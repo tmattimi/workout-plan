@@ -209,7 +209,10 @@ export async function getClientActivePlan(clientId) {
 export async function logSet(clientId, setData) {
   const { data, error } = await supabase
     .from('workout_logs')
-    .insert({ client_id: clientId, ...setData })
+    .upsert(
+      { client_id: clientId, ...setData },
+      { onConflict: 'client_id,exercise_id,session_date,set_number' }
+    )
     .select()
     .single();
   return { data, error };
