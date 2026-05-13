@@ -31,37 +31,6 @@ export async function getCoachSession() {
 // Send invite email to a client using Supabase magic link
 export async function inviteClient(clientId, email, clientName) {
   if (!supabase) return { error: { message: "Supabase not initialized" } };
-
-  const tempPassword = Math.random().toString(36).slice(2, 10) + 
-                       Math.random().toString(36).slice(2, 6).toUpperCase() + "1!";
-
-  const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-    email: email.trim(),
-    password: tempPassword,
-    options: {
-      emailRedirectTo: window.location.origin + "/",
-      data: { name: clientName, role: "client", client_id: clientId }
-    }
-  });
-
-  if (signUpError) return { error: signUpError };
-  if (!signUpData?.user) return { error: { message: "Failed to create account" } };
-
-  await supabase.from("clients").update({ email }).eq("id", clientId);
-  
-  const { error: linkError } = await supabase
-    .from("clients")
-    .update({ auth_user_id: signUpData.user.id })
-    .eq("id", clientId);
-
-  if (linkError) console.warn("Could not link auth user:", linkError.message);
-
-  return { data: { userId: signUpData.user.id, emailSent: true } };
-}
-
-
-export async function inviteClient(clientId, email, clientName) {
-  if (!supabase) return { error: { message: "Supabase not initialized" } };
   
   // Use Supabase admin invite (requires service role — we use signUp with email confirmation instead)
   // This creates an auth user and sends a confirmation email
