@@ -90,7 +90,7 @@ function CreateClientModal({ onSave, onCancel, coachId }) {
   }
 
   if (created) {
-    const clientUrl = `${window.location.origin}?client=${created.access_token}`;
+    const clientUrl = `${window.location.origin}/?client=${created.access_token}`;
     return (
       <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}>
         <div style={{ background: "#fff", borderRadius: "12px", padding: "24px", maxWidth: "380px", width: "100%" }}>
@@ -416,7 +416,7 @@ function ClientDetail({ client, coachId, plans, onBack, onAssignPlan }) {
     setMessages(data || []);
   }
 
-  const clientUrl = `${window.location.origin}?client=${client.access_token}`;
+  const clientUrl = `${window.location.origin}/?client=${client.access_token}`;
 
   return (
     <div style={{ padding: "16px 16px 40px" }}>
