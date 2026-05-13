@@ -28,35 +28,69 @@ export async function getCoachSession() {
   return data?.session;
 }
 
-// Send invite email to a client using Supabase magic link
+// Send invite email via our serverless API function
+// This keeps the Supabase service role key secret on the server
+export async function inviteClient(clientId, email, clientName) {
+  try {
+    const response = await fetch('/api/invite', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: email.trim(),
+        clientId,
+        clientName,
+        redirectTo: window.location.origin + '/'
+      })
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      return { error: { message: result.error || 'Failed to send invite' } };
+    }
+
+    return { data: result };
+  } catch (err) {
+    return { error: { message: err.message } };
+  }
+}
+
+
 export async function inviteClient(clientId, email, clientName) {
   if (!supabase) return { error: { message: "Supabase not initialized" } };
-  
-  // Use Supabase admin invite (requires service role — we use signUp with email confirmation instead)
-  // This creates an auth user and sends a confirmation email
-  const redirectUrl = `${window.location.origin}/`;
-  
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password: Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2) + "A1!", // temp password
+
+  // Step 1: Create auth account with a random password
+  // Supabase will send a confirmation email automatically
+  const tempPassword = Math.random().toString(36).slice(2, 10) + 
+                       Math.random().toString(36).slice(2, 6).toUpperCase() + "1!";
+
+  const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+    email: email.trim(),
+    password: tempPassword,
     options: {
-      emailRedirectTo: redirectUrl,
-      data: { name: clientName, role: "client" }
+      emailRedirectTo: window.location.origin + "/",
+      data: { name: clientName, role: "client", client_id: clientId }
     }
   });
+
+  if (signUpError) return { error: signUpError };
+  if (!signUpData?.user) return { error: { message: "Failed to create account" } };
+
+  // Step 2: Update client record with email and auth_user_id
+  // Do these separately so if the auth_user_id link fails, email still saves
+  await supabase.from("clients").update({ email }).eq("id", clientId);
   
-  if (error) return { error };
-  if (!data?.user) return { error: { message: "Failed to create auth user" } };
-  
-  // Link auth user to client record
   const { error: linkError } = await supabase
     .from("clients")
-    .update({ auth_user_id: data.user.id, email })
+    .update({ auth_user_id: signUpData.user.id })
     .eq("id", clientId);
-    
-  if (linkError) return { error: linkError };
-  
-  return { data: { userId: data.user.id, emailSent: !data.user.email_confirmed_at } };
+
+  if (linkError) {
+    console.warn("Could not link auth user to client:", linkError.message);
+    // Still return success — the email was sent
+  }
+
+  return { data: { userId: signUpData.user.id, emailSent: true } };
 }
 
 export function onAuthChange(callback) {

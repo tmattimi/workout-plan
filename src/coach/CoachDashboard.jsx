@@ -414,15 +414,14 @@ function ClientDetail({ client, coachId, plans, onBack, onAssignPlan }) {
     }
     setInviting(true);
     setInviteError("");
-    const { error } = await inviteClient(client.id, client.email, client.name);
+    setInviteStatus(null);
+    console.log("Sending invite to:", client.email, "clientId:", client.id);
+    const { data, error } = await inviteClient(client.id, client.email, client.name);
+    console.log("Invite result - data:", data, "error:", error);
     setInviting(false);
     if (error) {
-      if (error.message?.includes("already registered")) {
-        setInviteStatus("exists");
-        setInviteError("This email already has an account.");
-      } else {
-        setInviteError(error.message || "Failed to send invite.");
-      }
+      console.error("Invite error:", error);
+      setInviteError(error.message || "Failed to send invite.");
     } else {
       setInviteStatus("sent");
     }
