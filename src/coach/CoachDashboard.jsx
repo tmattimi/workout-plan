@@ -392,6 +392,20 @@ function ClientDetail({ client, coachId, plans, onBack, onAssignPlan }) {
   const [inviting, setInviting] = useState(false);
   const [inviteStatus, setInviteStatus] = useState(client.auth_user_id ? "exists" : null);
   const [inviteError, setInviteError] = useState("");
+  const [editForm, setEditForm] = useState({ name: client.name || "", email: client.email || "", phone: client.phone || "", goal: client.goal || "recomp", sex: client.sex || "male", notes: client.notes || "" });
+  const [editSaving, setEditSaving] = useState(false);
+  const [editSaved, setEditSaved] = useState(false);
+
+  async function handleSaveEdit() {
+    setEditSaving(true);
+    setEditSaved(false);
+    await updateClient_db(client.id, editForm);
+    setEditSaving(false);
+    setEditSaved(true);
+    setTimeout(() => setEditSaved(false), 2000);
+    // Update local client data
+    Object.assign(client, editForm);
+  }
 
   async function handleSendInvite() {
     if (!client.email) {
@@ -470,7 +484,7 @@ function ClientDetail({ client, coachId, plans, onBack, onAssignPlan }) {
 
       {/* Sub-nav */}
       <div style={{ display: "flex", gap: "5px", marginBottom: "16px", overflowX: "auto" }}>
-        {[["overview","Overview"],["notes","Coach Notes"],["messages","Messages"],["assign","Assign Plan"]].map(([v, label]) => (
+        {[["overview","Overview"],["notes","Coach Notes"],["messages","Messages"],["assign","Assign Plan"],["edit","Edit Client"]].map(([v, label]) => (
           <button key={v} onClick={() => setView(v)} style={{ flex: "0 0 auto", background: view === v ? "#111" : "#fff", color: view === v ? "#fff" : "#555", border: "1px solid #e0e0e0", borderRadius: "20px", padding: "6px 14px", fontSize: "11px", cursor: "pointer", ...F, whiteSpace: "nowrap" }}>
             {label}{v === "messages" && overview?.unreadFromClient > 0 ? ` (${overview.unreadFromClient})` : ""}
           </button>
@@ -670,6 +684,47 @@ function ClientDetail({ client, coachId, plans, onBack, onAssignPlan }) {
             </button>
           </div>
         </>
+      )}
+
+      {/* Edit Client */}
+      {view === "edit" && (
+        <div>
+          <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.15em", color: "#999", marginBottom: "14px" }}>Client Details</div>
+          {[["Name", "name", "text"], ["Email", "email", "email"], ["Phone", "phone", "tel"]].map(([label, key, type]) => (
+            <div key={key} style={{ marginBottom: "12px" }}>
+              <div style={{ fontSize: "11px", color: "#777", marginBottom: "4px" }}>{label}</div>
+              <input type={type} value={editForm[key]} onChange={e => setEditForm(f => ({ ...f, [key]: e.target.value }))}
+                style={{ width: "100%", padding: "9px 11px", borderRadius: "6px", border: "1px solid #e0e0e0", fontSize: "13px", ...F }} />
+            </div>
+          ))}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "12px" }}>
+            <div>
+              <div style={{ fontSize: "11px", color: "#777", marginBottom: "4px" }}>Goal</div>
+              <select value={editForm.goal} onChange={e => setEditForm(f => ({ ...f, goal: e.target.value }))}
+                style={{ width: "100%", padding: "9px 11px", borderRadius: "6px", border: "1px solid #e0e0e0", fontSize: "13px", ...F }}>
+                {["recomp","fat_loss","muscle_gain","strength","endurance"].map(g => (
+                  <option key={g} value={g}>{g.replace("_"," ")}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <div style={{ fontSize: "11px", color: "#777", marginBottom: "4px" }}>Sex</div>
+              <select value={editForm.sex} onChange={e => setEditForm(f => ({ ...f, sex: e.target.value }))}
+                style={{ width: "100%", padding: "9px 11px", borderRadius: "6px", border: "1px solid #e0e0e0", fontSize: "13px", ...F }}>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+              </select>
+            </div>
+          </div>
+          <div style={{ marginBottom: "16px" }}>
+            <div style={{ fontSize: "11px", color: "#777", marginBottom: "4px" }}>Coach Notes / Intake</div>
+            <textarea value={editForm.notes} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))}
+              rows={3} style={{ width: "100%", padding: "9px 11px", borderRadius: "6px", border: "1px solid #e0e0e0", fontSize: "12px", resize: "none", ...F }} />
+          </div>
+          <button onClick={handleSaveEdit} disabled={editSaving} style={{ width: "100%", background: editSaved ? "#2d7a1e" : "#111", color: "#fff", border: "none", borderRadius: "8px", padding: "13px", fontSize: "14px", cursor: "pointer", ...F }}>
+            {editSaving ? "Saving..." : editSaved ? "✓ Saved" : "Save Changes"}
+          </button>
+        </div>
       )}
 
       {/* Assign Plan */}
