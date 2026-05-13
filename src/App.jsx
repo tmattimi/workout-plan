@@ -74,11 +74,23 @@ function SetLogger({ exercise, sessionKey, logs, onLogsChange, accent, color, on
     updateLog({ ...exLog, sets: newSets });
 
     if (newDone && set.weight && set.reps) {
+      // Set was just marked done — check if it's a PR
       const w = parseFloat(set.weight);
       const r = parseInt(set.reps);
       const prevPR = prs[exercise.name];
       const isPR = !prevPR || w > prevPR.weight || (w === prevPR.weight && r > prevPR.reps);
       onSetDone && onSetDone({ exercise: exercise.name, weight: w, reps: r, isPR, rest: exercise.rest, setNumber: i + 1 });
+    } else if (!newDone) {
+      // Set was unchecked — recalculate PR from remaining done sets
+      const remainingDone = newSets.filter(s => s.done && s.weight && s.reps);
+      if (remainingDone.length > 0) {
+        const bestWeight = Math.max(...remainingDone.map(s => parseFloat(s.weight)));
+        const bestReps = Math.max(...remainingDone.filter(s => parseFloat(s.weight) === bestWeight).map(s => parseInt(s.reps)));
+        onSetDone && onSetDone({ exercise: exercise.name, weight: bestWeight, reps: bestReps, isPR: true, rest: exercise.rest, setNumber: i + 1, recalculate: true });
+      } else {
+        // No more done sets — notify to clear PR for this session
+        onSetDone && onSetDone({ exercise: exercise.name, weight: 0, reps: 0, isPR: false, rest: exercise.rest, setNumber: i + 1, cleared: true });
+      }
     }
   }
 
@@ -466,9 +478,17 @@ export default function App({ clientData, adaptedSchedule }) {
   }, []);
 
   // Called whenever a set is marked done
-  async function handleSetDone({ exercise, weight, reps, isPR, rest, setNumber }) {
+  async function handleSetDone({ exercise, weight, reps, isPR, rest, setNumber, recalculate, cleared }) {
     // 1. Local state updates immediately
-    if (isPR) {
+    if (cleared) {
+      // All sets unchecked — don't change the all-time PR, just skip
+      return;
+    } else if (recalculate) {
+      // Recalculate PR from remaining sets — update silently without celebration
+      const newPRs = { ...prs, [exercise]: { weight, reps, date: today() } };
+      setPRs(newPRs);
+      savePRs(newPRs);
+    } else if (isPR) {
       const newPRs = { ...prs, [exercise]: { weight, reps, date: today() } };
       setPRs(newPRs);
       savePRs(newPRs);
@@ -481,7 +501,6 @@ export default function App({ clientData, adaptedSchedule }) {
     // 2. Write to Supabase in the background if client is logged in
     if (clientData && clientData.id) {
       try {
-        console.log("LOGGING SET - clientData.id:", clientData.id, "exercise:", exercise);
         const { logSet, upsertPR, getAllExercises } = await import("./lib/supabase");
         const exObj = current.exercises && current.exercises.find(function(e) { return e.name === exercise; });
         
@@ -490,14 +509,7 @@ export default function App({ clientData, adaptedSchedule }) {
         let exId = exObj && exObj.exercise_id;
         if (!exId) {
           const { data: allEx } = await getAllExercises();
-          // Try exact match first, then fuzzy match on first word(s)
-          let found = allEx && allEx.find(function(e) { return e.name === exercise; });
-          if (!found && allEx) {
-            const exLower = exercise.toLowerCase();
-            found = allEx.find(function(e) {
-              return exLower.includes(e.name.toLowerCase()) || e.name.toLowerCase().includes(exLower.split(" ").slice(0,3).join(" "));
-            });
-          }
+          const found = allEx && allEx.find(function(e) { return e.name === exercise; });
           exId = found && found.id;
         }
 

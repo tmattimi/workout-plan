@@ -90,7 +90,7 @@ function CreateClientModal({ onSave, onCancel, coachId }) {
   }
 
   if (created) {
-    const clientUrl = `${window.location.origin}/?client=${created.access_token}`;
+    const clientUrl = `${window.location.origin}?client=${created.access_token}`;
     return (
       <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}>
         <div style={{ background: "#fff", borderRadius: "12px", padding: "24px", maxWidth: "380px", width: "100%" }}>
@@ -416,7 +416,7 @@ function ClientDetail({ client, coachId, plans, onBack, onAssignPlan }) {
     setMessages(data || []);
   }
 
-  const clientUrl = `${window.location.origin}/?client=${client.access_token}`;
+  const clientUrl = `${window.location.origin}?client=${client.access_token}`;
 
   return (
     <div style={{ padding: "16px 16px 40px" }}>
@@ -449,44 +449,131 @@ function ClientDetail({ client, coachId, plans, onBack, onAssignPlan }) {
       </div>
 
       {/* Overview */}
-      {view === "overview" && overview && (
-        <>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px", marginBottom: "14px" }}>
-            {[["Sessions", overview.recentLogs?.length || 0], ["PRs", overview.prs?.length || 0], ["Unread", overview.unreadFromClient || 0]].map(([label, val]) => (
-              <div key={label} style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "7px", padding: "10px 8px", textAlign: "center" }}>
-                <div style={{ fontSize: "8px", textTransform: "uppercase", letterSpacing: "0.1em", color: "#bbb", marginBottom: "4px" }}>{label}</div>
-                <div style={{ fontSize: "18px", fontWeight: "700", color: label === "Unread" && val > 0 ? "#a02a2a" : "#1a1a1a" }}>{val}</div>
-              </div>
-            ))}
-          </div>
+      {view === "overview" && overview && (() => {
+        // Group logs by session date
+        const sessionMap = {};
+        (overview.recentLogs || []).forEach(log => {
+          const d = log.session_date;
+          if (!sessionMap[d]) sessionMap[d] = [];
+          sessionMap[d].push(log);
+        });
+        const sessions = Object.entries(sessionMap).sort((a, b) => b[0].localeCompare(a[0]));
 
-          {/* Recent sessions */}
-          {overview.recentLogs?.slice(0, 5).map((log, i) => (
-            <div key={i} style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "7px", padding: "10px 13px", marginBottom: "6px", display: "flex", justifyContent: "space-between" }}>
-              <span style={{ fontSize: "12px" }}>{log.exercises?.name}</span>
-              <span style={{ fontSize: "12px", color: "#aaa" }}>{log.weight_lbs} lbs × {log.reps}</span>
+        // Group PRs by muscle group
+        const prsByMuscle = {};
+        (overview.prs || []).forEach(pr => {
+          const muscle = pr.exercises?.primary_muscle || "other";
+          if (!prsByMuscle[muscle]) prsByMuscle[muscle] = [];
+          prsByMuscle[muscle].push(pr);
+        });
+
+        // Measurements trend
+        const measurements = overview.measurements || [];
+        const latestMeasurement = measurements[measurements.length - 1];
+        const prevMeasurement = measurements[measurements.length - 2];
+
+        return (
+          <>
+            {/* Stats row */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px", marginBottom: "16px" }}>
+              {[
+                ["Sessions", sessions.length],
+                ["PRs", overview.prs?.length || 0],
+                ["Unread", overview.unreadFromClient || 0]
+              ].map(([label, val]) => (
+                <div key={label} style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "7px", padding: "10px 8px", textAlign: "center" }}>
+                  <div style={{ fontSize: "8px", textTransform: "uppercase", letterSpacing: "0.1em", color: "#bbb", marginBottom: "4px" }}>{label}</div>
+                  <div style={{ fontSize: "18px", fontWeight: "700", color: label === "Unread" && val > 0 ? "#a02a2a" : "#1a1a1a" }}>{val}</div>
+                </div>
+              ))}
             </div>
-          ))}
 
-          {/* Measurements summary */}
-          {overview.measurements?.length > 0 && (() => {
-            const latest = overview.measurements[overview.measurements.length - 1];
-            return (
-              <div style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "8px", padding: "12px 14px", marginTop: "10px" }}>
-                <div style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.1em", color: "#aaa", marginBottom: "8px" }}>Latest Measurements ({formatDate(latest.measured_at)})</div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "5px" }}>
-                  {[["Weight", latest.weight_lbs, "lbs"], ["Waist", latest.waist_in, "\""], ["Chest", latest.chest_in, "\""], ["Right Arm", latest.right_arm_in, "\""], ["Left Arm", latest.left_arm_in, "\""]].map(([label, val]) => val && (
-                    <div key={label} style={{ fontSize: "11px", display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ color: "#aaa" }}>{label}</span>
-                      <span style={{ fontWeight: "600" }}>{val}</span>
+            {/* Recent sessions grouped by date */}
+            {sessions.length > 0 && (
+              <div style={{ marginBottom: "16px" }}>
+                <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.15em", color: "#999", marginBottom: "10px" }}>Recent Sessions</div>
+                {sessions.slice(0, 4).map(([date, logs]) => {
+                  const muscles = [...new Set(logs.map(l => l.exercises?.primary_muscle).filter(Boolean))];
+                  const maxWeight = Math.max(...logs.map(l => parseFloat(l.weight_lbs) || 0));
+                  return (
+                    <div key={date} style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "8px", padding: "12px 14px", marginBottom: "8px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
+                        <div>
+                          <div style={{ fontSize: "12px", fontWeight: "600" }}>{formatDate(date)}</div>
+                          <div style={{ fontSize: "10px", color: "#aaa", marginTop: "2px", textTransform: "capitalize" }}>
+                            {muscles.slice(0, 3).join(" · ")}
+                          </div>
+                        </div>
+                        <span style={{ fontSize: "10px", background: "#f5f5f3", color: "#555", padding: "2px 8px", borderRadius: "20px" }}>
+                          {logs.length} sets
+                        </span>
+                      </div>
+                      <div style={{ display: "flex", gap: "5px", flexWrap: "wrap" }}>
+                        {[...new Set(logs.map(l => l.exercises?.name))].slice(0, 4).map((name, i) => (
+                          <span key={i} style={{ fontSize: "10px", background: "#f0f4ff", color: "#2563a8", padding: "2px 8px", borderRadius: "20px" }}>{name}</span>
+                        ))}
+                      </div>
                     </div>
-                  ))}
+                  );
+                })}
+              </div>
+            )}
+
+            {/* PRs by muscle group */}
+            {overview.prs?.length > 0 && (
+              <div style={{ marginBottom: "16px" }}>
+                <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.15em", color: "#999", marginBottom: "10px" }}>Personal Records</div>
+                {Object.entries(prsByMuscle).map(([muscle, prs]) => (
+                  <div key={muscle} style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "8px", padding: "12px 14px", marginBottom: "7px" }}>
+                    <div style={{ fontSize: "10px", textTransform: "capitalize", fontWeight: "600", color: "#555", marginBottom: "6px" }}>{muscle}</div>
+                    {prs.map((pr, i) => (
+                      <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+                        <span style={{ fontSize: "12px", color: "#333" }}>{pr.exercises?.name}</span>
+                        <span style={{ fontSize: "12px", fontWeight: "700", color: "#f59e0b" }}>🏆 {pr.weight_lbs} lbs × {pr.reps}</span>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Measurements */}
+            {latestMeasurement && (
+              <div style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "8px", padding: "12px 14px" }}>
+                <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.1em", color: "#aaa", marginBottom: "10px" }}>
+                  Latest Measurements · {formatDate(latestMeasurement.measured_at)}
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                  {[
+                    ["Weight", latestMeasurement.weight_lbs, "lbs", prevMeasurement?.weight_lbs],
+                    ["Waist", latestMeasurement.waist_in, '"', prevMeasurement?.waist_in],
+                    ["Chest", latestMeasurement.chest_in, '"', prevMeasurement?.chest_in],
+                    ["R Thigh", latestMeasurement.right_thigh_in, '"', prevMeasurement?.right_thigh_in],
+                    ["L Thigh", latestMeasurement.left_thigh_in, '"', prevMeasurement?.left_thigh_in],
+                    ["R Arm", latestMeasurement.right_arm_in, '"', prevMeasurement?.right_arm_in],
+                    ["L Arm", latestMeasurement.left_arm_in, '"', prevMeasurement?.left_arm_in],
+                  ].filter(([, val]) => val).map(([label, val, unit, prev]) => {
+                    const diff = prev ? (parseFloat(val) - parseFloat(prev)).toFixed(1) : null;
+                    return (
+                      <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0", borderBottom: "1px solid #f5f5f5" }}>
+                        <span style={{ fontSize: "11px", color: "#aaa" }}>{label}</span>
+                        <div style={{ textAlign: "right" }}>
+                          <span style={{ fontSize: "13px", fontWeight: "600" }}>{val}{unit}</span>
+                          {diff !== null && diff !== "0.0" && (
+                            <span style={{ fontSize: "10px", color: parseFloat(diff) > 0 ? "#2d7a1e" : "#a02a2a", marginLeft: "5px" }}>
+                              {parseFloat(diff) > 0 ? "+" : ""}{diff}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
-            );
-          })()}
-        </>
-      )}
+            )}
+          </>
+        );
+      })()}
 
       {/* Coach Notes */}
       {view === "notes" && (
