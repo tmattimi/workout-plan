@@ -13,10 +13,6 @@ export const supabase = SUPABASE_URL && SUPABASE_ANON_KEY
   ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
   : null;
 
-console.log("SUPABASE_URL:", SUPABASE_URL ? "SET ✓" : "MISSING ✗");
-console.log("SUPABASE_KEY:", SUPABASE_ANON_KEY ? "SET ✓" : "MISSING ✗");
-console.log("SUPABASE CLIENT:", supabase ? "INITIALIZED ✓" : "NULL ✗");
-
 // ── AUTH (coach) ───────────────────────────────────────────────────────────────
 export async function signInCoach(email, password) {
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -209,10 +205,7 @@ export async function getClientActivePlan(clientId) {
 export async function logSet(clientId, setData) {
   const { data, error } = await supabase
     .from('workout_logs')
-    .upsert(
-      { client_id: clientId, ...setData },
-      { onConflict: 'client_id,exercise_id,session_date,set_number' }
-    )
+    .insert({ client_id: clientId, ...setData })
     .select()
     .single();
   return { data, error };
@@ -260,6 +253,43 @@ export async function getClientPRs(clientId) {
     .select('*, exercises(name, primary_muscle)')
     .eq('client_id', clientId);
   return { data: data || [], error };
+}
+
+// Recalculate PRs from actual workout logs — source of truth
+export async function recalculatePRsFromLogs(clientId) {
+  if (!supabase) return;
+  const { data: logs } = await supabase
+    .from('workout_logs')
+    .select('exercise_id, weight_lbs, reps, exercises(name, primary_muscle)')
+    .eq('client_id', clientId)
+    .eq('completed', true)
+    .not('weight_lbs', 'is', null);
+
+  if (!logs || logs.length === 0) return;
+
+  // Find best weight (then most reps at that weight) per exercise
+  const best = {};
+  logs.forEach(log => {
+    const id = log.exercise_id;
+    const w = parseFloat(log.weight_lbs) || 0;
+    const r = parseInt(log.reps) || 0;
+    if (!best[id] || w > best[id].weight || (w === best[id].weight && r > best[id].reps)) {
+      best[id] = { exercise_id: id, weight: w, reps: r, exercises: log.exercises };
+    }
+  });
+
+  // Upsert each PR
+  const upserts = Object.values(best).map(b =>
+    supabase.from('personal_records').upsert({
+      client_id: clientId,
+      exercise_id: b.exercise_id,
+      weight_lbs: b.weight,
+      reps: b.reps,
+      achieved_at: new Date().toISOString().slice(0, 10),
+    }, { onConflict: 'client_id,exercise_id' })
+  );
+  await Promise.all(upserts);
+  return best;
 }
 
 // ── MEASUREMENTS ──────────────────────────────────────────────────────────────

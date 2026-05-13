@@ -387,9 +387,13 @@ function ClientDetail({ client, coachId, plans, onBack, onAssignPlan }) {
   const [reply, setReply] = useState("");
   const [savingNote, setSavingNote] = useState(false);
   const [messages, setMessages] = useState([]);
+  const [expandedSession, setExpandedSession] = useState(null);
 
   useEffect(() => {
     async function load() {
+      // Recalculate PRs from actual logs first (ensures accuracy)
+      const { recalculatePRsFromLogs } = await import("../lib/supabase");
+      await recalculatePRsFromLogs(client.id);
       const data = await getClientOverview(client.id);
       setOverview(data);
       setMessages(data.messages || []);
@@ -492,27 +496,47 @@ function ClientDetail({ client, coachId, plans, onBack, onAssignPlan }) {
             {sessions.length > 0 && (
               <div style={{ marginBottom: "16px" }}>
                 <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.15em", color: "#999", marginBottom: "10px" }}>Recent Sessions</div>
-                {sessions.slice(0, 4).map(([date, logs]) => {
+                {sessions.slice(0, 8).map(([date, logs]) => {
                   const muscles = [...new Set(logs.map(l => l.exercises?.primary_muscle).filter(Boolean))];
-                  const maxWeight = Math.max(...logs.map(l => parseFloat(l.weight_lbs) || 0));
+                  const isExpanded = expandedSession === date;
+                  // Group by exercise name
+                  const byExercise = {};
+                  logs.forEach(log => {
+                    const name = log.exercises?.name || "Unknown";
+                    if (!byExercise[name]) byExercise[name] = [];
+                    byExercise[name].push(log);
+                  });
                   return (
-                    <div key={date} style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "8px", padding: "12px 14px", marginBottom: "8px" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
+                    <div key={date} style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "8px", marginBottom: "8px", overflow: "hidden" }}>
+                      <button onClick={() => setExpandedSession(isExpanded ? null : date)} style={{ width: "100%", background: "transparent", border: "none", padding: "12px 14px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", ...F, textAlign: "left" }}>
                         <div>
                           <div style={{ fontSize: "12px", fontWeight: "600" }}>{formatDate(date)}</div>
                           <div style={{ fontSize: "10px", color: "#aaa", marginTop: "2px", textTransform: "capitalize" }}>
-                            {muscles.slice(0, 3).join(" · ")}
+                            {muscles.slice(0, 3).join(" · ")} · {logs.length} sets
                           </div>
                         </div>
-                        <span style={{ fontSize: "10px", background: "#f5f5f3", color: "#555", padding: "2px 8px", borderRadius: "20px" }}>
-                          {logs.length} sets
-                        </span>
-                      </div>
-                      <div style={{ display: "flex", gap: "5px", flexWrap: "wrap" }}>
-                        {[...new Set(logs.map(l => l.exercises?.name))].slice(0, 4).map((name, i) => (
-                          <span key={i} style={{ fontSize: "10px", background: "#f0f4ff", color: "#2563a8", padding: "2px 8px", borderRadius: "20px" }}>{name}</span>
-                        ))}
-                      </div>
+                        <span style={{ color: "#ccc", fontSize: "12px" }}>{isExpanded ? "▲" : "▼"}</span>
+                      </button>
+                      {isExpanded && (
+                        <div style={{ borderTop: "1px solid #f0f0f0" }}>
+                          {Object.entries(byExercise).map(([exName, exLogs]) => {
+                            const maxW = Math.max(...exLogs.map(l => parseFloat(l.weight_lbs) || 0));
+                            return (
+                              <div key={exName} style={{ padding: "10px 14px", borderBottom: "1px solid #f5f5f5" }}>
+                                <div style={{ fontSize: "12px", fontWeight: "600", marginBottom: "6px" }}>{exName}</div>
+                                <div style={{ display: "flex", gap: "5px", flexWrap: "wrap" }}>
+                                  {exLogs.sort((a,b) => a.set_number - b.set_number).map((log, i) => (
+                                    <span key={i} style={{ fontSize: "11px", background: "#f0f4ff", color: "#2563a8", padding: "3px 9px", borderRadius: "20px" }}>
+                                      Set {log.set_number}: {log.weight_lbs} lbs × {log.reps}
+                                    </span>
+                                  ))}
+                                </div>
+                                <div style={{ fontSize: "10px", color: "#aaa", marginTop: "4px" }}>Best: {maxW} lbs</div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
