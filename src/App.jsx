@@ -384,7 +384,7 @@ function PhotosTab({ photos, onSave }) {
 }
 
 // ── Main App ───────────────────────────────────────────────────────────────────
-export default function App({ clientData, adaptedSchedule }) {
+export default function App({ clientData, adaptedSchedule, onSignOut }) {
   // Use coach-assigned plan if available, otherwise fall back to default
   const activeSchedule = adaptedSchedule || schedule;
 
@@ -603,9 +603,16 @@ export default function App({ clientData, adaptedSchedule }) {
       {/* Header */}
       <div style={{ background: "#111", color: "#f7f6f3", padding: "22px 18px 0" }}>
         <div style={{ fontSize: "9px", letterSpacing: "0.25em", textTransform: "uppercase", color: "#555", marginBottom: "3px" }}>Push Pull Legs × 2 · 6 Days</div>
-        <h1 style={{ margin: "0 0 14px", fontSize: "21px", fontWeight: "normal", letterSpacing: "-0.5px" }}>
-          {clientData?.name ? `${clientData.name.split(" ")[0]}'s Plan` : "Workout Plan"}
-        </h1>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "14px" }}>
+          <h1 style={{ margin: 0, fontSize: "21px", fontWeight: "normal", letterSpacing: "-0.5px" }}>
+            {clientData?.name ? `${clientData.name.split(" ")[0]}'s Plan` : "Workout Plan"}
+          </h1>
+          {onSignOut && (
+            <button onClick={onSignOut} style={{ background: "none", border: "1px solid #333", color: "#555", borderRadius: "20px", padding: "5px 12px", fontSize: "10px", cursor: "pointer", ...F, whiteSpace: "nowrap" }}>
+              Sign out
+            </button>
+          )}
+        </div>
         <div style={{ display: "flex", gap: "3px", overflowX: "auto", paddingBottom: "1px" }}>
           {tabs.map(([t, label]) => (
             <button key={t} onClick={() => setTab(t)} style={{

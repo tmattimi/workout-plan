@@ -5,7 +5,8 @@ import {
   getMyPlans, createPlan, updatePlan, createPlanDay,
   addExerciseToPlanDay, removePlanExercise, reorderPlanExercises,
   assignPlanToClient, getAllExercises, getClientOverview,
-  createCoachNote, getMessages, sendMessage, markMessagesRead
+  createCoachNote, getMessages, sendMessage, markMessagesRead,
+  inviteClient
 } from "../lib/supabase";
 import { formatDate } from "../storage";
 
@@ -388,6 +389,30 @@ function ClientDetail({ client, coachId, plans, onBack, onAssignPlan }) {
   const [savingNote, setSavingNote] = useState(false);
   const [messages, setMessages] = useState([]);
   const [expandedSession, setExpandedSession] = useState(null);
+  const [inviting, setInviting] = useState(false);
+  const [inviteStatus, setInviteStatus] = useState(client.auth_user_id ? "exists" : null);
+  const [inviteError, setInviteError] = useState("");
+
+  async function handleSendInvite() {
+    if (!client.email) {
+      setInviteError("Add an email address to this client first.");
+      return;
+    }
+    setInviting(true);
+    setInviteError("");
+    const { error } = await inviteClient(client.id, client.email, client.name);
+    setInviting(false);
+    if (error) {
+      if (error.message?.includes("already registered")) {
+        setInviteStatus("exists");
+        setInviteError("This email already has an account.");
+      } else {
+        setInviteError(error.message || "Failed to send invite.");
+      }
+    } else {
+      setInviteStatus("sent");
+    }
+  }
 
   useEffect(() => {
     async function load() {
@@ -432,15 +457,15 @@ function ClientDetail({ client, coachId, plans, onBack, onAssignPlan }) {
         <div style={{ fontSize: "11px", color: "#666", marginBottom: "10px" }}>
           {client.goal?.replace("_"," ")} · {client.sex} · {client.is_active ? "Active" : "Inactive"}
         </div>
-        <div style={{ fontSize: "10px", color: "#555", marginBottom: "6px" }}>Client link:</div>
-        <div style={{ display: "flex", gap: "6px" }}>
-          <div style={{ flex: 1, background: "#1a1a1a", borderRadius: "5px", padding: "7px 10px", fontSize: "10px", color: "#888", wordBreak: "break-all", fontFamily: "monospace" }}>
-            {clientUrl}
-          </div>
-          <button onClick={() => navigator.clipboard.writeText(clientUrl)} style={{ background: "#333", color: "#fff", border: "none", borderRadius: "5px", padding: "7px 10px", fontSize: "10px", cursor: "pointer", ...F, whiteSpace: "nowrap" }}>
-            Copy
+        <div style={{ display: "flex", gap: "6px", marginTop: "4px" }}>
+          <button onClick={handleSendInvite} disabled={inviting || !!inviteStatus} style={{ flex: 1, background: inviteStatus === "sent" ? "#2d7a1e" : "#333", color: "#fff", border: "none", borderRadius: "5px", padding: "8px 10px", fontSize: "11px", cursor: "pointer", ...F }}>
+            {inviting ? "Sending..." : inviteStatus === "sent" ? "✓ Invite Sent" : inviteStatus === "exists" ? "Already invited" : "📧 Send Invite"}
+          </button>
+          <button onClick={() => navigator.clipboard.writeText(clientUrl)} style={{ background: "#222", color: "#aaa", border: "1px solid #333", borderRadius: "5px", padding: "8px 10px", fontSize: "10px", cursor: "pointer", ...F, whiteSpace: "nowrap" }}>
+            Copy link
           </button>
         </div>
+        {inviteError && <div style={{ fontSize: "10px", color: "#f87171", marginTop: "6px" }}>{inviteError}</div>}
       </div>
 
       {/* Sub-nav */}

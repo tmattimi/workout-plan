@@ -28,6 +28,37 @@ export async function getCoachSession() {
   return data?.session;
 }
 
+// Send invite email to a client and link their auth account
+export async function inviteClient(clientId, email, clientName) {
+  if (!supabase) return { error: { message: "Supabase not initialized" } };
+  
+  // Use Supabase admin invite (requires service role — we use signUp with email confirmation instead)
+  // This creates an auth user and sends a confirmation email
+  const redirectUrl = `${window.location.origin}/`;
+  
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password: Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2) + "A1!", // temp password
+    options: {
+      emailRedirectTo: redirectUrl,
+      data: { name: clientName, role: "client" }
+    }
+  });
+  
+  if (error) return { error };
+  if (!data?.user) return { error: { message: "Failed to create auth user" } };
+  
+  // Link auth user to client record
+  const { error: linkError } = await supabase
+    .from("clients")
+    .update({ auth_user_id: data.user.id, email })
+    .eq("id", clientId);
+    
+  if (linkError) return { error: linkError };
+  
+  return { data: { userId: data.user.id, emailSent: !data.user.email_confirmed_at } };
+}
+
 export function onAuthChange(callback) {
   return supabase.auth.onAuthStateChange((_event, session) => callback(session));
 }

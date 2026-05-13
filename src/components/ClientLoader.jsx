@@ -1,71 +1,111 @@
 import { useState, useEffect } from "react";
-import { getClientByToken, getClientActivePlan, getClientLogs, getClientPRs, getClientMeasurements } from "../lib/supabase";
+import { supabase } from "../lib/supabase";
+import { getClientActivePlan } from "../lib/supabase";
 import { adaptPlanToSchedule } from "../lib/planAdapter";
+import ClientAuth from "./ClientAuth";
+import PasswordSetup from "./PasswordSetup";
 
 const F = { fontFamily: "'Georgia','Times New Roman',serif" };
 
-// Extracts ?client=TOKEN from the URL
-function getClientToken() {
-  // Try standard search params first
-  let params = new URLSearchParams(window.location.search);
-  let token = params.get("client");
-  // Fallback: parse from full href in case search is empty
-  if (!token && window.location.href.includes("client=")) {
-    const match = window.location.href.match(/[?&]client=([^&]+)/);
-    token = match ? match[1] : null;
-  }
-  console.log("getClientToken - href:", window.location.href, "token:", token);
-  return token;
+// Check if the URL has Supabase auth tokens (from invite/reset email click)
+function hasAuthTokensInUrl() {
+  const hash = window.location.hash;
+  return hash.includes("access_token") || hash.includes("type=invite") || hash.includes("type=recovery");
 }
 
 export default function ClientLoader({ children }) {
-  const [state, setState] = useState("loading"); // loading | ready | no_token | no_plan | error
+  const [state, setState] = useState("loading"); // loading | auth | setup | ready | error
   const [clientData, setClientData] = useState(null);
   const [adaptedSchedule, setAdaptedSchedule] = useState(null);
-  const [error, setError] = useState(null);
-
-  const token = getClientToken();
+  const [session, setSession] = useState(null);
 
   useEffect(() => {
-    if (!token) {
-      // No token — show default app
-      setState("ready");
+    // If URL has auth tokens, show password setup screen
+    if (hasAuthTokensInUrl()) {
+      setState("setup");
       return;
     }
-    loadClient();
-  }, [token]);
+    checkSession();
 
-  async function loadClient() {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        setSession(session);
+        loadClientData(session.user.id);
+      } else {
+        setState("auth");
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  async function checkSession() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      setSession(session);
+      await loadClientData(session.user.id);
+    } else {
+      setState("auth");
+    }
+  }
+
+  async function loadClientData(authUserId) {
     try {
       setState("loading");
 
-      // 1. Load client by token
-      const client = await getClientByToken(token);
-      console.log("TOKEN:", token);
-      console.log("CLIENT RESULT:", client);
-      if (!client) {
+      // Get client record linked to this auth user
+      const { data: client, error } = await supabase
+        .from("clients")
+        .select("*")
+        .eq("auth_user_id", authUserId)
+        .eq("is_active", true)
+        .single();
+
+      if (error || !client) {
+        // Auth user exists but no client record linked — could be coach trying client URL
         setState("error");
-        setError("This link is invalid or has been deactivated. Contact your coach for a new link.");
         return;
       }
 
       setClientData(client);
 
-      // 2. Load their active plan
+      // Load their active plan
       const { data: plan } = await getClientActivePlan(client.id);
-
       if (plan) {
         const schedule = adaptPlanToSchedule(plan);
         setAdaptedSchedule(schedule);
       }
-      // If no plan, app falls back to default schedule from data.js
 
       setState("ready");
     } catch (err) {
       console.error("ClientLoader error:", err);
-      // Still show the app with default schedule
-      setState("ready");
+      setState("ready"); // Fall through to default schedule
     }
+  }
+
+  async function handleSignOut() {
+    await supabase.auth.signOut();
+    setState("auth");
+    setClientData(null);
+    setAdaptedSchedule(null);
+  }
+
+  if (state === "setup") {
+    return (
+      <PasswordSetup onComplete={() => {
+        setState("loading");
+        checkSession();
+        // Clean up URL hash
+        window.history.replaceState(null, "", window.location.pathname);
+      }} />
+    );
+  }
+
+  if (state === "auth") {
+    return <ClientAuth onAuthenticated={async (user) => {
+      setSession({ user });
+      await loadClientData(user.id);
+    }} />;
   }
 
   if (state === "loading") {
@@ -83,13 +123,17 @@ export default function ClientLoader({ children }) {
       <div style={{ minHeight: "100vh", background: "#111", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
         <div style={{ textAlign: "center", color: "#f7f6f3" }}>
           <div style={{ fontSize: "36px", marginBottom: "12px" }}>🔗</div>
-          <div style={{ fontSize: "16px", marginBottom: "8px", ...F }}>Link not found</div>
-          <div style={{ fontSize: "12px", color: "#666", lineHeight: "1.6" }}>{error}</div>
+          <div style={{ fontSize: "16px", marginBottom: "8px", ...F }}>No plan found</div>
+          <div style={{ fontSize: "12px", color: "#666", lineHeight: "1.6", marginBottom: "16px" }}>
+            Your account isn't linked to a plan yet. Contact your coach.
+          </div>
+          <button onClick={handleSignOut} style={{ background: "transparent", color: "#aaa", border: "1px solid #333", borderRadius: "7px", padding: "8px 16px", fontSize: "12px", cursor: "pointer", ...F }}>
+            Sign out
+          </button>
         </div>
       </div>
     );
   }
 
-  // Pass client data and adapted schedule down to the app
-  return children({ clientData, adaptedSchedule });
+  return children({ clientData, adaptedSchedule, onSignOut: handleSignOut });
 }
