@@ -464,6 +464,17 @@ export async function searchExercises(query, muscleGroup = null, equipment = [],
   return { data: safe, error };
 }
 
+// ── CLIENT INTAKE ─────────────────────────────────────────────────────────────────
+export async function getClientIntake(clientId) {
+  if (!supabase) return { data: null };
+  const { data, error } = await supabase
+    .from('client_intake')
+    .select('*')
+    .eq('client_id', clientId)
+    .single();
+  return { data, error };
+}
+
 // ── WEEKLY CHECK-IN ───────────────────────────────────────────────────────────
 export async function submitCheckin(clientId, checkinData) {
   const { data, error } = await supabase
