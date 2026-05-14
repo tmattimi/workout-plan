@@ -61,8 +61,27 @@ export default function ClientLoader({ children }) {
         .eq("is_active", true)
         .single();
 
+      // If not found by auth_user_id, try matching by email
       if (error || !client) {
-        // Auth user exists but no client record linked — could be coach trying client URL
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user?.email) {
+          const { data: clientByEmail } = await supabase
+            .from("clients")
+            .select("*")
+            .eq("email", user.email)
+            .eq("is_active", true)
+            .single();
+          if (clientByEmail) {
+            await supabase
+              .from("clients")
+              .update({ auth_user_id: authUserId })
+              .eq("id", clientByEmail.id);
+            client = { ...clientByEmail, auth_user_id: authUserId };
+          }
+        }
+      }
+
+      if (!client) {
         setState("error");
         return;
       }
