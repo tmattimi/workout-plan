@@ -31,32 +31,6 @@ export async function getCoachSession() {
 // Send invite email via our serverless API function
 // This keeps the Supabase service role key secret on the server
 export async function inviteClient(clientId, email, clientName) {
-  try {
-    const response = await fetch('/api/invite', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: email.trim(),
-        clientId,
-        clientName,
-        redirectTo: window.location.origin + '/'
-      })
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      return { error: { message: result.error || 'Failed to send invite' } };
-    }
-
-    return { data: result };
-  } catch (err) {
-    return { error: { message: err.message } };
-  }
-}
-
-
-export async function inviteClient(clientId, email, clientName) {
   if (!supabase) return { error: { message: "Supabase not initialized" } };
 
   // Step 1: Create auth account with a random password
