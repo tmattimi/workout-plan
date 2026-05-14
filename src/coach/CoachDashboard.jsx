@@ -704,14 +704,17 @@ function ClientDetail({ client, coachId, plans, onBack, onAssignPlan }) {
             <div>
               <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.15em", color: "#999", marginBottom: "14px" }}>Client Intake Form</div>
               {[
+                { label: "── GOALS ──", value: " " },
                 { label: "Primary Goal", value: intake.primary_goal?.replace("_"," ") },
                 { label: "Target Weight", value: intake.target_weight_lbs ? `${intake.target_weight_lbs} lbs` : null },
                 { label: "Timeline", value: intake.goal_timeline?.replace("_"," ") },
                 { label: "Focus Areas", value: intake.focus_areas?.join(", ") },
                 { label: "Goal Notes", value: intake.goal_notes },
+                { label: "── STATS ──", value: " " },
                 { label: "Height", value: intake.height_ft ? `${intake.height_ft}' ${Math.round((intake.height_in || 0) % 12)}"` : null },
                 { label: "Current Weight", value: intake.current_weight_lbs ? `${intake.current_weight_lbs} lbs` : null },
                 { label: "Body Fat %", value: intake.body_fat_pct ? `${intake.body_fat_pct}%` : null },
+                { label: "── MEASUREMENTS ──", value: " " },
                 { label: "Waist", value: intake.waist_in ? `${intake.waist_in}"` : null },
                 { label: "Chest", value: intake.chest_in ? `${intake.chest_in}"` : null },
                 { label: "Hips", value: intake.hips_in ? `${intake.hips_in}"` : null },
@@ -719,12 +722,14 @@ function ClientDetail({ client, coachId, plans, onBack, onAssignPlan }) {
                 { label: "Left Thigh", value: intake.left_thigh_in ? `${intake.left_thigh_in}"` : null },
                 { label: "Right Arm", value: intake.right_arm_in ? `${intake.right_arm_in}"` : null },
                 { label: "Left Arm", value: intake.left_arm_in ? `${intake.left_arm_in}"` : null },
-                { label: "Bench Press", value: intake.bench_press_lbs ? `${intake.bench_press_lbs} lbs` : null },
-                { label: "Overhead Press", value: intake.overhead_press_lbs ? `${intake.overhead_press_lbs} lbs` : null },
-                { label: "Squat", value: intake.squat_lbs ? `${intake.squat_lbs} lbs` : null },
-                { label: "Hip Thrust", value: intake.hip_thrust_lbs ? `${intake.hip_thrust_lbs} lbs` : null },
-                { label: "Deadlift", value: intake.deadlift_lbs ? `${intake.deadlift_lbs} lbs` : null },
-                { label: "Max Pull-Ups", value: intake.pullups_max !== null ? `${intake.pullups_max}` : null },
+                { label: "── BASELINE BENCHMARKS ──", value: " " },
+                { label: "Bench Press (baseline)", value: intake.bench_press_lbs ? `${intake.bench_press_lbs} lbs` : null },
+                { label: "Overhead Press (baseline)", value: intake.overhead_press_lbs ? `${intake.overhead_press_lbs} lbs` : null },
+                { label: "Squat (baseline)", value: intake.squat_lbs ? `${intake.squat_lbs} lbs` : null },
+                { label: "Hip Thrust (baseline)", value: intake.hip_thrust_lbs ? `${intake.hip_thrust_lbs} lbs` : null },
+                { label: "Deadlift (baseline)", value: intake.deadlift_lbs ? `${intake.deadlift_lbs} lbs` : null },
+                { label: "Max Pull-Ups (baseline)", value: intake.pullups_max !== null ? `${intake.pullups_max} reps` : null },
+                { label: "── TRAINING ──", value: " " },
                 { label: "Training Days/Week", value: intake.training_days_per_week },
                 { label: "Preferred Days", value: intake.preferred_days?.join(", ") },
                 { label: "Session Length", value: intake.session_length_minutes ? `${intake.session_length_minutes} min` : null },
@@ -732,22 +737,34 @@ function ClientDetail({ client, coachId, plans, onBack, onAssignPlan }) {
                 { label: "Injuries", value: intake.injury_flags?.join(", ") || "None" },
                 { label: "Injury Notes", value: intake.injury_notes },
                 { label: "Mobility Limitations", value: intake.mobility_limitations },
+                { label: "── LIFESTYLE ──", value: " " },
                 { label: "Sleep", value: intake.sleep_hours_per_night ? `${intake.sleep_hours_per_night} hrs/night` : null },
                 { label: "Stress Level", value: intake.stress_level ? `${intake.stress_level}/5` : null },
                 { label: "Nutrition Approach", value: intake.nutrition_approach?.replace("_"," ") },
                 { label: "Daily Protein", value: intake.daily_protein_grams ? `${intake.daily_protein_grams}g` : null },
                 { label: "Stretches", value: intake.does_stretch === true ? "Yes" : intake.does_stretch === false ? "No" : null },
+                { label: "── BACKGROUND ──", value: " " },
                 { label: "Experience", value: intake.experience_level },
                 { label: "Knows Progressive Overload", value: intake.knows_progressive_overload === true ? "Yes" : intake.knows_progressive_overload === false ? "No" : null },
                 { label: "Knows Form Basics", value: intake.knows_form_basics === true ? "Yes" : intake.knows_form_basics === false ? "No" : null },
                 { label: "Prior Coaching", value: intake.prior_coaching === true ? "Yes" : intake.prior_coaching === false ? "No" : null },
                 { label: "Additional Notes", value: intake.additional_notes },
-              ].filter(item => item.value).map(({ label, value }, i) => (
-                <div key={i} style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "7px", padding: "10px 13px", marginBottom: "6px", display: "flex", justifyContent: "space-between", gap: "10px" }}>
-                  <span style={{ fontSize: "11px", color: "#aaa", flexShrink: 0 }}>{label}</span>
-                  <span style={{ fontSize: "12px", fontWeight: "500", textAlign: "right", textTransform: "capitalize" }}>{value}</span>
-                </div>
-              ))}
+              ].filter(item => item.value).map(({ label, value }, i) => {
+                // Section dividers
+                if (label.startsWith("──")) {
+                  return (
+                    <div key={i} style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.15em", color: "#999", marginTop: "14px", marginBottom: "8px", paddingBottom: "4px", borderBottom: "1px solid #f0f0f0" }}>
+                      {label.replace(/──/g, "").trim()}
+                    </div>
+                  );
+                }
+                return (
+                  <div key={i} style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "7px", padding: "10px 13px", marginBottom: "6px", display: "flex", justifyContent: "space-between", gap: "10px" }}>
+                    <span style={{ fontSize: "11px", color: "#aaa", flexShrink: 0 }}>{label}</span>
+                    <span style={{ fontSize: "12px", fontWeight: "500", textAlign: "right", textTransform: "capitalize" }}>{value}</span>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

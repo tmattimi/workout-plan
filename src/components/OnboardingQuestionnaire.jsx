@@ -358,36 +358,6 @@ export default function OnboardingQuestionnaire({ client, onComplete }) {
         });
       }
 
-      // 4. Save strength benchmarks as initial PRs
-      const strengthBenchmarks = [
-        { name: "Bench Press", weight: intakeData.bench_press_lbs },
-        { name: "Overhead Tricep Extension", weight: intakeData.overhead_press_lbs },
-        { name: "Barbell Back Squat", weight: intakeData.squat_lbs },
-        { name: "Hip Thrust (Barbell)", weight: intakeData.hip_thrust_lbs },
-        { name: "Romanian Deadlift (Barbell)", weight: intakeData.deadlift_lbs },
-        { name: "Pull-Up", weight: intakeData.pullups_max, isReps: true },
-      ].filter(b => b.weight);
-
-      if (strengthBenchmarks.length > 0) {
-        // Look up exercise IDs
-        const { data: exercises } = await supabase.from("exercises").select("id, name");
-        const exerciseMap = {};
-        if (exercises) exercises.forEach(ex => { exerciseMap[ex.name] = ex.id; });
-
-        for (const benchmark of strengthBenchmarks) {
-          const exerciseId = exerciseMap[benchmark.name];
-          if (exerciseId) {
-            await supabase.from("personal_records").upsert({
-              client_id: client.id,
-              exercise_id: exerciseId,
-              weight_lbs: benchmark.isReps ? 0 : parseFloat(benchmark.weight),
-              reps: benchmark.isReps ? parseInt(benchmark.weight) : 1,
-              achieved_at: new Date().toISOString().slice(0, 10),
-            }, { onConflict: "client_id,exercise_id" });
-          }
-        }
-      }
-
       setStep("complete");
     } catch (err) {
       console.error("Onboarding save error:", err);
