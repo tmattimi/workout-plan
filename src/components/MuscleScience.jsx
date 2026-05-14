@@ -1,342 +1,314 @@
 import { useState } from "react";
-import { muscleGroups, exerciseDatabase } from "../muscleScience";
 
 const F = { fontFamily: "'Georgia','Times New Roman',serif" };
 
-// Simple SVG body diagram — front view with tappable regions
-function BodyDiagram({ onSelect, selectedGroup }) {
-  const regions = [
-    { id: "chest", label: "Chest", path: "M 88,58 L 112,58 L 115,80 L 85,80 Z", cx: 100, cy: 69 },
-    { id: "shoulders", label: "Shoulders", cx: 100, cy: 48, isCircles: true },
-    { id: "back", label: "Back", path: "M 88,58 L 112,58 L 115,80 L 85,80 Z", cx: 100, cy: 69, backSide: true },
-    { id: "triceps", label: "Triceps", cx: 100, cy: 78, isArms: true },
-    { id: "biceps", label: "Biceps", cx: 100, cy: 72, isArms: true },
-    { id: "core", label: "Core", path: "M 88,80 L 112,80 L 110,105 L 90,105 Z", cx: 100, cy: 92 },
-    { id: "quads", label: "Quads", path: "M 90,110 L 100,110 L 98,145 L 88,145 Z", cx: 94, cy: 127 },
-    { id: "hamstrings", label: "Hams", path: "M 100,110 L 110,110 L 112,145 L 102,145 Z", cx: 106, cy: 127 },
-    { id: "glutes", label: "Glutes", path: "M 88,105 L 112,105 L 112,115 L 88,115 Z", cx: 100, cy: 110 },
-    { id: "calves", label: "Calves", cx: 100, cy: 158, isCalves: true },
-  ];
+const MUSCLE_INFO = {
+  chest: {
+    label: "Chest", clinical: "Pectoralis Major & Minor",
+    color: "#2563a8", light: "#dbeafe",
+    overview: "The pectoralis major has two distinct heads with independent motor unit recruitment. Flat pressing alone is insufficient — incline work is non-optional for complete development.",
+    regions: [
+      { name: "Clavicular head (upper pec)", act: "Shoulder flexion from a low angle. Most active at 30–45° incline. Creates the shelf below the collarbone.", exs: ["Incline Dumbbell Press", "Cable Fly (Low-to-High)"] },
+      { name: "Sternal head (lower pec)", act: "Primary force producer in flat pressing. Peak stretch at the bottom of a dumbbell press — controlled eccentrics are especially effective.", exs: ["Dumbbell Bench Press", "Flat Dumbbell Fly"] },
+    ],
+    biomech: "Dumbbell pressing allows greater range than barbell, maximizing sternal head stretch. EMG research confirms the clavicular head is significantly more active at 30–45° incline than flat.",
+    errors: ["Elbows flaring past 75° — shoulder joint stress", "Cutting range short at the bottom — removes peak stretch", "Forward shoulder roll — anterior deltoid dominates", "Scapulae not retracted — impingement risk over time"],
+  },
+  shoulders: {
+    label: "Shoulders", clinical: "Deltoideus — Anterior, Lateral, Posterior",
+    color: "#7c3aed", light: "#ede9fe",
+    overview: "Three distinct heads with different functions. Pressing covers the anterior head well. The lateral and posterior heads require direct work — they get minimal stimulus from pressing.",
+    regions: [
+      { name: "Anterior deltoid", act: "Shoulder flexion. Heavily recruited by pressing. Adding direct front raises on top of heavy pressing is usually unnecessary.", exs: ["Overhead Press (indirect)", "Incline Press (indirect)"] },
+      { name: "Lateral deltoid", act: "Shoulder abduction — drives shoulder width. Cable raises maintain constant tension throughout the range; dumbbells drop to near zero at the bottom.", exs: ["Cable Lateral Raise", "Dumbbell Lateral Raise"] },
+      { name: "Posterior deltoid", act: "Horizontal abduction and external rotation. Most undertrained head. Weakness contributes to anterior impingement under heavy pressing loads.", exs: ["Face Pull", "Rear Delt Fly"] },
+    ],
+    biomech: "Cable lateral raises are mechanically superior to dumbbells — the cable maintains tension perpendicular to the forearm throughout the range. Dumbbells produce zero torque at 0° arm abduction.",
+    errors: ["Shrugging traps during lateral raises", "Too heavy on lateral raises — momentum replaces tension", "Neglecting posterior deltoid entirely", "Not balancing with external rotation work"],
+  },
+  back: {
+    label: "Back", clinical: "Lat. Dorsi, Trapezius, Rhomboids, Erectors",
+    color: "#16a34a", light: "#dcfce7",
+    overview: "Complete development requires both vertical pulling (lat width) and horizontal pulling (mid-back thickness). These train different muscles and cannot substitute for each other.",
+    regions: [
+      { name: "Latissimus dorsi", act: "Creates the V-taper. Attaches to thoracolumbar fascia — full overhead elevation required for maximum stretch. Dead hang at the bottom of every pull is essential.", exs: ["Pull-Up", "Lat Pulldown", "Straight-Arm Pulldown"] },
+      { name: "Middle trapezius", act: "Scapular retraction — pulling shoulder blades together. Most active at peak contraction of rows. The 1-second squeeze at the top is where it works hardest.", exs: ["Seated Cable Row", "Chest-Supported Row"] },
+      { name: "Rhomboids", act: "Retract and downwardly rotate the scapula. Work with mid-trap. Most challenged at full retraction — the end position of a properly executed row.", exs: ["Single-Arm DB Row", "Seated Cable Row"] },
+    ],
+    biomech: "The lat attaches to thoracolumbar fascia, not the spine directly. Cutting the return short on pulldowns removes the stretch stimulus — equivalent to training only the concentric half.",
+    errors: ["Cutting return short on pulldowns — no lat stretch", "Rowing with arms instead of elbows — bicep dominance", "Not pausing at peak scapular retraction", "Pulling bar behind neck"],
+  },
+  biceps: {
+    label: "Biceps", clinical: "Biceps Brachii, Brachialis",
+    color: "#0d9488", light: "#ccfbf1",
+    overview: "Three muscles with different grip requirements. The brachialis — often neglected — is actually the strongest elbow flexor and creates the thickness that pushes the bicep upward.",
+    regions: [
+      { name: "Long head", act: "Creates the peak. Crosses the shoulder joint — reaches maximum stretch when the arm is behind the body. Incline curls specifically target this position.", exs: ["Incline Dumbbell Curl", "Cable Curl (arm behind body)"] },
+      { name: "Short head", act: "Contributes to width. Supination at the top of curls specifically targets this head.", exs: ["Alternating Dumbbell Curl", "Preacher Curl"] },
+      { name: "Brachialis", act: "The strongest elbow flexor — produces more force than the bicep itself. Targeted with neutral grip. When developed, pushes the bicep upward.", exs: ["Hammer Curl", "Cross-Body Curl"] },
+    ],
+    biomech: "Cable curls provide resistance at full arm extension — where dumbbell resistance drops to near zero. This bottom-range tension is the primary mechanical advantage of cables.",
+    errors: ["Not supinating at top of curls — short head bypassed", "Torso swing — removes tension", "Short range at bottom — removes stretch stimulus", "Elbows drifting forward on incline curls"],
+  },
+  triceps: {
+    label: "Triceps", clinical: "Triceps Brachii — Long, Lateral, Medial",
+    color: "#1d4ed8", light: "#dbeafe",
+    overview: "Two-thirds of upper arm mass. The long head (~55% of tricep) crosses the shoulder joint and can only be fully trained overhead. Pushdowns alone neglect the majority of the muscle.",
+    regions: [
+      { name: "Long head", act: "~55% of tricep cross-section. Fully stretched only with arm overhead. Significantly more active in overhead extension than pushdowns.", exs: ["Overhead Tricep Extension", "Skull Crusher"] },
+      { name: "Lateral head", act: "Creates the horseshoe shape from the side. Does not cross the shoulder — elbow position alone determines its length.", exs: ["Tricep Rope Pushdown", "Close-Grip Press"] },
+      { name: "Medial head", act: "Deep stabilizer. Always partially active. Cannot be isolated — trained through all tricep movements.", exs: ["All tricep exercises (synergist)"] },
+    ],
+    biomech: "Research confirms the long head is substantially more active in overhead extension than pushdowns — by a margin that makes overhead work indispensable.",
+    errors: ["Pushdowns only — long head undertrained", "Elbows flaring during overhead extensions", "Upper arms moving — elbow lockdown breaks", "Not spreading rope at full extension"],
+  },
+  core: {
+    label: "Core", clinical: "TVA, Rectus Abdominis, Obliques",
+    color: "#059669", light: "#d1fae5",
+    overview: "The core is a canister of muscles surrounding the spine. The deep TVA pre-activates before any limb movement. Training visible abs without deep stability is building walls without a foundation.",
+    regions: [
+      { name: "Transverse abdominis (TVA)", act: "The deepest layer — wraps like a corset. Creates intra-abdominal pressure when braced, stiffening the spine under load. The most important core muscle for injury prevention.", exs: ["Dead Bug", "Plank", "Ab Wheel Rollout"] },
+      { name: "Rectus abdominis", act: "The six-pack. Responds to progressive overload. Cable crunches and hanging raises allow load to be added — unlike bodyweight crunches which plateau rapidly.", exs: ["Cable Crunch", "Hanging Leg Raise"] },
+      { name: "Obliques", act: "More critical for resisting rotation than producing it. Anti-rotation (Pallof Press) trains the pattern obliques actually perform during compound lifts.", exs: ["Pallof Press", "Side Plank"] },
+    ],
+    biomech: "McGill: intra-abdominal pressure from TVA bracing is the most effective strategy for reducing disc compression under load. The 360° brace — expand all directions, then brace hard — is the evidence-based technique.",
+    errors: ["Crunching without posterior pelvic tilt — hip flexors dominate", "Not loading progressively", "Training abs without deep stability foundation", "Over-training flexion, neglecting anti-rotation"],
+  },
+  glutes: {
+    label: "Glutes", clinical: "Gluteus Maximus, Medius, Minimus",
+    color: "#b91c1c", light: "#fee2e2",
+    overview: "The largest muscle group in the body. Peak glute max activation occurs at full hip extension — exactly where the hip thrust loads it. This is the mechanical reason the thrust outperforms the squat.",
+    regions: [
+      { name: "Gluteus maximus", act: "Peak activation at full hip extension. Hip thrust creates a horizontal resistance vector — peak resistance coincides with peak activation.", exs: ["Hip Thrust (Barbell)", "Single-Leg Hip Thrust", "Romanian Deadlift"] },
+      { name: "Gluteus medius", act: "Hip abduction and pelvic stabilization. Weakness causes knee valgus — inward knee collapse during squats and lunges.", exs: ["Bulgarian Split Squat", "Single-Leg Hip Thrust"] },
+    ],
+    biomech: "Contreras et al. (2015): hip thrust produces significantly higher glute max EMG than squats or deadlifts. The horizontal resistance vector loads directly into hip extension rather than sharing load across multiple muscles.",
+    errors: ["Hip hyperextension at top — lumbar overload", "Pushing through toes — quad dominance", "Shallow range — missing peak extension", "Bilateral only — glute medius weakness hidden"],
+  },
+  hamstrings: {
+    label: "Hamstrings", clinical: "Biceps Femoris, Semimembranosus, Semitendinosus",
+    color: "#b45309", light: "#fef3c7",
+    overview: "Perform both knee flexion and hip extension. RDLs and leg curls train different muscles through different mechanisms — they are not interchangeable.",
+    regions: [
+      { name: "Biceps femoris long head", act: "Most important for hypertrophy. Crosses both hip and knee. Maximally stimulated by hip hinge exercises loading it in the stretched position.", exs: ["Romanian Deadlift", "Nordic Curl"] },
+      { name: "Semimembranosus", act: "Larger medial hamstring. Primary function is knee flexion. Best targeted through leg curl variations.", exs: ["Single-Leg Hamstring Curl", "Lying Leg Curl"] },
+      { name: "Semitendinosus", act: "Superficial medial hamstring. Works alongside the semimembranosus. Trained identically through leg curl variations.", exs: ["Single-Leg Hamstring Curl", "Lying Leg Curl"] },
+    ],
+    biomech: "Maeo et al. (2021): stretch-loaded training (RDL) produces significantly greater hypertrophy than peak-contraction training (leg curls alone). Loading at maximum length drives superior adaptation.",
+    errors: ["Lower back rounding in RDLs — hip hinge lost", "Excessive knee bend — RDL becomes a squat", "Leg curl short at bottom — stretch removed", "Bilateral only — asymmetry masked"],
+  },
+  quads: {
+    label: "Quadriceps", clinical: "Rectus Femoris, Vastus Lateralis, VMO, Vastus Intermedius",
+    color: "#d97706", light: "#fef9c3",
+    overview: "Four muscles with different functions. The rectus femoris crosses the hip joint — hip position affects its challenge in ways the vasti are not. The VMO stabilizes the patella.",
+    regions: [
+      { name: "Rectus femoris", act: "Only quad crossing the hip. Most challenged with hip simultaneously extended — the split squat achieves this uniquely well.", exs: ["Bulgarian Split Squat", "Goblet Squat (deep)"] },
+      { name: "Vastus lateralis", act: "Largest vasti — primary force producer. Creates the lateral sweep. Consistently recruited across most knee extension exercises.", exs: ["Leg Press", "Leg Extension"] },
+      { name: "Vastus medialis (VMO)", act: "Teardrop above the knee. Critical for final 15–30° of extension and patellar stabilization. VMO weakness causes lateral patellar tracking — patellofemoral pain syndrome.", exs: ["Leg Extension (pause at top)", "Step-Up"] },
+    ],
+    biomech: "The VMO fiber angle (~55°) pulls the patella medially into the femoral groove. When the VMO is weak relative to the vastus lateralis, the patella tracks laterally — the primary patellofemoral pain mechanism.",
+    errors: ["Knee valgus under load", "Shallow squat depth — rectus femoris undertrained", "No pause at top of leg extensions — VMO range skipped", "Aggressive lockout on leg press"],
+  },
+  calves: {
+    label: "Calves", clinical: "Gastrocnemius, Soleus",
+    color: "#c2410c", light: "#ffedd5",
+    overview: "Two muscles with different fiber types and different training positions. Knee position is the physiological selector — straight knee for gastrocnemius, bent knee for soleus.",
+    regions: [
+      { name: "Gastrocnemius (2 heads)", act: "Crosses both knee and ankle — active only with straight knee. Creates the rounded shape from behind. Standing raises with straight knee are the only way to fully activate it.", exs: ["Standing Calf Raise"] },
+      { name: "Soleus", act: "Does not cross the knee — active regardless. Slow-twitch dominant, responds to higher reps (15–25). Seated raises with bent knee isolate it by deactivating the gastrocnemius.", exs: ["Seated Calf Raise"] },
+    ],
+    biomech: "The gastrocnemius becomes actively insufficient when the knee is flexed. Knee position is therefore the physiological selector between the two muscles — a mechanical fact most calf training ignores.",
+    errors: ["Standing raises only — soleus never trained", "Partial range — heel not dropping fully", "Bouncing at bottom — elastic recoil replaces muscle force", "Low reps on seated raises — wrong fiber type for soleus"],
+  },
+};
 
-  return (
-    <svg viewBox="0 0 200 200" style={{ width: "100%", maxWidth: "200px", margin: "0 auto", display: "block" }}>
-      {/* Body silhouette */}
-      <g fill="#f0ede8" stroke="#ddd" strokeWidth="0.5">
-        {/* Head */}
-        <circle cx="100" cy="28" r="16" />
-        {/* Neck */}
-        <rect x="94" y="43" width="12" height="8" rx="2" />
-        {/* Torso */}
-        <rect x="82" y="51" width="36" height="62" rx="4" />
-        {/* Left arm */}
-        <rect x="62" y="53" width="18" height="52" rx="6" />
-        {/* Right arm */}
-        <rect x="120" y="53" width="18" height="52" rx="6" />
-        {/* Left forearm */}
-        <rect x="58" y="107" width="15" height="40" rx="6" />
-        {/* Right forearm */}
-        <rect x="127" y="107" width="15" height="40" rx="6" />
-        {/* Left leg */}
-        <rect x="84" y="113" width="16" height="50" rx="6" />
-        {/* Right leg */}
-        <rect x="100" y="113" width="16" height="50" rx="6" />
-        {/* Left calf */}
-        <rect x="84" y="164" width="14" height="30" rx="5" />
-        {/* Right calf */}
-        <rect x="102" y="164" width="14" height="30" rx="5" />
-      </g>
-
-      {/* Interactive regions */}
-      {/* Chest */}
-      <rect x="84" y="54" width="32" height="24" rx="2" fill={selectedGroup === "chest" ? "#2563a8" : "transparent"} fillOpacity="0.3" stroke={selectedGroup === "chest" ? "#2563a8" : "transparent"} strokeWidth="1.5" style={{ cursor: "pointer" }} onClick={() => onSelect("chest")} />
-      <text x="100" y="68" textAnchor="middle" fontSize="6" fill={selectedGroup === "chest" ? "#2563a8" : "#888"} style={{ cursor: "pointer", pointerEvents: "none" }}>Chest</text>
-
-      {/* Shoulders */}
-      <circle cx="72" cy="60" r="9" fill={selectedGroup === "shoulders" ? "#7a3aa0" : "transparent"} fillOpacity="0.3" stroke={selectedGroup === "shoulders" ? "#7a3aa0" : "transparent"} strokeWidth="1.5" style={{ cursor: "pointer" }} onClick={() => onSelect("shoulders")} />
-      <circle cx="128" cy="60" r="9" fill={selectedGroup === "shoulders" ? "#7a3aa0" : "transparent"} fillOpacity="0.3" stroke={selectedGroup === "shoulders" ? "#7a3aa0" : "transparent"} strokeWidth="1.5" style={{ cursor: "pointer" }} onClick={() => onSelect("shoulders")} />
-      <text x="63" y="74" textAnchor="middle" fontSize="5.5" fill={selectedGroup === "shoulders" ? "#7a3aa0" : "#888"} style={{ pointerEvents: "none" }}>Shoulders</text>
-
-      {/* Biceps */}
-      <rect x="63" y="58" width="15" height="22" rx="4" fill={selectedGroup === "biceps" ? "#2d7a1e" : "transparent"} fillOpacity="0.3" stroke={selectedGroup === "biceps" ? "#2d7a1e" : "transparent"} strokeWidth="1.5" style={{ cursor: "pointer" }} onClick={() => onSelect("biceps")} />
-      <rect x="122" y="58" width="15" height="22" rx="4" fill={selectedGroup === "biceps" ? "#2d7a1e" : "transparent"} fillOpacity="0.3" stroke={selectedGroup === "biceps" ? "#2d7a1e" : "transparent"} strokeWidth="1.5" style={{ cursor: "pointer" }} onClick={() => onSelect("biceps")} />
-      <text x="70" y="72" textAnchor="middle" fontSize="5" fill={selectedGroup === "biceps" ? "#2d7a1e" : "#888"} style={{ pointerEvents: "none" }}>Bi</text>
-
-      {/* Triceps (back of arm — shown as outline) */}
-      <rect x="63" y="80" width="15" height="22" rx="4" fill={selectedGroup === "triceps" ? "#2563a8" : "transparent"} fillOpacity="0.25" stroke={selectedGroup === "triceps" ? "#2563a8" : "transparent"} strokeWidth="1.5" strokeDasharray="2,2" style={{ cursor: "pointer" }} onClick={() => onSelect("triceps")} />
-      <rect x="122" y="80" width="15" height="22" rx="4" fill={selectedGroup === "triceps" ? "#2563a8" : "transparent"} fillOpacity="0.25" stroke={selectedGroup === "triceps" ? "#2563a8" : "transparent"} strokeWidth="1.5" strokeDasharray="2,2" style={{ cursor: "pointer" }} onClick={() => onSelect("triceps")} />
-      <text x="70" y="93" textAnchor="middle" fontSize="5" fill={selectedGroup === "triceps" ? "#2563a8" : "#888"} style={{ pointerEvents: "none" }}>Tri</text>
-
-      {/* Core */}
-      <rect x="85" y="78" width="30" height="30" rx="2" fill={selectedGroup === "core" ? "#147a50" : "transparent"} fillOpacity="0.3" stroke={selectedGroup === "core" ? "#147a50" : "transparent"} strokeWidth="1.5" style={{ cursor: "pointer" }} onClick={() => onSelect("core")} />
-      <text x="100" y="96" textAnchor="middle" fontSize="6" fill={selectedGroup === "core" ? "#147a50" : "#888"} style={{ cursor: "pointer", pointerEvents: "none" }}>Core</text>
-
-      {/* Back (dashed — behind) */}
-      <rect x="84" y="54" width="32" height="54" rx="2" fill={selectedGroup === "back" ? "#2d7a1e" : "transparent"} fillOpacity="0.15" stroke={selectedGroup === "back" ? "#2d7a1e" : "transparent"} strokeWidth="1.5" strokeDasharray="3,2" style={{ cursor: "pointer" }} onClick={() => onSelect("back")} />
-      <text x="100" y="83" textAnchor="middle" fontSize="5.5" fill={selectedGroup === "back" ? "#2d7a1e" : "#999"} style={{ pointerEvents: "none" }}>Back ↩</text>
-
-      {/* Glutes */}
-      <rect x="84" y="109" width="32" height="14" rx="2" fill={selectedGroup === "glutes" ? "#a02a2a" : "transparent"} fillOpacity="0.3" stroke={selectedGroup === "glutes" ? "#a02a2a" : "transparent"} strokeWidth="1.5" style={{ cursor: "pointer" }} onClick={() => onSelect("glutes")} />
-      <text x="100" y="119" textAnchor="middle" fontSize="5.5" fill={selectedGroup === "glutes" ? "#a02a2a" : "#888"} style={{ cursor: "pointer", pointerEvents: "none" }}>Glutes</text>
-
-      {/* Quads */}
-      <rect x="85" y="123" width="14" height="36" rx="4" fill={selectedGroup === "quads" ? "#c47a0a" : "transparent"} fillOpacity="0.35" stroke={selectedGroup === "quads" ? "#c47a0a" : "transparent"} strokeWidth="1.5" style={{ cursor: "pointer" }} onClick={() => onSelect("quads")} />
-      <rect x="101" y="123" width="14" height="36" rx="4" fill={selectedGroup === "quads" ? "#c47a0a" : "transparent"} fillOpacity="0.35" stroke={selectedGroup === "quads" ? "#c47a0a" : "transparent"} strokeWidth="1.5" style={{ cursor: "pointer" }} onClick={() => onSelect("quads")} />
-      <text x="92" y="143" textAnchor="middle" fontSize="5.5" fill={selectedGroup === "quads" ? "#c47a0a" : "#888"} style={{ pointerEvents: "none" }}>Quads</text>
-
-      {/* Hamstrings (behind quads — dashed) */}
-      <rect x="85" y="123" width="30" height="36" rx="4" fill="transparent" stroke={selectedGroup === "hamstrings" ? "#c47a0a" : "transparent"} strokeWidth="1.5" strokeDasharray="2,2" style={{ cursor: "pointer" }} onClick={() => onSelect("hamstrings")} />
-      <text x="108" y="155" textAnchor="middle" fontSize="5" fill={selectedGroup === "hamstrings" ? "#c47a0a" : "#999"} style={{ pointerEvents: "none" }}>Hams↩</text>
-
-      {/* Calves */}
-      <rect x="85" y="161" width="12" height="26" rx="4" fill={selectedGroup === "calves" ? "#c47a0a" : "transparent"} fillOpacity="0.35" stroke={selectedGroup === "calves" ? "#c47a0a" : "transparent"} strokeWidth="1.5" style={{ cursor: "pointer" }} onClick={() => onSelect("calves")} />
-      <rect x="103" y="161" width="12" height="26" rx="4" fill={selectedGroup === "calves" ? "#c47a0a" : "transparent"} fillOpacity="0.35" stroke={selectedGroup === "calves" ? "#c47a0a" : "transparent"} strokeWidth="1.5" style={{ cursor: "pointer" }} onClick={() => onSelect("calves")} />
-      <text x="100" y="179" textAnchor="middle" fontSize="5.5" fill={selectedGroup === "calves" ? "#c47a0a" : "#888"} style={{ pointerEvents: "none" }}>Calves</text>
-    </svg>
-  );
-}
+const SEARCH_TERMS = {
+  chest: ["pec", "pectoral", "chest", "bench"],
+  shoulders: ["delt", "deltoid", "shoulder", "ohp", "overhead"],
+  back: ["lat", "trap", "rhomboid", "back", "pull", "row"],
+  biceps: ["bicep", "curl", "brachialis", "arm"],
+  triceps: ["tricep", "pushdown", "extension", "arm"],
+  core: ["abs", "core", "abdominal", "oblique", "tva"],
+  glutes: ["glute", "hip thrust", "butt", "posterior"],
+  hamstrings: ["hamstring", "rdl", "deadlift", "posterior"],
+  quads: ["quad", "squat", "knee", "vmo", "rectus"],
+  calves: ["calf", "calves", "gastrocnemius", "soleus"],
+};
 
 export default function MuscleScience() {
-  const [selectedGroup, setSelectedGroup] = useState(null);
-  const [expandedRegion, setExpandedRegion] = useState(null);
-  const [dbFilter, setDbFilter] = useState("all");
-  const [dbView, setDbView] = useState("groups"); // groups | database | search
-  const [searchQuery, setSearchQuery] = useState("");
+  const [selected, setSelected] = useState(null);
+  const [activeRegion, setActiveRegion] = useState(null);
+  const [activeTab, setActiveTab] = useState("anatomy");
+  const [search, setSearch] = useState("");
 
-  const group = muscleGroups.find(g => g.id === selectedGroup);
+  const filtered = search.trim()
+    ? Object.entries(MUSCLE_INFO).filter(([id]) =>
+        SEARCH_TERMS[id]?.some(t => t.includes(search.toLowerCase())) ||
+        MUSCLE_INFO[id].label.toLowerCase().includes(search.toLowerCase())
+      ).map(([id]) => id)
+    : Object.keys(MUSCLE_INFO);
 
-  // Exercises for selected group
-  const groupExercises = selectedGroup
-    ? exerciseDatabase.filter(e => e.primaryGroup === selectedGroup || e.secondaryGroups?.includes(selectedGroup))
-    : [];
+  function openMuscle(id) {
+    setSelected(id);
+    setActiveRegion(null);
+    setActiveTab("anatomy");
+  }
 
-  // Database filtered
-  const filteredExercises = exerciseDatabase.filter(ex => {
-    const matchesFilter = dbFilter === "all" || ex.primaryGroup === dbFilter;
-    const matchesSearch = !searchQuery || ex.name.toLowerCase().includes(searchQuery.toLowerCase()) || ex.primaryGroup.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesFilter && matchesSearch;
-  });
+  if (selected) {
+    const m = MUSCLE_INFO[selected];
+    const tabs = [["anatomy", "Anatomy"], ["training", "Biomechanics"], ["errors", "Common Errors"]];
 
-  if (dbView === "database") {
     return (
-      <div style={{ padding: "16px 16px 40px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
-          <button onClick={() => setDbView("groups")} style={{ background: "none", border: "none", color: "#555", fontSize: "13px", cursor: "pointer", ...F }}>←</button>
-          <div style={{ fontSize: "16px", fontWeight: "normal" }}>Exercise Database</div>
-        </div>
-
-        {/* Search */}
-        <input
-          type="text" placeholder="Search exercises..."
-          value={searchQuery}
-          onChange={e => setSearchQuery(e.target.value)}
-          style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1px solid #e0e0e0", fontSize: "13px", marginBottom: "10px", ...F }}
-        />
-
-        {/* Filter by muscle group */}
-        <div style={{ display: "flex", gap: "5px", overflowX: "auto", paddingBottom: "4px", marginBottom: "12px" }}>
-          {["all", ...muscleGroups.map(g => g.id)].map(f => (
-            <button key={f} onClick={() => setDbFilter(f)} style={{
-              flex: "0 0 auto", background: dbFilter === f ? "#111" : "#fff",
-              color: dbFilter === f ? "#fff" : "#555",
-              border: "1px solid #e0e0e0", borderRadius: "20px",
-              padding: "4px 12px", fontSize: "11px", cursor: "pointer", ...F,
-              whiteSpace: "nowrap",
-            }}>
-              {f === "all" ? "All" : muscleGroups.find(g => g.id === f)?.name || f}
-            </button>
-          ))}
-        </div>
-
-        <div style={{ fontSize: "10px", color: "#aaa", marginBottom: "10px" }}>{filteredExercises.length} exercises</div>
-
-        {filteredExercises.map((ex, i) => {
-          const mg = muscleGroups.find(g => g.id === ex.primaryGroup);
-          const region = mg?.regions?.find(r => r.name === ex.primaryRegion);
-          return (
-            <div key={i} style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "7px", padding: "12px 14px", marginBottom: "7px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "4px" }}>
-                <div style={{ fontSize: "13px", fontWeight: "600" }}>{ex.name}</div>
-                <span style={{ fontSize: "9px", background: mg?.color || "#f5f5f5", color: mg?.accent || "#555", padding: "2px 7px", borderRadius: "20px", border: `1px solid ${mg?.accent || "#ddd"}44`, whiteSpace: "nowrap" }}>
-                  {mg?.emoji} {mg?.name}
-                </span>
-              </div>
-              <div style={{ fontSize: "11px", color: "#777", marginBottom: "5px" }}>
-                Primary: {ex.primaryRegion}
-              </div>
-              {ex.secondaryGroups?.length > 0 && (
-                <div style={{ fontSize: "10px", color: "#aaa" }}>
-                  Also works: {ex.secondaryGroups.map(sg => muscleGroups.find(g => g.id === sg)?.name).join(", ")}
-                </div>
-              )}
-              <div style={{ display: "flex", gap: "5px", marginTop: "6px" }}>
-                <span style={{ fontSize: "9px", background: "#f5f5f5", color: "#777", padding: "2px 7px", borderRadius: "20px" }}>{ex.category}</span>
-                <span style={{ fontSize: "9px", background: "#f5f5f5", color: "#777", padding: "2px 7px", borderRadius: "20px" }}>{ex.difficulty}</span>
-              </div>
-              {region?.scienceNote && (
-                <div style={{ marginTop: "8px", fontSize: "10px", color: "#666", lineHeight: "1.55", background: "#f9f9f7", borderRadius: "5px", padding: "7px 9px" }}>
-                  {region.scienceNote}
-                </div>
-              )}
+      <div style={{ padding: "0 0 60px" }}>
+        {/* Header */}
+        <div style={{ padding: "14px 16px 10px", borderBottom: "1px solid #f0f0f0" }}>
+          <button onClick={() => setSelected(null)} style={{ background: "none", border: "none", color: "#888", fontSize: "13px", cursor: "pointer", ...F, padding: "0 0 10px", display: "flex", alignItems: "center", gap: "5px" }}>
+            ← All muscle groups
+          </button>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+            <div>
+              <div style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.15em", color: "#aaa", marginBottom: "3px" }}>Anatomy & Training</div>
+              <div style={{ fontSize: "22px", fontWeight: "normal", color: m.color, ...F }}>{m.label}</div>
+              <div style={{ fontSize: "11px", color: "#aaa", fontStyle: "italic", marginTop: "2px" }}>{m.clinical}</div>
             </div>
+            <span style={{ fontSize: "10px", background: m.light, color: m.color, padding: "3px 10px", borderRadius: "20px", border: `1px solid ${m.color}33`, marginTop: "4px" }}>
+              {m.regions.length} regions
+            </span>
+          </div>
+        </div>
+
+        {/* Zygote Body 3D viewer */}
+        <div style={{ background: "#1a1a1a", position: "relative" }}>
+          <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.12em", color: "#555", padding: "8px 14px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span>3D Anatomy Viewer</span>
+            <span style={{ color: "#444" }}>Rotate · Zoom · Pinch</span>
+          </div>
+          <iframe
+            src={`https://www.zygotebody.com`}
+            width="100%"
+            height="340"
+            frameBorder="0"
+            allow="fullscreen"
+            style={{ display: "block" }}
+            title="3D Anatomy — Zygote Body"
+          />
+          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(transparent, #1a1a1a)", height: "40px", pointerEvents: "none" }} />
+        </div>
+
+        {/* Overview */}
+        <div style={{ padding: "14px 16px 0" }}>
+          <div style={{ fontSize: "12px", color: "#555", lineHeight: "1.75", marginBottom: "14px", padding: "10px 13px", background: "#f9f9f7", borderLeft: `3px solid ${m.color}`, borderRadius: "0 7px 7px 0" }}>
+            {m.overview}
+          </div>
+
+          {/* Tabs */}
+          <div style={{ display: "flex", gap: "4px", marginBottom: "14px", borderBottom: "1px solid #f0f0f0" }}>
+            {tabs.map(([t, l]) => (
+              <button key={t} onClick={() => setActiveTab(t)} style={{
+                background: "none", border: "none", padding: "8px 12px",
+                borderBottom: activeTab === t ? `2px solid ${m.color}` : "2px solid transparent",
+                color: activeTab === t ? m.color : "#aaa",
+                fontSize: "11px", cursor: "pointer", ...F,
+                fontWeight: activeTab === t ? "600" : "400",
+              }}>{l}</button>
+            ))}
+          </div>
+
+          {/* Anatomy tab */}
+          {activeTab === "anatomy" && (
+            <div>
+              {m.regions.map((r, i) => {
+                const isOpen = activeRegion === i;
+                return (
+                  <div key={i} style={{ border: "1px solid #e8e8e8", borderRadius: "8px", marginBottom: "7px", overflow: "hidden" }}>
+                    <button onClick={() => setActiveRegion(isOpen ? null : i)} style={{ width: "100%", background: isOpen ? m.light : "#fff", border: "none", padding: "11px 14px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", ...F, textAlign: "left" }}>
+                      <div>
+                        <div style={{ fontSize: "12px", fontWeight: "600", color: isOpen ? m.color : "#333" }}>{r.name}</div>
+                      </div>
+                      <span style={{ color: "#ccc", fontSize: "12px" }}>{isOpen ? "▲" : "▼"}</span>
+                    </button>
+                    {isOpen && (
+                      <div style={{ padding: "10px 14px 13px", borderTop: `1px solid ${m.color}22` }}>
+                        <div style={{ fontSize: "12px", color: "#444", lineHeight: "1.75", marginBottom: "10px" }}>{r.act}</div>
+                        <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.12em", color: "#aaa", marginBottom: "6px" }}>Key Exercises</div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "5px" }}>
+                          {r.exs.map((e, ei) => (
+                            <span key={ei} style={{ fontSize: "11px", background: m.light, color: m.color, border: `1px solid ${m.color}33`, padding: "3px 10px", borderRadius: "20px" }}>{e}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Biomechanics tab */}
+          {activeTab === "training" && (
+            <div style={{ background: "#f9f9f7", borderRadius: "8px", padding: "13px 14px", fontSize: "12px", color: "#444", lineHeight: "1.8" }}>
+              {m.biomech}
+            </div>
+          )}
+
+          {/* Errors tab */}
+          {activeTab === "errors" && (
+            <div>
+              {m.errors.map((e, i) => (
+                <div key={i} style={{ display: "flex", gap: "10px", alignItems: "flex-start", padding: "10px 0", borderBottom: "1px solid #f5f5f5" }}>
+                  <div style={{ width: "20px", height: "20px", borderRadius: "50%", background: m.light, color: m.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px", fontWeight: "600", flexShrink: 0, border: `1px solid ${m.color}33` }}>
+                    {i + 1}
+                  </div>
+                  <div style={{ fontSize: "12px", color: "#444", lineHeight: "1.65" }}>{e}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Overview
+  return (
+    <div style={{ padding: "16px 16px 60px" }}>
+      <div style={{ marginBottom: "14px" }}>
+        <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.2em", color: "#999", marginBottom: "3px" }}>Anatomy & Training</div>
+        <div style={{ fontSize: "20px", fontWeight: "normal", ...F }}>Muscle Science</div>
+      </div>
+
+      {/* Search */}
+      <input
+        type="text"
+        placeholder="Search muscle groups..."
+        value={search}
+        onChange={e => setSearch(e.target.value)}
+        style={{ width: "100%", padding: "9px 13px", borderRadius: "8px", border: "1px solid #e0e0e0", fontSize: "13px", marginBottom: "14px", ...F }}
+      />
+
+      {/* Grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+        {filtered.map(id => {
+          const m = MUSCLE_INFO[id];
+          return (
+            <button key={id} onClick={() => openMuscle(id)} style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "9px", padding: "13px 12px", textAlign: "left", cursor: "pointer", ...F }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "7px", marginBottom: "5px" }}>
+                <div style={{ width: "10px", height: "10px", borderRadius: "50%", background: m.color, flexShrink: 0 }} />
+                <div style={{ fontSize: "13px", fontWeight: "600", color: "#1a1a1a" }}>{m.label}</div>
+              </div>
+              <div style={{ fontSize: "10px", color: "#aaa", marginBottom: "7px", lineHeight: "1.4" }}>{m.clinical}</div>
+              <div style={{ fontSize: "9px", background: m.light, color: m.color, padding: "2px 8px", borderRadius: "20px", display: "inline-block" }}>
+                {m.regions.length} regions
+              </div>
+            </button>
           );
         })}
       </div>
-    );
-  }
 
-  // Detail view for a selected muscle group
-  if (selectedGroup && group) {
-    return (
-      <div style={{ padding: "16px 16px 40px" }}>
-        <button onClick={() => { setSelectedGroup(null); setExpandedRegion(null); }} style={{ background: "none", border: "none", color: group.accent, fontSize: "13px", cursor: "pointer", marginBottom: "12px", ...F }}>
-          ← All Muscle Groups
-        </button>
-
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "6px" }}>
-          <span style={{ fontSize: "28px" }}>{group.emoji}</span>
-          <div>
-            <div style={{ fontSize: "20px", fontWeight: "normal" }}>{group.name}</div>
-          </div>
-        </div>
-
-        <div style={{ fontSize: "12px", color: "#555", lineHeight: "1.65", marginBottom: "14px", padding: "10px 12px", background: group.color, borderRadius: "7px", borderLeft: `3px solid ${group.accent}` }}>
-          {group.summary}
-        </div>
-
-        {/* Regions */}
-        <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.15em", color: "#999", marginBottom: "10px" }}>Anatomy</div>
-        {group.regions.map((region, i) => (
-          <div key={i} style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "7px", marginBottom: "7px", overflow: "hidden" }}>
-            <button
-              onClick={() => setExpandedRegion(expandedRegion === i ? null : i)}
-              style={{ width: "100%", background: "transparent", border: "none", padding: "12px 14px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", ...F, textAlign: "left" }}
-            >
-              <div>
-                <div style={{ fontSize: "13px", fontWeight: "600", color: group.accent }}>{region.name}</div>
-                <div style={{ fontSize: "10px", color: "#aaa", marginTop: "2px" }}>
-                  {region.bestExercises.slice(0, 2).join(" · ")}
-                </div>
-              </div>
-              <span style={{ color: "#ccc", fontSize: "12px" }}>{expandedRegion === i ? "▲" : "▼"}</span>
-            </button>
-            {expandedRegion === i && (
-              <div style={{ padding: "0 14px 14px", borderTop: "1px solid #f0f0f0" }}>
-                <div style={{ fontSize: "11px", color: "#444", lineHeight: "1.65", marginBottom: "10px", paddingTop: "10px" }}>
-                  {region.role}
-                </div>
-                <div style={{ fontSize: "10px", color: "#555", lineHeight: "1.6", background: "#f9f9f7", borderRadius: "5px", padding: "8px 10px", marginBottom: "8px" }}>
-                  <strong style={{ color: group.accent }}>Research note: </strong>{region.scienceNote}
-                </div>
-                <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.1em", color: "#aaa", marginBottom: "5px" }}>Best exercises</div>
-                <div style={{ display: "flex", gap: "5px", flexWrap: "wrap" }}>
-                  {region.bestExercises.map((ex, ei) => (
-                    <span key={ei} style={{ fontSize: "10px", background: group.color, color: group.accent, padding: "3px 9px", borderRadius: "20px", border: `1px solid ${group.accent}33` }}>{ex}</span>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        ))}
-
-        {/* Weekly strategy */}
-        <div style={{ background: "#111", borderRadius: "7px", padding: "12px 14px", marginBottom: "14px" }}>
-          <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.1em", color: "#666", marginBottom: "6px" }}>In Your Plan</div>
-          <div style={{ fontSize: "11px", color: "#bbb", lineHeight: "1.65" }}>{group.weeklyStrategy}</div>
-        </div>
-
-        {/* Exercises for this group */}
-        <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.15em", color: "#999", marginBottom: "10px" }}>
-          All Exercises ({groupExercises.length})
-        </div>
-        {groupExercises.map((ex, i) => (
-          <div key={i} style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "7px", padding: "10px 13px", marginBottom: "6px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "3px" }}>
-              <span style={{ fontSize: "12px", fontWeight: "600" }}>{ex.name}</span>
-              <span style={{ fontSize: "9px", background: ex.primaryGroup === selectedGroup ? group.color : "#f5f5f5", color: ex.primaryGroup === selectedGroup ? group.accent : "#888", padding: "2px 7px", borderRadius: "20px" }}>
-                {ex.primaryGroup === selectedGroup ? "Primary" : "Secondary"}
-              </span>
-            </div>
-            <div style={{ fontSize: "10px", color: "#aaa" }}>{ex.primaryRegion} · {ex.category}</div>
-          </div>
-        ))}
-
-        {/* Alternatives */}
-        <div style={{ marginTop: "10px" }}>
-          <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.15em", color: "#999", marginBottom: "8px" }}>Alternative Exercises</div>
-          <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
-            {group.alternatives.map((alt, i) => (
-              <span key={i} style={{ fontSize: "11px", background: "#f5f5f3", color: "#555", padding: "5px 11px", borderRadius: "20px", border: "1px solid #e8e8e8" }}>{alt}</span>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Main overview — grid of muscle groups with body diagram
-  return (
-    <div style={{ padding: "16px 16px 40px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
-        <div>
-          <div style={{ fontSize: "9px", letterSpacing: "0.2em", textTransform: "uppercase", color: "#999", marginBottom: "2px" }}>Muscle Science</div>
-          <div style={{ fontSize: "16px", fontWeight: "normal" }}>Anatomy and Training</div>
-        </div>
-        <button
-          onClick={() => setDbView("database")}
-          style={{ background: "#f5f5f3", color: "#555", border: "1px solid #e0e0e0", borderRadius: "20px", padding: "6px 14px", fontSize: "11px", cursor: "pointer", ...F }}
-        >
-          Exercise DB
-        </button>
-      </div>
-
-      {/* Body diagram */}
-      <div style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "8px", padding: "14px", marginBottom: "14px" }}>
-        <div style={{ fontSize: "10px", color: "#aaa", textAlign: "center", marginBottom: "8px" }}>Tap a muscle group to explore</div>
-        <BodyDiagram onSelect={setSelectedGroup} selectedGroup={selectedGroup} />
-        {!selectedGroup && (
-          <div style={{ fontSize: "10px", color: "#bbb", textAlign: "center", marginTop: "8px" }}>
-            Dashed outlines are muscles on the back of the body
-          </div>
-        )}
-      </div>
-
-      {/* Muscle group cards */}
-      <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.15em", color: "#999", marginBottom: "10px" }}>All Muscle Groups</div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
-        {muscleGroups.map(group => (
-          <button
-            key={group.id}
-            onClick={() => setSelectedGroup(group.id)}
-            style={{
-              background: "#fff", border: `1px solid #e8e8e8`,
-              borderRadius: "8px", padding: "12px", textAlign: "left",
-              cursor: "pointer", ...F,
-            }}
-          >
-            <div style={{ fontSize: "22px", marginBottom: "4px" }}>{group.emoji}</div>
-            <div style={{ fontSize: "13px", fontWeight: "600", color: group.accent, marginBottom: "2px" }}>{group.name}</div>
-            <div style={{ fontSize: "10px", color: "#aaa", marginBottom: "5px" }}>
-              {group.regions.length} region{group.regions.length !== 1 ? "s" : ""}
-            </div>
-            <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
-              {group.regions.slice(0, 2).map((r, i) => (
-                <span key={i} style={{ fontSize: "8px", background: group.color, color: group.accent, padding: "1px 5px", borderRadius: "10px" }}>
-                  {r.name.split(" ")[0]}
-                </span>
-              ))}
-              {group.regions.length > 2 && (
-                <span style={{ fontSize: "8px", color: "#aaa" }}>+{group.regions.length - 2}</span>
-              )}
-            </div>
-          </button>
-        ))}
-      </div>
-
-      {/* Quick science note */}
-      <div style={{ marginTop: "16px", padding: "12px 14px", background: "#111", borderRadius: "7px", color: "#f7f6f3" }}>
-        <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.15em", color: "#555", marginBottom: "6px" }}>How to use this</div>
+      <div style={{ marginTop: "16px", padding: "12px 14px", background: "#111", borderRadius: "8px" }}>
+        <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.15em", color: "#555", marginBottom: "6px" }}>How to use</div>
         <div style={{ fontSize: "11px", color: "#aaa", lineHeight: "1.7" }}>
-          Tap any muscle group to see its anatomy, which regions need what exercises, why each exercise was chosen, and alternatives if equipment isn't available. The Exercise Database lets you search by muscle group or exercise name.
+          Tap any muscle group to open the 3D anatomy viewer alongside NASM-grade regional breakdowns, biomechanics, and common training errors.
         </div>
       </div>
     </div>
