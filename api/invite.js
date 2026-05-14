@@ -80,7 +80,7 @@ async function sendInviteEmail(email, clientName, redirectTo, resendApiKey, setu
   const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${resendApiKey}` },
-    body: JSON.stringify({ from: 'onboarding@resend.dev', to: email, subject: 'Your workout plan is ready', html })
+    body: JSON.stringify({ from: 'onboarding@resend.dev', to: 'tara.mattimiro@gmail.com', subject: 'Your workout plan is ready', html })
   });
 
   const result = await response.json();
