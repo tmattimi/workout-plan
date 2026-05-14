@@ -28,10 +28,6 @@ export async function getCoachSession() {
   return data?.session;
 }
 
-export function onAuthChange(callback) {
-  return supabase.auth.onAuthStateChange((_event, session) => callback(session));
-}
-
 // Send invite email via our serverless API function
 // This keeps the Supabase service role key secret on the server
 export async function inviteClient(clientId, email, clientName) {
@@ -46,10 +42,13 @@ export async function inviteClient(clientId, email, clientName) {
         redirectTo: window.location.origin + '/'
       })
     });
+
     const result = await response.json();
+
     if (!response.ok) {
       return { error: { message: result.error || 'Failed to send invite' } };
     }
+
     return { data: result };
   } catch (err) {
     return { error: { message: err.message } };
@@ -57,6 +56,48 @@ export async function inviteClient(clientId, email, clientName) {
 }
 
 
+export async function inviteClient(clientId, email, clientName) {
+  if (!supabase) return { error: { message: "Supabase not initialized" } };
+
+  // Step 1: Create auth account with a random password
+  // Supabase will send a confirmation email automatically
+  const tempPassword = Math.random().toString(36).slice(2, 10) + 
+                       Math.random().toString(36).slice(2, 6).toUpperCase() + "1!";
+
+  const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+    email: email.trim(),
+    password: tempPassword,
+    options: {
+      emailRedirectTo: window.location.origin + "/",
+      data: { name: clientName, role: "client", client_id: clientId }
+    }
+  });
+
+  if (signUpError) return { error: signUpError };
+  if (!signUpData?.user) return { error: { message: "Failed to create account" } };
+
+  // Step 2: Update client record with email and auth_user_id
+  // Do these separately so if the auth_user_id link fails, email still saves
+  await supabase.from("clients").update({ email }).eq("id", clientId);
+  
+  const { error: linkError } = await supabase
+    .from("clients")
+    .update({ auth_user_id: signUpData.user.id })
+    .eq("id", clientId);
+
+  if (linkError) {
+    console.warn("Could not link auth user to client:", linkError.message);
+    // Still return success — the email was sent
+  }
+
+  return { data: { userId: signUpData.user.id, emailSent: true } };
+}
+
+export function onAuthChange(callback) {
+  return supabase.auth.onAuthStateChange((_event, session) => callback(session));
+}
+
+// ── CLIENT ACCESS (by token, no auth) ─────────────────────────────────────────
 export async function getClientByToken(token) {
   if (!supabase) {
     console.warn("Supabase not initialized - check REACT_APP_SUPABASE_URL and REACT_APP_SUPABASE_ANON_KEY env vars");

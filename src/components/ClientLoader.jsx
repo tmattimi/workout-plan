@@ -3,6 +3,7 @@ import { supabase } from "../lib/supabase";
 import { getClientActivePlan } from "../lib/supabase";
 import { adaptPlanToSchedule } from "../lib/planAdapter";
 import ClientAuth from "./ClientAuth";
+import OnboardingQuestionnaire from "./OnboardingQuestionnaire";
 import PasswordSetup from "./PasswordSetup";
 
 const F = { fontFamily: "'Georgia','Times New Roman',serif" };
@@ -54,7 +55,7 @@ export default function ClientLoader({ children }) {
       setState("loading");
 
       // Get client record linked to this auth user
-      const { data: client, error } = await supabase
+      let { data: client, error } = await supabase
         .from("clients")
         .select("*")
         .eq("auth_user_id", authUserId)
@@ -71,7 +72,9 @@ export default function ClientLoader({ children }) {
             .eq("email", user.email)
             .eq("is_active", true)
             .single();
+
           if (clientByEmail) {
+            // Auto-link the auth user to this client record
             await supabase
               .from("clients")
               .update({ auth_user_id: authUserId })
@@ -98,7 +101,7 @@ export default function ClientLoader({ children }) {
       setState("ready");
     } catch (err) {
       console.error("ClientLoader error:", err);
-      setState("ready"); // Fall through to default schedule
+      setState("ready");
     }
   }
 
@@ -151,6 +154,24 @@ export default function ClientLoader({ children }) {
           </button>
         </div>
       </div>
+    );
+  }
+
+  // Show onboarding for new clients who haven't completed it
+  if (clientData && !clientData.onboarding_completed) {
+    return (
+      <OnboardingQuestionnaire
+        client={clientData}
+        onComplete={async () => {
+          // Refresh client data to pick up onboarding_completed = true
+          const { data: refreshed } = await supabase
+            .from("clients")
+            .select("*")
+            .eq("id", clientData.id)
+            .single();
+          if (refreshed) setClientData(refreshed);
+        }}
+      />
     );
   }
 

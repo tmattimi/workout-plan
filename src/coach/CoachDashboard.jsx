@@ -6,7 +6,7 @@ import {
   addExerciseToPlanDay, removePlanExercise, reorderPlanExercises,
   assignPlanToClient, getAllExercises, getClientOverview,
   createCoachNote, getMessages, sendMessage, markMessagesRead,
-  inviteClient
+  inviteClient, getClientIntake
 } from "../lib/supabase";
 import { formatDate } from "../storage";
 
@@ -389,6 +389,7 @@ function ClientDetail({ client, coachId, plans, onBack, onAssignPlan }) {
   const [savingNote, setSavingNote] = useState(false);
   const [messages, setMessages] = useState([]);
   const [expandedSession, setExpandedSession] = useState(null);
+  const [intake, setIntake] = useState(null);
   const [inviting, setInviting] = useState(false);
   const [inviteStatus, setInviteStatus] = useState(client.auth_user_id ? "exists" : null);
   const [inviteError, setInviteError] = useState("");
@@ -414,14 +415,15 @@ function ClientDetail({ client, coachId, plans, onBack, onAssignPlan }) {
     }
     setInviting(true);
     setInviteError("");
-    setInviteStatus(null);
-    console.log("Sending invite to:", client.email, "clientId:", client.id);
-    const { data, error } = await inviteClient(client.id, client.email, client.name);
-    console.log("Invite result - data:", data, "error:", error);
+    const { error } = await inviteClient(client.id, client.email, client.name);
     setInviting(false);
     if (error) {
-      console.error("Invite error:", error);
-      setInviteError(error.message || "Failed to send invite.");
+      if (error.message?.includes("already registered")) {
+        setInviteStatus("exists");
+        setInviteError("This email already has an account.");
+      } else {
+        setInviteError(error.message || "Failed to send invite.");
+      }
     } else {
       setInviteStatus("sent");
     }
@@ -432,8 +434,12 @@ function ClientDetail({ client, coachId, plans, onBack, onAssignPlan }) {
       // Recalculate PRs from actual logs first (ensures accuracy)
       const { recalculatePRsFromLogs } = await import("../lib/supabase");
       await recalculatePRsFromLogs(client.id);
-      const data = await getClientOverview(client.id);
+      const [data, intakeResult] = await Promise.all([
+        getClientOverview(client.id),
+        getClientIntake(client.id)
+      ]);
       setOverview(data);
+      setIntake(intakeResult.data);
       setMessages(data.messages || []);
       markMessagesRead(client.id, "client");
     }
@@ -483,7 +489,7 @@ function ClientDetail({ client, coachId, plans, onBack, onAssignPlan }) {
 
       {/* Sub-nav */}
       <div style={{ display: "flex", gap: "5px", marginBottom: "16px", overflowX: "auto" }}>
-        {[["overview","Overview"],["notes","Coach Notes"],["messages","Messages"],["assign","Assign Plan"],["edit","Edit Client"]].map(([v, label]) => (
+        {[["overview","Overview"],["intake","Intake Form"],["notes","Coach Notes"],["messages","Messages"],["assign","Assign Plan"],["edit","Edit Client"]].map(([v, label]) => (
           <button key={v} onClick={() => setView(v)} style={{ flex: "0 0 auto", background: view === v ? "#111" : "#fff", color: view === v ? "#fff" : "#555", border: "1px solid #e0e0e0", borderRadius: "20px", padding: "6px 14px", fontSize: "11px", cursor: "pointer", ...F, whiteSpace: "nowrap" }}>
             {label}{v === "messages" && overview?.unreadFromClient > 0 ? ` (${overview.unreadFromClient})` : ""}
           </button>
@@ -683,6 +689,68 @@ function ClientDetail({ client, coachId, plans, onBack, onAssignPlan }) {
             </button>
           </div>
         </>
+      )}
+
+      {/* Intake Form */}
+      {view === "intake" && (
+        <div>
+          {!intake ? (
+            <div style={{ padding: "40px 20px", textAlign: "center", color: "#aaa" }}>
+              <div style={{ fontSize: "36px", marginBottom: "10px" }}>📋</div>
+              <div style={{ fontSize: "14px", marginBottom: "6px" }}>No intake submitted yet</div>
+              <div style={{ fontSize: "12px", lineHeight: "1.6" }}>The client hasn't completed the onboarding questionnaire yet.</div>
+            </div>
+          ) : (
+            <div>
+              <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.15em", color: "#999", marginBottom: "14px" }}>Client Intake Form</div>
+              {[
+                { label: "Primary Goal", value: intake.primary_goal?.replace("_"," ") },
+                { label: "Target Weight", value: intake.target_weight_lbs ? `${intake.target_weight_lbs} lbs` : null },
+                { label: "Timeline", value: intake.goal_timeline?.replace("_"," ") },
+                { label: "Focus Areas", value: intake.focus_areas?.join(", ") },
+                { label: "Goal Notes", value: intake.goal_notes },
+                { label: "Height", value: intake.height_ft ? `${intake.height_ft}' ${Math.round((intake.height_in || 0) % 12)}"` : null },
+                { label: "Current Weight", value: intake.current_weight_lbs ? `${intake.current_weight_lbs} lbs` : null },
+                { label: "Body Fat %", value: intake.body_fat_pct ? `${intake.body_fat_pct}%` : null },
+                { label: "Waist", value: intake.waist_in ? `${intake.waist_in}"` : null },
+                { label: "Chest", value: intake.chest_in ? `${intake.chest_in}"` : null },
+                { label: "Hips", value: intake.hips_in ? `${intake.hips_in}"` : null },
+                { label: "Right Thigh", value: intake.right_thigh_in ? `${intake.right_thigh_in}"` : null },
+                { label: "Left Thigh", value: intake.left_thigh_in ? `${intake.left_thigh_in}"` : null },
+                { label: "Right Arm", value: intake.right_arm_in ? `${intake.right_arm_in}"` : null },
+                { label: "Left Arm", value: intake.left_arm_in ? `${intake.left_arm_in}"` : null },
+                { label: "Bench Press", value: intake.bench_press_lbs ? `${intake.bench_press_lbs} lbs` : null },
+                { label: "Overhead Press", value: intake.overhead_press_lbs ? `${intake.overhead_press_lbs} lbs` : null },
+                { label: "Squat", value: intake.squat_lbs ? `${intake.squat_lbs} lbs` : null },
+                { label: "Hip Thrust", value: intake.hip_thrust_lbs ? `${intake.hip_thrust_lbs} lbs` : null },
+                { label: "Deadlift", value: intake.deadlift_lbs ? `${intake.deadlift_lbs} lbs` : null },
+                { label: "Max Pull-Ups", value: intake.pullups_max !== null ? `${intake.pullups_max}` : null },
+                { label: "Training Days/Week", value: intake.training_days_per_week },
+                { label: "Preferred Days", value: intake.preferred_days?.join(", ") },
+                { label: "Session Length", value: intake.session_length_minutes ? `${intake.session_length_minutes} min` : null },
+                { label: "Equipment", value: intake.equipment_available?.join(", ") },
+                { label: "Injuries", value: intake.injury_flags?.join(", ") || "None" },
+                { label: "Injury Notes", value: intake.injury_notes },
+                { label: "Mobility Limitations", value: intake.mobility_limitations },
+                { label: "Sleep", value: intake.sleep_hours_per_night ? `${intake.sleep_hours_per_night} hrs/night` : null },
+                { label: "Stress Level", value: intake.stress_level ? `${intake.stress_level}/5` : null },
+                { label: "Nutrition Approach", value: intake.nutrition_approach?.replace("_"," ") },
+                { label: "Daily Protein", value: intake.daily_protein_grams ? `${intake.daily_protein_grams}g` : null },
+                { label: "Stretches", value: intake.does_stretch === true ? "Yes" : intake.does_stretch === false ? "No" : null },
+                { label: "Experience", value: intake.experience_level },
+                { label: "Knows Progressive Overload", value: intake.knows_progressive_overload === true ? "Yes" : intake.knows_progressive_overload === false ? "No" : null },
+                { label: "Knows Form Basics", value: intake.knows_form_basics === true ? "Yes" : intake.knows_form_basics === false ? "No" : null },
+                { label: "Prior Coaching", value: intake.prior_coaching === true ? "Yes" : intake.prior_coaching === false ? "No" : null },
+                { label: "Additional Notes", value: intake.additional_notes },
+              ].filter(item => item.value).map(({ label, value }, i) => (
+                <div key={i} style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "7px", padding: "10px 13px", marginBottom: "6px", display: "flex", justifyContent: "space-between", gap: "10px" }}>
+                  <span style={{ fontSize: "11px", color: "#aaa", flexShrink: 0 }}>{label}</span>
+                  <span style={{ fontSize: "12px", fontWeight: "500", textAlign: "right", textTransform: "capitalize" }}>{value}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
       {/* Edit Client */}
