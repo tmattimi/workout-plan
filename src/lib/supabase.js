@@ -28,6 +28,10 @@ export async function getCoachSession() {
   return data?.session;
 }
 
+export function onAuthChange(callback) {
+  return supabase.auth.onAuthStateChange((_event, session) => callback(session));
+}
+
 // Send invite email via our serverless API function
 // This keeps the Supabase service role key secret on the server
 export async function inviteClient(clientId, email, clientName) {
