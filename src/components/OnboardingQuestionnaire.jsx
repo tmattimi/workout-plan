@@ -319,19 +319,74 @@ export default function OnboardingQuestionnaire({ client, onComplete }) {
         additional_notes: form.additional_notes || null,
       };
 
-      // Save intake data
+      // 1. Save full intake form
       await supabase.from("client_intake").upsert(intakeData, { onConflict: "client_id" });
 
-      // Mark onboarding complete
+      // 2. Update client profile
       await supabase.from("clients").update({
         onboarding_completed: true,
         onboarding_completed_at: new Date().toISOString(),
         current_weight_lbs: intakeData.current_weight_lbs,
+        goal_weight_lbs: intakeData.target_weight_lbs,
         height_in: intakeData.height_in,
         goal: intakeData.primary_goal,
-        equipment: intakeData.equipment_available.length ? intakeData.equipment_available : null,
+        weekly_frequency: intakeData.training_days_per_week,
+        equipment: intakeData.equipment_available && intakeData.equipment_available.length ? intakeData.equipment_available : null,
         injury_flags: intakeData.injury_flags,
+        date_of_birth: intakeData.date_of_birth,
       }).eq("id", client.id);
+
+      // 3. Save initial measurements if any were provided
+      const hasMeasurements = intakeData.waist_in || intakeData.chest_in || intakeData.hips_in ||
+        intakeData.right_thigh_in || intakeData.left_thigh_in ||
+        intakeData.right_arm_in || intakeData.left_arm_in || intakeData.current_weight_lbs;
+
+      if (hasMeasurements) {
+        await supabase.from("measurements").insert({
+          client_id: client.id,
+          measured_at: new Date().toISOString().slice(0, 10),
+          weight_lbs: intakeData.current_weight_lbs,
+          waist_in: intakeData.waist_in,
+          chest_in: intakeData.chest_in,
+          hips_in: intakeData.hips_in,
+          right_thigh_in: intakeData.right_thigh_in,
+          left_thigh_in: intakeData.left_thigh_in,
+          right_arm_in: intakeData.right_arm_in,
+          left_arm_in: intakeData.left_arm_in,
+          body_fat_pct: intakeData.body_fat_pct,
+          notes: "Initial measurement from onboarding",
+        });
+      }
+
+      // 4. Save strength benchmarks as initial PRs
+      const strengthBenchmarks = [
+        { name: "Bench Press", weight: intakeData.bench_press_lbs },
+        { name: "Overhead Tricep Extension", weight: intakeData.overhead_press_lbs },
+        { name: "Barbell Back Squat", weight: intakeData.squat_lbs },
+        { name: "Hip Thrust (Barbell)", weight: intakeData.hip_thrust_lbs },
+        { name: "Romanian Deadlift (Barbell)", weight: intakeData.deadlift_lbs },
+        { name: "Pull-Up", weight: intakeData.pullups_max, isReps: true },
+      ].filter(b => b.weight);
+
+      if (strengthBenchmarks.length > 0) {
+        // Look up exercise IDs
+        const { data: exercises } = await supabase.from("exercises").select("id, name");
+        const exerciseMap = {};
+        if (exercises) exercises.forEach(ex => { exerciseMap[ex.name] = ex.id; });
+
+        for (const benchmark of strengthBenchmarks) {
+          const exerciseId = exerciseMap[benchmark.name];
+          if (exerciseId) {
+            await supabase.from("personal_records").upsert({
+              client_id: client.id,
+              exercise_id: exerciseId,
+              weight_lbs: benchmark.isReps ? 0 : parseFloat(benchmark.weight),
+              reps: benchmark.isReps ? parseInt(benchmark.weight) : 1,
+              achieved_at: new Date().toISOString().slice(0, 10),
+            }, { onConflict: "client_id,exercise_id" });
+          }
+        }
+      }
 
       setStep("complete");
     } catch (err) {
