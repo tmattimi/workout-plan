@@ -15,6 +15,7 @@ import MonthlyPrompt from "./components/MonthlyPrompt";
 import { getWarmupForDay } from "./warmups";
 import AlternativeExercises from "./components/AlternativeExercises";
 import { getClientByToken } from "./lib/supabase";
+import NewProgressTab from "./components/ProgressTab";
 
 const F = { fontFamily: "'Georgia','Times New Roman',serif" };
 function makeSessionKey(day, date) { return `${day}_${date}`; }
@@ -786,7 +787,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
         </>
       )}
 
-      {tab === "progress" && <ProgressTab logs={logs} prs={prs} />}
+      {tab === "progress" && <NewProgressTab clientId={clientData?.id} bodyweight={clientData?.weight || 170} localLogs={logs} />}
       {tab === "body" && <MeasurementsTracker measurements={measurements} onSave={handleMeasurementsChange} />}
       {tab === "photos" && <PhotosTab photos={photos} onSave={handlePhotosChange} />}
       {tab === "history" && <HistoryTab logs={logs} activeSchedule={activeSchedule} />}
