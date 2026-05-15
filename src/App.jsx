@@ -688,12 +688,6 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
                   Warm-Up
                 </button>
               )}
-              {/* Post-workout stretch button */}
-              {current.type !== "rest" && (
-                <button onClick={() => setShowStretches(true)} style={{ background: "rgba(255,255,255,0.7)", color: current.accent, border: `1px solid ${current.accent}44`, borderRadius: "20px", padding: "4px 12px", fontSize: "11px", cursor: "pointer", ...F, fontWeight: "600" }}>
-                  Stretch
-                </button>
-              )}
             </div>
 
             {current.sessionNote && (
@@ -735,8 +729,13 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
                         {ex.imbalanceNote && <span style={{ fontSize: "8px", letterSpacing: "0.1em", textTransform: "uppercase", padding: "2px 6px", borderRadius: "3px", background: "#fef3e4", color: "#c47a0a", border: "1px solid #f0c060" }}>Imbalance</span>}
                       </div>
                       {ex.muscles && ex.muscles.length > 0 && (
-                        <div style={{ fontSize: "10px", color: "#aaa", marginTop: "4px" }}>
-                          {ex.muscles.join(" · ")}
+                        <div style={{ fontSize: "10px", color: "#bbb", marginTop: "4px", display: "flex", gap: "6px", alignItems: "center" }}>
+                          <span style={{ color: "#aaa" }}>{ex.muscles.join(" · ")}</span>
+                          {ex.category && ex.category !== "Recovery" && ex.category !== "Mobility" && (
+                            <span style={{ color: "#d0d0d0", fontSize: "9px", letterSpacing: "0.06em" }}>
+                              · {ex.category.replace(" Bilateral", "").replace(" Unilateral", " Uni")}
+                            </span>
+                          )}
                         </div>
                       )}
                     </div>
@@ -810,6 +809,29 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
             sessionKey={sessionKey}
             allLogs={logs}
           />
+
+          {/* Cool down stretch — at the end of the full workout */}
+          {current.type !== "rest" && (
+            <div style={{ margin: "8px 16px 4px" }}>
+              <button
+                onClick={() => setShowStretches(true)}
+                style={{
+                  width: "100%", background: "#fff", border: `1px solid ${current.accent}44`,
+                  borderRadius: "10px", padding: "13px 16px", cursor: "pointer", ...F,
+                  display: "flex", justifyContent: "space-between", alignItems: "center",
+                  textAlign: "left",
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: "9px", letterSpacing: "0.15em", textTransform: "uppercase", color: current.accent, marginBottom: "3px" }}>
+                    After Your Workout
+                  </div>
+                  <div style={{ fontSize: "13px", color: "#1a1a1a", fontWeight: "500" }}>Cool Down & Stretch</div>
+                </div>
+                <span style={{ fontSize: "12px", color: "#ccc" }}>→</span>
+              </button>
+            </div>
+          )}
 
           <div style={{ margin: "12px 16px 80px", padding: "10px 12px", background: "#111", borderRadius: "7px", color: "#f7f6f3", fontSize: "11px", lineHeight: "1.55" }}>
             Tap <strong>Warm-Up</strong> before lifting. Tap <strong>Log</strong> on any exercise to record sets — the rest timer starts automatically. Tap <strong>Stretch</strong> when you're done to cool down. Tap ▼ for form cues.
