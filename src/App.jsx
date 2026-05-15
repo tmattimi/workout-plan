@@ -10,7 +10,7 @@ import MeasurementsTracker from "./components/MeasurementsTracker";
 import MuscleScience from "./components/MuscleScience";
 import WarmUp from "./components/WarmUp";
 import RestTimer, { parseRestSeconds } from "./components/RestTimer";
-import { PRCelebration, OverloadSuggestions, SkipDayBanner } from "./components/PRCelebration";
+import { PRCelebration, OverloadSuggestions } from "./components/PRCelebration";
 import MonthlyPrompt from "./components/MonthlyPrompt";
 import DailyScripture from "./components/DailyScripture";
 import PostWorkoutStretches from "./components/PostWorkoutStretches";
@@ -697,15 +697,8 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
             </div>
 
             {current.sessionNote && (
-              <div style={{ fontSize: "11px", color: "#444", background: "rgba(255,255,255,0.65)", borderRadius: "5px", padding: "8px 10px", lineHeight: "1.55", marginBottom: current.cardio ? "8px" : 0 }}>
+              <div style={{ fontSize: "11px", color: "#444", background: "rgba(255,255,255,0.65)", borderRadius: "5px", padding: "8px 10px", lineHeight: "1.55" }}>
                 {current.sessionNote}
-              </div>
-            )}
-            {current.cardio && (
-              <div style={{ fontSize: "11px", background: "rgba(255,255,255,0.55)", borderRadius: "5px", padding: "9px 11px", lineHeight: "1.5" }}>
-                <div style={{ color: current.accent, fontWeight: "700", marginBottom: "3px" }}>Post-Lift Cardio · {current.cardio.zone}</div>
-                <div style={{ color: "#333" }}><strong>{current.cardio.name}:</strong> {current.cardio.protocol}</div>
-                <div style={{ color: "#666", marginTop: "3px", fontSize: "10px" }}>{current.cardio.feel}</div>
               </div>
             )}
           </div>
@@ -716,13 +709,6 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
               <span key={label} style={{ fontSize: "9px", background: color, color: "#fff", padding: "2px 7px", borderRadius: "20px" }}>{label}</span>
             ))}
           </div>
-
-          {/* Skip Day Banner */}
-          <SkipDayBanner
-            activeSchedule={activeSchedule}
-            activeDay={activeDay}
-            logs={logs}
-          />
 
           {/* Exercises */}
           <div>
@@ -806,6 +792,22 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
               );
             })}
           </div>
+
+          {/* Post-lift cardio */}
+          {current.cardio && (
+            <div style={{ margin: "0 16px 4px", background: "#fff", border: "1px solid #e8e8e8", borderRadius: "10px", overflow: "hidden" }}>
+              <div style={{ background: current.color, borderLeft: `4px solid ${current.accent}`, padding: "12px 14px" }}>
+                <div style={{ fontSize: "9px", letterSpacing: "0.15em", textTransform: "uppercase", color: current.accent, marginBottom: "3px" }}>
+                  Post-Lift Cardio · {current.cardio.zone}
+                </div>
+                <div style={{ fontSize: "13px", fontWeight: "600", marginBottom: "5px" }}>{current.cardio.name}</div>
+                <div style={{ fontSize: "11px", color: "#444", lineHeight: "1.55" }}>{current.cardio.protocol}</div>
+                <div style={{ fontSize: "10px", color: "#777", marginTop: "5px", lineHeight: "1.5", borderTop: "1px solid rgba(0,0,0,0.06)", paddingTop: "6px" }}>
+                  {current.cardio.feel}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Overload suggestions */}
           <OverloadSuggestions

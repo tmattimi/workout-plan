@@ -2,11 +2,11 @@ export const IMBALANCE_NOTE = "Start with the LEFT side every time. Match the sa
 
 export const schedule = [
   {
-    day: "MON", label: "Push A", type: "push",
-    focus: "Push A — Chest Focus",
+    day: "MON", label: "Push", type: "push",
+    focus: "Push — Chest Focus",
     muscles: ["Chest", "Shoulders", "Triceps"],
     color: "#e9f0fb", accent: "#2563a8",
-    sessionNote: "Chest leads today. The heaviest compound goes first while everything is fresh. Shoulder and tricep work follows after.",
+    sessionNote: "Chest leads today. Shoulders and triceps follow.",
     cardio: { name: "Incline Treadmill", protocol: "4.0–4.5 mph at 8–12% incline for 20 minutes", zone: "Zone 3 (65–75% max HR)", feel: "Breathing is noticeably elevated. Short sentences only — not fully conversational. That's the target and it stays there the whole 20 minutes." },
     exercises: [
       { name: "Dumbbell Bench Press", category: "Compound Bilateral", order: 1, sets: 4, reps: "6–10", rest: "2–3 min", eccentric: "3s down", why: "Opens the session as the primary chest compound. Dumbbells mean each side has to generate its own force independently — the right side cannot carry the left, which is what makes them better than a barbell for catching and correcting asymmetry.", form: [{ label: "Setup", text: "Lie flat with feet firmly planted. Pull the shoulder blades together and down toward your back pockets — hold that position the entire set." }, { label: "Elbows", text: "Hold the dumbbells at chest height with elbows at roughly 45–60° from your torso. Wrists stacked directly over elbows." }, { label: "Descent", text: "Take 3 full seconds to lower until you feel a deep stretch across the chest. Don't let elbows drop below your torso plane." }, { label: "Press", text: "Drive back up along the same arc. Think about pushing the chest up toward the ceiling. Stop just short of full lockout so the chest stays under tension." }, { label: "Breathing", text: "Breathe in on the way down. Brace your core hard at the bottom, then exhale as you press." }, { label: "Watch for", text: "Hips lifting off the bench, wrists collapsing backward, or dumbbells drifting too far over the face or stomach." }] },
@@ -19,11 +19,11 @@ export const schedule = [
     ],
   },
   {
-    day: "TUE", label: "Pull A", type: "pull",
-    focus: "Pull A — Back Focus",
+    day: "TUE", label: "Pull", type: "pull",
+    focus: "Pull — Back Focus",
     muscles: ["Back", "Biceps", "Rear Delts"],
     color: "#ebf5e6", accent: "#2d7a1e",
-    sessionNote: "Back compounds lead. The heaviest bilateral pull goes first, then a second compound, then one unilateral row for back asymmetry. Biceps and rear delts finish.",
+    sessionNote: "Back compounds lead. Biceps and rear delts finish.",
     cardio: { name: "Rowing Machine or Incline Treadmill", protocol: "Rower: moderate pace, damper 4–5 for 20 minutes. Treadmill: 4.0 mph at 10% incline.", zone: "Zone 3 (65–75% max HR)", feel: "The rower reinforces the pulling pattern at low load post-session. Breathing elevated throughout." },
     exercises: [
       { name: "Lat Pulldown (Wide Overhand)", category: "Compound Bilateral", order: 1, sets: 4, reps: "6–10", rest: "2–3 min", eccentric: "3s return", why: "Heaviest pull of the session, so it goes first. Wide grip builds lat width and develops the strength pattern for unassisted pull-ups.", form: [{ label: "Setup", text: "Grip just outside shoulder width. Lock knees firmly under the pad. Lean back about 20°." }, { label: "Pull", text: "Think about driving the elbows down toward your back pockets. Bring the bar to the upper chest." }, { label: "Return", text: "3 full seconds back to the top. Let the bar travel all the way up — the shoulder blades spread at the top. That full stretch is part of the range." }, { label: "Watch for", text: "Pulling the bar behind the neck, excessive lower back arch, or cutting the return short." }] },
@@ -36,14 +36,14 @@ export const schedule = [
     ],
   },
   {
-    day: "WED", label: "Legs A", type: "legs",
-    focus: "Legs A — Posterior Chain and Quad",
+    day: "WED", label: "Legs", type: "legs",
+    focus: "Legs — Posterior Chain",
     muscles: ["Glutes", "Hamstrings", "Quads", "Calves"],
     color: "#fef3e4", accent: "#c47a0a",
-    sessionNote: "Hip thrust opens the session. It is the primary compound and strongest lift — it goes first, not fourth. Posterior chain first while everything is fresh. Quads follow.",
+    sessionNote: "Hip thrust opens the session — posterior chain first. Quads follow.",
     cardio: { name: "Stationary Bike", protocol: "Resistance 6–8 out of 10 for 20 minutes", zone: "Zone 3 (65–75% max HR)", feel: "Legs will be fatigued — that's fine. Hold the elevated heart rate steady. Consistent pedaling, not sprinting." },
     exercises: [
-      { name: "Hip Thrust (Barbell or Machine)", category: "Compound Bilateral", order: 1, sets: 4, reps: "8–10", rest: "2–3 min", eccentric: "3s down", why: "His strongest lift at 450 lbs and the single most effective glute exercise — loads the glute at full hip extension where peak resistance occurs. Progressive overload is the primary week-over-week focus here.", form: [{ label: "Setup", text: "Upper back on bench just below the shoulder blades. Feet flat, hip-width, toes slightly out. Barbell padded across the hip crease." }, { label: "Before driving", text: "Breathe in, brace the core, tuck the chin. Chin stays tucked the entire set." }, { label: "Drive", text: "Push through the heels. Drive hips up until the body forms a straight line from shoulders to knees." }, { label: "Top", text: "Squeeze glutes hard and hold for one full second. If you feel it in the lower back the hips are going too high." }, { label: "Watch for", text: "Lower back hyperextending, knees caving inward, or pushing through the toes instead of heels." }] },
+      { name: "Hip Thrust (Barbell or Machine)", category: "Compound Bilateral", order: 1, sets: 4, reps: "8–10", rest: "2–3 min", eccentric: "3s down", why: "The single most effective glute exercise — loads the glute at full hip extension where peak resistance occurs. Progressive overload is the primary week-over-week focus here.", form: [{ label: "Setup", text: "Upper back on bench just below the shoulder blades. Feet flat, hip-width, toes slightly out. Barbell padded across the hip crease." }, { label: "Before driving", text: "Breathe in, brace the core, tuck the chin. Chin stays tucked the entire set." }, { label: "Drive", text: "Push through the heels. Drive hips up until the body forms a straight line from shoulders to knees." }, { label: "Top", text: "Squeeze glutes hard and hold for one full second. If you feel it in the lower back the hips are going too high." }, { label: "Watch for", text: "Lower back hyperextending, knees caving inward, or pushing through the toes instead of heels." }] },
       { name: "Romanian Deadlift (Dumbbell)", category: "Compound Bilateral", order: 2, sets: 4, reps: "8–10", rest: "2–3 min", eccentric: "3–4s down", why: "Primary hamstring compound second in session while the posterior chain is maximally warm. Loads the hamstrings in a stretched position — stretch-loaded training produces superior hypertrophy.", form: [{ label: "Setup", text: "Stand holding dumbbells in front of the thighs. Feet hip-width, soft fixed knee bend — don't change it." }, { label: "Hinge", text: "Push the hips backward — not downward. This is a hip hinge, not a squat. Dumbbells stay close to the legs." }, { label: "Depth", text: "Lower until a deep hamstring pull — usually mid-shin to ankle. The back must stay flat." }, { label: "Watch for", text: "Squatting the weight by bending the knees, lower back rounding, or dumbbells drifting away from the body." }] },
       { name: "Leg Press", category: "Compound Bilateral", order: 3, sets: 3, reps: "10–12", rest: "2 min", eccentric: "3s down", why: "Third compound after the posterior chain has been loaded. Targets the quads heavily with the machine removing balance demands.", form: [{ label: "Foot position", text: "Hip-width at mid-platform, toes slightly out." }, { label: "Core", text: "Lower back pressed into the seat pad throughout. If it peels off, too deep or too heavy." }, { label: "Press", text: "Drive through the whole foot. Stop just short of full knee lockout." }, { label: "Watch for", text: "Lower back lifting off the pad, knees caving, full lockout at the top." }] },
       { name: "Bulgarian Split Squat (Dumbbell)", category: "Compound Unilateral", order: 4, sets: 3, reps: "8–10 each leg", rest: "2 min", eccentric: "3s down", imbalanceNote: IMBALANCE_NOTE, why: "Addresses the half-inch left/right thigh size difference directly. The right leg cannot compensate for the left when each is working alone.", form: [{ label: "Setup", text: "2 feet in front of a bench. Top of rear foot on the bench — laces down. Front foot far enough forward that the shin stays vertical when you lower." }, { label: "Descent", text: "Drop straight down rather than forward. Front knee stays over the toes. Lower until rear knee is 2 inches from the floor." }, { label: "Torso", text: "Keep the chest up throughout." }, { label: "Watch for", text: "Rear foot wrong (top of foot, not ankle), front knee caving, torso collapsing forward." }] },
@@ -52,11 +52,11 @@ export const schedule = [
     ],
   },
   {
-    day: "THU", label: "Push B", type: "push",
-    focus: "Push B — Shoulder Focus",
+    day: "THU", label: "Push", type: "push",
+    focus: "Push — Shoulder Focus",
     muscles: ["Shoulders", "Chest", "Triceps"],
     color: "#f3eafa", accent: "#7a3aa0",
-    sessionNote: "Shoulders lead today. The overhead press opens the session as the primary compound. Chest gets its second weekly hit in a supporting role after the shoulder work.",
+    sessionNote: "Shoulders lead today. Chest gets its second weekly hit after.",
     cardio: { name: "Incline Treadmill", protocol: "4.0–4.5 mph at 8–12% incline for 20 minutes", zone: "Zone 3 (65–75% max HR)", feel: "Same target as Monday. Short sentences only, breathing noticeably elevated." },
     exercises: [
       { name: "Seated Dumbbell Overhead Press", category: "Compound Bilateral", order: 1, sets: 4, reps: "6–10", rest: "2–3 min", eccentric: "3s down", why: "Primary shoulder compound first. Seated removes lower back involvement. Dumbbells let each shoulder work independently.", form: [{ label: "Setup", text: "Upright bench at 90°. Dumbbells at shoulder height, palms forward." }, { label: "Core", text: "Breathe in, brace hard, press lower back into the bench. It stays in contact throughout." }, { label: "Press", text: "Drive both dumbbells up in a slight inward arc. Exhale on the press." }, { label: "Watch for", text: "Lower back arching away from the bench, wrists collapsing backward." }] },
@@ -69,11 +69,11 @@ export const schedule = [
     ],
   },
   {
-    day: "FRI", label: "Pull B", type: "pull",
-    focus: "Pull B — Bicep Focus and Core",
+    day: "FRI", label: "Pull", type: "pull",
+    focus: "Pull — Bicep Focus & Core",
     muscles: ["Back", "Biceps", "Rear Delts", "Core"],
     color: "#e5f7f0", accent: "#147a50",
-    sessionNote: "Pull-up opens as the primary compound. Core work is embedded at the end — the abs have been stabilizing through every pulling movement so they're warm and ready.",
+    sessionNote: "Pull-up opens the session. Core finishes.",
     cardio: { name: "Rowing Machine", protocol: "Moderate pace at damper 4–5 for 20 minutes", zone: "Zone 3 (65–75% max HR)", feel: "Rower post-Pull keeps the back and arms engaged through the recovery window. Breathing elevated." },
     exercises: [
       { name: "Pull-Up (or Assisted Pull-Up)", category: "Compound Bilateral", order: 1, sets: 4, reps: "Max reps (or 6–8 assisted)", rest: "2–3 min", eccentric: "3s down", why: "Primary compound and the key weekly progress marker. Currently at 6 wide-grip — tracking rep increases week over week is one of the clearest indicators of lat and bicep development.", form: [{ label: "Grip", text: "Overhand, just outside shoulder width. Full dead hang at the bottom." }, { label: "Before pulling", text: "Depress and retract the shoulder blades before initiating the pull." }, { label: "Pull", text: "Drive the elbows down and back. Pull until the chin clears the bar." }, { label: "Eccentric", text: "3 full seconds on the way down. This is the fastest path to unassisted pull-ups." }, { label: "Watch for", text: "Kipping, not reaching a dead hang at the bottom, or craning the neck." }] },
@@ -87,11 +87,11 @@ export const schedule = [
     ],
   },
   {
-    day: "SAT", label: "Legs B", type: "legs",
-    focus: "Legs B — Quad Focus and Core",
+    day: "SAT", label: "Legs", type: "legs",
+    focus: "Legs — Quad Focus & Core",
     muscles: ["Quads", "Glutes", "Hamstrings", "Calves", "Core"],
     color: "#fce8e8", accent: "#a02a2a",
-    sessionNote: "Quads lead today. Leg press opens the session as the primary compound. Hip thrust follows as the second compound. Core finishes the session.",
+    sessionNote: "Quads lead today. Hip thrust follows. Core finishes.",
     cardio: { name: "Stationary Bike or Brisk Walk", protocol: "Bike: resistance 6–8 out of 10 for 20 minutes. Walk: brisk with hills if available.", zone: "Zone 3 (65–75% max HR)", feel: "End of the training week. Legs will be more fatigued than Wednesday — hold the heart rate target regardless." },
     exercises: [
       { name: "Leg Press", category: "Compound Bilateral", order: 1, sets: 4, reps: "8–10", rest: "2–3 min", eccentric: "3s down", why: "Quad-focused bilateral compound placed first today. Lower rep range and higher load than Wednesday for a different stimulus.", form: [{ label: "Today", text: "Slightly lower foot position than Wednesday to increase quad bias. Same core brace throughout." }] },
@@ -110,7 +110,7 @@ export const schedule = [
     focus: "Active Recovery",
     muscles: [],
     color: "#f4f4f2", accent: "#888",
-    sessionNote: "No lifting today. The goal is blood flow, reduced soreness, and mental recovery. Easy movement only.",
+    sessionNote: "No lifting today. Easy movement, blood flow, recovery.",
     exercises: [
       { name: "Light Walk", category: "Recovery", order: 1, sets: 1, reps: "20–30 min", rest: "—", eccentric: "—", why: "Easy movement supports blood flow and nutrient delivery.", form: [{ label: "Pace", text: "Fully conversational. Outdoors if possible." }] },
       { name: "Hip Flexor Stretch", category: "Mobility", order: 2, sets: 2, reps: "60 sec each side", rest: "30 sec", eccentric: "—", why: "Heavy split squats and lunges shorten the hip flexors over time.", form: [{ label: "Position", text: "Kneeling lunge. Push the front hip gently forward. 60 seconds each side." }] },
