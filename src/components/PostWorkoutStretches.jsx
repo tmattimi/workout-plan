@@ -156,7 +156,7 @@ export default function PostWorkoutStretches({ muscles = [], onDone }) {
   if (complete) {
     return (
       <div style={{ ...F, padding: "32px 20px", textAlign: "center" }}>
-        <div style={{ fontSize: "48px", marginBottom: "12px" }}>🙏</div>
+        <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: "#111", marginBottom: "16px", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}><div style={{ width: "2px", height: "16px", background: "#4ade80", borderRadius: "1px" }}></div></div>
         <div style={{ fontSize: "16px", color: "#1a1a1a", marginBottom: "6px" }}>Well done.</div>
         <div style={{ fontSize: "12px", color: "#666", marginBottom: "24px", lineHeight: "1.6" }}>
           You honored your body today. Rest well and recover strong.

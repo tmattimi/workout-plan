@@ -22,14 +22,14 @@ const DAY_LABELS = { MON:"Mon", TUE:"Tue", WED:"Wed", THU:"Thu", FRI:"Fri", SAT:
 
 const FOCUS_AREAS = [
   { key: "glutes", label: "Glutes / Booty", emoji: "🍑" },
-  { key: "upper_body", label: "Upper Body", emoji: "💪" },
+  { key: "upper_body", label: "Upper Body", emoji: "" },
   { key: "core", label: "Core / Abs", emoji: "🧱" },
   { key: "legs", label: "Legs / Quads", emoji: "🦵" },
   { key: "back", label: "Back", emoji: "🔙" },
   { key: "shoulders", label: "Shoulders", emoji: "🏋️" },
-  { key: "overall", label: "Overall / Balanced", emoji: "⚖️" },
-  { key: "weight_loss", label: "Fat Loss", emoji: "🔥" },
-  { key: "muscle_gain", label: "Muscle Gain", emoji: "📈" },
+  { key: "overall", label: "Overall / Balanced", emoji: "" },
+  { key: "weight_loss", label: "Fat Loss", emoji: "" },
+  { key: "muscle_gain", label: "Muscle Gain", emoji: "" },
 ];
 
 const INJURY_OPTIONS = [
@@ -406,7 +406,7 @@ export default function OnboardingQuestionnaire({ client, onComplete }) {
   if (step === "complete") {
     return (
       <div style={{ minHeight: "100vh", background: "#f7f6f3", padding: "40px 20px", maxWidth: 480, margin: "0 auto", textAlign: "center" }}>
-        <div style={{ fontSize: "52px", marginBottom: "16px" }}>🎯</div>
+        <div style={{ fontSize: "11px", letterSpacing: "0.2em", textTransform: "uppercase", color: "#888", marginBottom: "20px" }}>Your plan is ready</div>
         <h1 style={{ fontSize: "24px", fontWeight: "normal", margin: "0 0 12px", ...F }}>You're all set!</h1>
         <p style={{ fontSize: "14px", color: "#555", lineHeight: "1.7", margin: "0 0 8px" }}>
           Your intake has been sent to your coach. They'll review everything and build your personalized plan.

@@ -172,7 +172,7 @@ function ProgressTab({ logs, prs }) {
   if (!exercises.length) {
     return (
       <div style={{ padding: "40px 20px", textAlign: "center" }}>
-        <div style={{ fontSize: "40px", marginBottom: "12px" }}>📊</div>
+        <div style={{ fontSize: "11px", letterSpacing: "0.15em", textTransform: "uppercase", color: "#bbb", marginBottom: "12px" }}>No data yet</div>
         <div style={{ fontSize: "14px", color: "#888", lineHeight: "1.6" }}>Progress charts appear here after logging your first session.</div>
       </div>
     );
@@ -193,7 +193,7 @@ function ProgressTab({ logs, prs }) {
 
       {pr && (
         <div style={{ background: "#111", borderRadius: "8px", padding: "12px 14px", marginBottom: "12px", display: "flex", alignItems: "center", gap: "10px" }}>
-          <span style={{ fontSize: "24px" }}>🏆</span>
+          <span style={{ fontSize: "9px", letterSpacing: "0.15em", textTransform: "uppercase", background: "#f59e0b", color: "#111", padding: "3px 8px", borderRadius: "4px" }}>PR</span>
           <div>
             <div style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.1em", color: "#f59e0b", marginBottom: "2px" }}>Personal Record</div>
             <div style={{ fontSize: "16px", fontWeight: "700", color: "#fff" }}>{pr.weight} lbs × {pr.reps} reps</div>
@@ -247,7 +247,7 @@ function ProgressTab({ logs, prs }) {
           <button key={ex} onClick={() => setSelected(ex)} style={{ width: "100%", background: sel === ex ? "#f0f4ff" : "#fff", border: `1px solid ${sel === ex ? "#2563a8" : "#e8e8e8"}`, borderRadius: "7px", padding: "10px 13px", marginBottom: "6px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", ...F, textAlign: "left" }}>
             <div>
               <div style={{ fontSize: "12px", fontWeight: sel === ex ? "700" : "400", display: "flex", alignItems: "center", gap: "5px" }}>
-                {hasPR && <span style={{ fontSize: "10px" }}>🏆</span>}
+                {hasPR && <span style={{ fontSize: "8px", letterSpacing: "0.1em", textTransform: "uppercase", background: "#f59e0b", color: "#111", padding: "1px 5px", borderRadius: "3px" }}>PR</span>}
                 {ex}
               </div>
               <div style={{ fontSize: "10px", color: "#aaa" }}>{data.length} session{data.length !== 1 ? "s" : ""}</div>
@@ -278,7 +278,7 @@ function HistoryTab({ logs, activeSchedule }) {
 
   if (!keys.length) return (
     <div style={{ padding: "40px 20px", textAlign: "center" }}>
-      <div style={{ fontSize: "40px", marginBottom: "12px" }}>📋</div>
+      <div style={{ fontSize: "11px", letterSpacing: "0.15em", textTransform: "uppercase", color: "#bbb", marginBottom: "12px" }}>No sessions yet</div>
       <div style={{ fontSize: "14px", color: "#888", lineHeight: "1.6" }}>Past sessions appear here after completing your first workout.</div>
     </div>
   );
@@ -683,13 +683,13 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
               {/* Warm-up button */}
               {current.type !== "rest" && (
                 <button onClick={() => setShowWarmup(true)} style={{ background: "rgba(255,255,255,0.7)", color: current.accent, border: `1px solid ${current.accent}44`, borderRadius: "20px", padding: "4px 12px", fontSize: "11px", cursor: "pointer", ...F, fontWeight: "600" }}>
-                  🔥 Warm-Up
+                  Warm-Up
                 </button>
               )}
               {/* Post-workout stretch button */}
               {current.type !== "rest" && completedExercises > 0 && (
                 <button onClick={() => setShowStretches(true)} style={{ background: "rgba(255,255,255,0.7)", color: current.accent, border: `1px solid ${current.accent}44`, borderRadius: "20px", padding: "4px 12px", fontSize: "11px", cursor: "pointer", ...F, fontWeight: "600" }}>
-                  🧘 Stretch
+                  Stretch
                 </button>
               )}
             </div>
@@ -701,7 +701,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
             )}
             {current.cardio && (
               <div style={{ fontSize: "11px", background: "rgba(255,255,255,0.55)", borderRadius: "5px", padding: "9px 11px", lineHeight: "1.5" }}>
-                <div style={{ color: current.accent, fontWeight: "700", marginBottom: "3px" }}>🏃 Post-Lift Cardio · {current.cardio.zone}</div>
+                <div style={{ color: current.accent, fontWeight: "700", marginBottom: "3px" }}>Post-Lift Cardio · {current.cardio.zone}</div>
                 <div style={{ color: "#333" }}><strong>{current.cardio.name}:</strong> {current.cardio.protocol}</div>
                 <div style={{ color: "#666", marginTop: "3px", fontSize: "10px" }}>{current.cardio.feel}</div>
               </div>
@@ -746,7 +746,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: "13px", fontWeight: "600", marginBottom: "4px", display: "flex", alignItems: "center", gap: "5px" }}>
-                        {hasPR && <span title="You have a PR logged for this exercise" style={{ fontSize: "11px" }}>🏆</span>}
+                        {hasPR && <span style={{ fontSize: "8px", letterSpacing: "0.12em", textTransform: "uppercase", background: "#f59e0b", color: "#111", padding: "2px 6px", borderRadius: "3px", marginRight: "2px" }}>PR</span>}
                         {ex.name}
                       </div>
                       <div style={{ display: "flex", gap: "5px", flexWrap: "wrap" }}>
@@ -755,7 +755,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
                         {ex.eccentric && ex.eccentric !== "—" && <span style={{ fontSize: "9px", color: "#7a3aa0", padding: "2px 7px", background: "#f3eafa", borderRadius: "20px" }}>{ex.eccentric}</span>}
                         <span style={{ fontSize: "9px", padding: "2px 7px", borderRadius: "20px", background: cs.bg, color: cs.color }}>{cs.short}</span>
                         {isStarted && <span style={{ fontSize: "9px", padding: "2px 7px", borderRadius: "20px", background: doneSets > 0 ? "#e8f5e9" : "#f0f0f0", color: doneSets > 0 ? "#2d7a1e" : "#999" }}>{doneSets}/{totalLogged} ✓</span>}
-                        {ex.imbalanceNote && <span style={{ fontSize: "9px", padding: "2px 7px", borderRadius: "20px", background: "#fef3e4", color: "#c47a0a", border: "1px solid #f0c060" }}>⚖️</span>}
+                        {ex.imbalanceNote && <span style={{ fontSize: "8px", letterSpacing: "0.1em", textTransform: "uppercase", padding: "2px 6px", borderRadius: "3px", background: "#fef3e4", color: "#c47a0a", border: "1px solid #f0c060" }}>Imbalance</span>}
                       </div>
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: "4px", flexShrink: 0 }}>
@@ -817,7 +817,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
           />
 
           <div style={{ margin: "12px 16px 80px", padding: "10px 12px", background: "#111", borderRadius: "7px", color: "#f7f6f3", fontSize: "11px", lineHeight: "1.55" }}>
-            Tap <strong>🔥 Warm-Up</strong> before lifting. Tap <strong>Log</strong> on any exercise to record sets — the rest timer starts automatically. Tap <strong>🧘 Stretch</strong> when you're done to cool down. Tap ▼ for form cues.
+            Tap <strong>Warm-Up</strong> before lifting. Tap <strong>Log</strong> on any exercise to record sets — the rest timer starts automatically. Tap <strong>Stretch</strong> when you're done to cool down. Tap ▼ for form cues.
           </div>
         </>
       )}

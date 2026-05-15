@@ -598,7 +598,7 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
 
       {!hasData && (
         <div style={{ textAlign: 'center', padding: '40px 20px', color: '#aaa', fontSize: 13, lineHeight: 1.7 }}>
-          <div style={{ fontSize: 36, marginBottom: 12 }}>📊</div>
+          <div style={{ fontSize: 11, letterSpacing: "0.15em", textTransform: "uppercase", color: "#bbb", marginBottom: 12 }}>No data yet</div>
           Log your first session to see your strength breakdown and muscle analysis here.
         </div>
       )}

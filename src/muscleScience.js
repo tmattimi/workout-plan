@@ -95,7 +95,7 @@ export const muscleGroups = [
   {
     id: "chest",
     name: "Chest (Pectorals)",
-    emoji: "💪",
+    emoji: "",
     color: "#e9f0fb",
     accent: "#2563a8",
     summary: "The pectorals are a fan-shaped muscle with fibers running in different directions across the chest. Different fiber orientations mean different exercises stress different regions. Most people overdevelop the mid-chest from flat pressing while neglecting the upper and lower portions.",
@@ -185,7 +185,7 @@ export const muscleGroups = [
   {
     id: "triceps",
     name: "Triceps",
-    emoji: "💪",
+    emoji: "",
     color: "#e9f0fb",
     accent: "#2563a8",
     summary: "The triceps make up roughly two-thirds of the upper arm — more than the biceps. Most people undertrain them by focusing too heavily on pressing movements. Full tricep development requires at least one exercise with the arm overhead to fully stretch the long head.",
@@ -215,7 +215,7 @@ export const muscleGroups = [
   {
     id: "biceps",
     name: "Biceps",
-    emoji: "💪",
+    emoji: "",
     color: "#ebf5e6",
     accent: "#2d7a1e",
     summary: "The bicep is a two-headed muscle with a third synergist below it. Full arm development requires targeting all three — the long head for peak, the short head for width, and the brachialis for the 'pushing up' effect that makes the arm look bigger from the side.",

@@ -126,7 +126,7 @@ export default function WarmUp({ warmup, onComplete }) {
   if (allDone) {
     return (
       <div style={{ padding: "20px", textAlign: "center" }}>
-        <div style={{ fontSize: "48px", marginBottom: "12px" }}>🔥</div>
+        <div style={{ fontSize: "11px", letterSpacing: "0.2em", textTransform: "uppercase", color: "#c47a0a", marginBottom: "12px" }}>Ready to lift</div>
         <div style={{ fontSize: "20px", fontWeight: "normal", marginBottom: "6px" }}>Warm-Up Complete</div>
         <div style={{ fontSize: "13px", color: "#777", marginBottom: "20px" }}>
           Muscles are primed and ready. Get into the main session.

@@ -29,7 +29,7 @@ export function PRCelebration({ exercise, weight, reps, onDismiss }) {
         border: "2px solid #f59e0b", boxShadow: "0 0 40px rgba(245,158,11,0.3)",
         animation: "prPop 0.3s ease-out",
       }}>
-        <div style={{ fontSize: "52px", marginBottom: "10px" }}>🏆</div>
+        <div style={{ fontSize: "11px", letterSpacing: "0.25em", textTransform: "uppercase", background: "#f59e0b", color: "#111", padding: "4px 12px", borderRadius: "4px", display: "inline-block", marginBottom: "16px" }}>Personal Record</div>
         <div style={{ fontSize: "11px", letterSpacing: "0.25em", textTransform: "uppercase", color: "#f59e0b", marginBottom: "6px" }}>
           New Personal Record
         </div>
@@ -142,11 +142,11 @@ export function OverloadSuggestions({ sessionExercises, sessionLogs, sessionKey,
 
   const typeColors = {
     increase: { bg: "#e8f5e9", color: "#2d7a1e", icon: "↑", label: "Add weight" },
-    progress: { bg: "#e3f2fd", color: "#2563a8", icon: "📈", label: "Progress" },
+    progress: { bg: "#e3f2fd", color: "#2563a8", icon: "↑", label: "Progress" },
     rep_add:  { bg: "#f3e5f5", color: "#7a3aa0", icon: "+", label: "Add reps" },
-    hold:     { bg: "#fff3e0", color: "#c47a0a", icon: "⏸", label: "Hold weight" },
+    hold:     { bg: "#fff3e0", color: "#c47a0a", icon: "—", label: "Hold weight" },
     drop:     { bg: "#fce4ec", color: "#c62828", icon: "↓", label: "Reduce weight" },
-    baseline: { bg: "#f5f5f3", color: "#555",    icon: "📌", label: "Baseline" },
+    baseline: { bg: "#f5f5f3", color: "#555",    icon: "·", label: "Baseline" },
     maintain: { bg: "#f5f5f3", color: "#555",    icon: "→", label: "Maintain" },
   };
 
@@ -157,7 +157,7 @@ export function OverloadSuggestions({ sessionExercises, sessionLogs, sessionKey,
         style={{ width: "100%", background: "#111", border: "none", padding: "12px 14px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", ...F, textAlign: "left" }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <span style={{ fontSize: "16px" }}>🎯</span>
+          <span style={{ fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase" }}>Targets</span>
           <div>
             <div style={{ fontSize: "12px", fontWeight: "700", color: "#fff" }}>Next Session Targets</div>
             <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)" }}>{suggestions.length} exercises with suggestions</div>
@@ -294,7 +294,7 @@ export function SkipDayBanner({ activeSchedule, activeDay, logs, onDismiss }) {
           textAlign: "left", ...F,
         }}
       >
-        <span style={{ fontSize: "18px", flexShrink: 0 }}>📅</span>
+        <span style={{ fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase", color: "#c47a0a" }}>Missed</span>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: "11px", fontWeight: "700", color: "#c47a0a", marginBottom: "2px" }}>
             {advice.headline}

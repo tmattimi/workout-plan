@@ -2,7 +2,7 @@ import { useState } from "react";
 import { formatDate, formatShortDate, today } from "../storage";
 
 const METRICS = [
-  { key: "weight", label: "Body Weight", unit: "lbs", color: "#2563a8", icon: "⚖️", group: "weight" },
+  { key: "weight", label: "Body Weight", unit: "lbs", color: "#2563a8", icon: "wt", group: "weight" },
   { key: "waist", label: "Waist", unit: "in", color: "#a02a2a", icon: "📏", group: "measurements" },
   { key: "chest", label: "Chest", unit: "in", color: "#2d7a1e", icon: "📏", group: "measurements" },
   { key: "hips", label: "Hips", unit: "in", color: "#7a3aa0", icon: "📏", group: "measurements" },
@@ -259,7 +259,7 @@ export default function MeasurementsTracker({ measurements, onSave }) {
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: "12px", fontWeight: "500" }}>{metric.label}</div>
                     {metric.watchDiff && (
-                      <div style={{ fontSize: "10px", color: "#c47a0a" }}>⚖️ Track for symmetry</div>
+                      <div style={{ fontSize: "10px", color: "#c47a0a" }}>Track for symmetry</div>
                     )}
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
@@ -377,7 +377,7 @@ export default function MeasurementsTracker({ measurements, onSave }) {
             if (!armGap && !thighGap) return null;
             return (
               <div style={{ background: "#fef3e4", border: "1px solid #f0c060", borderRadius: "8px", padding: "12px 14px", marginBottom: "12px" }}>
-                <div style={{ fontSize: "10px", fontWeight: "700", color: "#c47a0a", marginBottom: "6px" }}>⚖️ Symmetry Tracking</div>
+                <div style={{ fontSize: "10px", fontWeight: "700", color: "#c47a0a", marginBottom: "6px" }}>Symmetry Tracking</div>
                 {armGap && (
                   <div style={{ fontSize: "11px", color: "#7a5010", marginBottom: "3px" }}>
                     Arms: {armGap}" gap (started {baseArmGap}") {parseFloat(armGap) < parseFloat(baseArmGap) ? "✓ improving" : "→ keep going"}
@@ -426,7 +426,7 @@ export default function MeasurementsTracker({ measurements, onSave }) {
                     <div style={{ fontSize: "12px", color: "#ccc", marginTop: "4px" }}>Not logged</div>
                   )}
                   {metric.watchDiff && (
-                    <div style={{ fontSize: "9px", color: "#c47a0a", marginTop: "2px" }}>⚖️ symmetry</div>
+                    <div style={{ fontSize: "9px", color: "#c47a0a", marginTop: "2px" }}>symmetry</div>
                   )}
                 </button>
               );

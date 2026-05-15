@@ -597,7 +597,7 @@ function ClientDetail({ client, coachId, plans, onBack, onAssignPlan }) {
                     {prs.map((pr, i) => (
                       <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
                         <span style={{ fontSize: "12px", color: "#333" }}>{pr.exercises?.name}</span>
-                        <span style={{ fontSize: "12px", fontWeight: "700", color: "#f59e0b" }}>🏆 {pr.weight_lbs} lbs × {pr.reps}</span>
+                        <span style={{ fontSize: "9px", letterSpacing: "0.1em", textTransform: "uppercase", background: "#f59e0b", color: "#111", padding: "2px 5px", borderRadius: "3px", marginRight: "4px" }}>PR</span>{pr.weight_lbs} lbs × {pr.reps}</span>
                       </div>
                     ))}
                   </div>
@@ -696,7 +696,7 @@ function ClientDetail({ client, coachId, plans, onBack, onAssignPlan }) {
         <div>
           {!intake ? (
             <div style={{ padding: "40px 20px", textAlign: "center", color: "#aaa" }}>
-              <div style={{ fontSize: "36px", marginBottom: "10px" }}>📋</div>
+              <div style={{ fontSize: "11px", letterSpacing: "0.15em", textTransform: "uppercase", color: "#bbb", marginBottom: "10px" }}>No sessions yet</div>
               <div style={{ fontSize: "14px", marginBottom: "6px" }}>No intake submitted yet</div>
               <div style={{ fontSize: "12px", lineHeight: "1.6" }}>The client hasn't completed the onboarding questionnaire yet.</div>
             </div>

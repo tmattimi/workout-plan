@@ -320,7 +320,7 @@ export const BENCHMARK_LIFTS = [
     id: 'deadlift',
     name: 'Deadlift',
     exerciseKey: 'conventional deadlift',
-    icon: '💪',
+    icon: '',
     primaryGroup: 'hamstrings',
     instructions: [
       'Warm up with 2 sets: 50% for 6 reps, then 70% for 3 reps. Rest 3 to 4 minutes.',
@@ -335,7 +335,7 @@ export const BENCHMARK_LIFTS = [
     id: 'hip_thrust',
     name: 'Hip Thrust',
     exerciseKey: 'barbell hip thrust',
-    icon: '🔥',
+    icon: '',
     primaryGroup: 'glutes',
     instructions: [
       'Warm up with 2 sets: 50% for 10 reps, then 70% for 6 reps. Rest 3 minutes.',
