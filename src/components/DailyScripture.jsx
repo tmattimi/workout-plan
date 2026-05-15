@@ -533,7 +533,6 @@ function CrossMark({ color = "#555" }) {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function DailyScripture({ accent = "#2563a8", inHeader = false }) {
-  const [dismissed, setDismissed] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [showDevotion, setShowDevotion] = useState(false);
   const [devotion, setDevotion] = useState(null);
@@ -543,13 +542,6 @@ export default function DailyScripture({ accent = "#2563a8", inHeader = false })
   const scripture = getTodayScripture();
   const isSunday = new Date().getDay() === 0;
   const sundayPrompt = isSunday ? getSundayPrompt() : null;
-
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem("scripture_dismissed");
-      if (stored === new Date().toISOString().slice(0, 10)) setDismissed(true);
-    } catch {}
-  }, []);
 
   async function handleDevotion() {
     if (showDevotion) { setShowDevotion(false); return; }
@@ -575,12 +567,7 @@ export default function DailyScripture({ accent = "#2563a8", inHeader = false })
     setLoading(false);
   }
 
-  function dismiss() {
-    try { localStorage.setItem("scripture_dismissed", new Date().toISOString().slice(0, 10)); } catch {}
-    setDismissed(true);
-  }
-
-  if (dismissed) return null;
+  if (!scripture) return null;
 
   const seasonLabel = scripture.season || (isSunday ? "Sunday · Rest & Reflection" : "Today's Word");
 
@@ -675,15 +662,6 @@ export default function DailyScripture({ accent = "#2563a8", inHeader = false })
             </div>
           )}
 
-          {/* Dismiss */}
-          <div style={{ padding: "10px 15px", display: "flex", justifyContent: "flex-end" }}>
-            <button onClick={dismiss} style={{
-              background: "none", border: "none", color: "#3a3a3a",
-              fontSize: "10px", cursor: "pointer", ...F, letterSpacing: "0.05em",
-            }}>
-              Dismiss for today
-            </button>
-          </div>
         </div>
       )}
     </div>
