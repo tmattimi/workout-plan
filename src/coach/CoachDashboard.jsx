@@ -597,7 +597,7 @@ function ClientDetail({ client, coachId, plans, onBack, onAssignPlan }) {
                     {prs.map((pr, i) => (
                       <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
                         <span style={{ fontSize: "12px", color: "#333" }}>{pr.exercises?.name}</span>
-                        <span style={{ fontSize: "9px", letterSpacing: "0.1em", textTransform: "uppercase", background: "#f59e0b", color: "#111", padding: "2px 5px", borderRadius: "3px", marginRight: "4px" }}>PR</span>{pr.weight_lbs} lbs × {pr.reps}</span>
+                        <span style={{ fontSize: "12px", color: "#555" }}><span style={{ fontSize: "9px", letterSpacing: "0.1em", textTransform: "uppercase", background: "#f59e0b", color: "#111", padding: "2px 5px", borderRadius: "3px", marginRight: "4px" }}>PR</span>{pr.weight_lbs} lbs × {pr.reps}</span>
                       </div>
                     ))}
                   </div>
