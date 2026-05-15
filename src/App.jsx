@@ -10,8 +10,10 @@ import MeasurementsTracker from "./components/MeasurementsTracker";
 import MuscleScience from "./components/MuscleScience";
 import WarmUp from "./components/WarmUp";
 import RestTimer, { parseRestSeconds } from "./components/RestTimer";
-import { PRCelebration, OverloadSuggestions } from "./components/PRCelebration";
+import { PRCelebration, OverloadSuggestions, SkipDayBanner } from "./components/PRCelebration";
 import MonthlyPrompt from "./components/MonthlyPrompt";
+import DailyScripture from "./components/DailyScripture";
+import PostWorkoutStretches from "./components/PostWorkoutStretches";
 import { getWarmupForDay } from "./warmups";
 import AlternativeExercises from "./components/AlternativeExercises";
 import { getClientByToken } from "./lib/supabase";
@@ -400,6 +402,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
   const [showLogger, setShowLogger] = useState({});
   const [sessionDate, setSessionDate] = useState(today());
   const [showWarmup, setShowWarmup] = useState(false);
+  const [showStretches, setShowStretches] = useState(false);
 
   // State from storage
   const [logs, setLogs] = useState(loadWorkoutLogs);
@@ -598,6 +601,22 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
     );
   }
 
+  // Post-workout stretch screen
+  if (showStretches) {
+    return (
+      <div style={{ ...F, background: "#f7f6f3", minHeight: "100vh", maxWidth: 640, margin: "0 auto" }}>
+        <div style={{ background: "#111", padding: "18px 18px 14px", display: "flex", alignItems: "center", gap: "12px" }}>
+          <button onClick={() => setShowStretches(false)} style={{ background: "none", border: "none", color: "#aaa", fontSize: "20px", cursor: "pointer" }}>←</button>
+          <div>
+            <div style={{ fontSize: "9px", letterSpacing: "0.2em", textTransform: "uppercase", color: "#555" }}>Post-Workout</div>
+            <div style={{ fontSize: "16px", color: "#f7f6f3", fontWeight: "normal" }}>Cool Down & Stretch</div>
+          </div>
+        </div>
+        <PostWorkoutStretches muscles={current.muscles || []} onDone={() => setShowStretches(false)} />
+      </div>
+    );
+  }
+
   return (
     <div style={{ ...F, background: "#f7f6f3", minHeight: "100vh", color: "#1a1a1a", maxWidth: 640, margin: "0 auto" }}>
 
@@ -667,6 +686,12 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
                   🔥 Warm-Up
                 </button>
               )}
+              {/* Post-workout stretch button */}
+              {current.type !== "rest" && completedExercises > 0 && (
+                <button onClick={() => setShowStretches(true)} style={{ background: "rgba(255,255,255,0.7)", color: current.accent, border: `1px solid ${current.accent}44`, borderRadius: "20px", padding: "4px 12px", fontSize: "11px", cursor: "pointer", ...F, fontWeight: "600" }}>
+                  🧘 Stretch
+                </button>
+              )}
             </div>
 
             {current.sessionNote && (
@@ -689,6 +714,16 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
               <span key={label} style={{ fontSize: "9px", background: color, color: "#fff", padding: "2px 7px", borderRadius: "20px" }}>{label}</span>
             ))}
           </div>
+
+          {/* Daily Scripture */}
+          <DailyScripture accent={current.accent} />
+
+          {/* Skip Day Banner */}
+          <SkipDayBanner
+            activeSchedule={activeSchedule}
+            activeDay={activeDay}
+            logs={logs}
+          />
 
           {/* Exercises */}
           <div>
@@ -782,7 +817,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
           />
 
           <div style={{ margin: "12px 16px 80px", padding: "10px 12px", background: "#111", borderRadius: "7px", color: "#f7f6f3", fontSize: "11px", lineHeight: "1.55" }}>
-            Tap <strong>🔥 Warm-Up</strong> before lifting. Tap <strong>Log</strong> on any exercise to record sets — the rest timer starts automatically. Tap ▼ for form cues.
+            Tap <strong>🔥 Warm-Up</strong> before lifting. Tap <strong>Log</strong> on any exercise to record sets — the rest timer starts automatically. Tap <strong>🧘 Stretch</strong> when you're done to cool down. Tap ▼ for form cues.
           </div>
         </>
       )}
