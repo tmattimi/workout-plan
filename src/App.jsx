@@ -689,7 +689,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
                 </button>
               )}
               {/* Post-workout stretch button */}
-              {current.type !== "rest" && completedExercises > 0 && (
+              {current.type !== "rest" && (
                 <button onClick={() => setShowStretches(true)} style={{ background: "rgba(255,255,255,0.7)", color: current.accent, border: `1px solid ${current.accent}44`, borderRadius: "20px", padding: "4px 12px", fontSize: "11px", cursor: "pointer", ...F, fontWeight: "600" }}>
                   Stretch
                 </button>
@@ -701,13 +701,6 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
                 {current.sessionNote}
               </div>
             )}
-          </div>
-
-          {/* Legend */}
-          <div style={{ padding: "6px 16px", background: "#fff", borderBottom: "1px solid #eee", display: "flex", gap: "5px", flexWrap: "wrap" }}>
-            {[["Compound","#1a1a1a"],["Compound Uni","#2563a8"],["Isolation","#555"],["Isolation Uni","#7a3aa0"],["Core","#147a50"]].map(([label, color]) => (
-              <span key={label} style={{ fontSize: "9px", background: color, color: "#fff", padding: "2px 7px", borderRadius: "20px" }}>{label}</span>
-            ))}
           </div>
 
           {/* Exercises */}
@@ -738,10 +731,14 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
                         <span style={{ fontSize: "10px", background: current.color, color: current.accent, padding: "2px 8px", borderRadius: "20px", fontWeight: "700" }}>{ex.sets} × {ex.reps}</span>
                         {ex.rest !== "—" && <span style={{ fontSize: "9px", color: "#999", padding: "2px 7px", background: "#f0f0f0", borderRadius: "20px" }}>{ex.rest} rest</span>}
                         {ex.eccentric && ex.eccentric !== "—" && <span style={{ fontSize: "9px", color: "#7a3aa0", padding: "2px 7px", background: "#f3eafa", borderRadius: "20px" }}>{ex.eccentric}</span>}
-                        <span style={{ fontSize: "9px", padding: "2px 7px", borderRadius: "20px", background: cs.bg, color: cs.color }}>{cs.short}</span>
-                        {isStarted && <span style={{ fontSize: "9px", padding: "2px 7px", borderRadius: "20px", background: doneSets > 0 ? "#e8f5e9" : "#f0f0f0", color: doneSets > 0 ? "#2d7a1e" : "#999" }}>{doneSets}/{totalLogged} ✓</span>}
+                        {isStarted && <span style={{ fontSize: "9px", padding: "2px 7px", borderRadius: "20px", background: doneSets > 0 ? "#e8f5e9" : "#f0f0f0", color: doneSets > 0 ? "#2d7a1e" : "#999" }}>{doneSets}/{totalLogged} done</span>}
                         {ex.imbalanceNote && <span style={{ fontSize: "8px", letterSpacing: "0.1em", textTransform: "uppercase", padding: "2px 6px", borderRadius: "3px", background: "#fef3e4", color: "#c47a0a", border: "1px solid #f0c060" }}>Imbalance</span>}
                       </div>
+                      {ex.muscles && ex.muscles.length > 0 && (
+                        <div style={{ fontSize: "10px", color: "#aaa", marginTop: "4px" }}>
+                          {ex.muscles.join(" · ")}
+                        </div>
+                      )}
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: "4px", flexShrink: 0 }}>
                       {ex.category !== "Recovery" && ex.category !== "Mobility" && (
@@ -772,9 +769,6 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
 
                   {isOpen && (
                     <div style={{ padding: "0 16px 12px 51px" }}>
-                      <div style={{ fontSize: "11px", color: "#555", lineHeight: "1.6", marginBottom: "7px", background: "#f5f5f3", borderRadius: "5px", padding: "8px 10px" }}>
-                        {ex.why}
-                      </div>
                       {ex.imbalanceNote && (
                         <div style={{ fontSize: "11px", color: "#7a5010", lineHeight: "1.6", marginBottom: "7px", background: "#fef3e4", border: "1px solid #f0c060", borderRadius: "5px", padding: "8px 10px" }}>
                           <strong>Imbalance note:</strong> {ex.imbalanceNote}
