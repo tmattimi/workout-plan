@@ -623,7 +623,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
       {/* Header */}
       <div style={{ background: "#111", color: "#f7f6f3", padding: "22px 18px 0" }}>
         <div style={{ fontSize: "9px", letterSpacing: "0.25em", textTransform: "uppercase", color: "#555", marginBottom: "3px" }}>Push Pull Legs × 2 · 6 Days</div>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "14px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "10px" }}>
           <h1 style={{ margin: 0, fontSize: "21px", fontWeight: "normal", letterSpacing: "-0.5px" }}>
             {clientData?.name ? `${clientData.name.split(" ")[0]}'s Plan` : "Workout Plan"}
           </h1>
@@ -633,6 +633,8 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
             </button>
           )}
         </div>
+        {/* Scripture — inline in header */}
+        <DailyScripture accent="#c47a0a" inHeader />
         <div style={{ display: "flex", gap: "3px", overflowX: "auto", paddingBottom: "1px" }}>
           {tabs.map(([t, label]) => (
             <button key={t} onClick={() => setTab(t)} style={{
@@ -714,9 +716,6 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
               <span key={label} style={{ fontSize: "9px", background: color, color: "#fff", padding: "2px 7px", borderRadius: "20px" }}>{label}</span>
             ))}
           </div>
-
-          {/* Daily Scripture */}
-          <DailyScripture accent={current.accent} />
 
           {/* Skip Day Banner */}
           <SkipDayBanner

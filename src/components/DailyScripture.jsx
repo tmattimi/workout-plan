@@ -50,18 +50,14 @@ const SPECIAL = {
 };
 
 const SEASONS = {
+  // Only specific holy days get overrides — not entire seasons (Lent, Easter Season etc.)
+  // Those would override every day for weeks, showing the same verse repeatedly
   ash_wednesday: { v:"Turn to me now, while there is time. Give me your hearts. Come with fasting, weeping, and mourning.", r:"Joel 2:12", season:"Ash Wednesday" },
-  lent:          { v:"Create in me a clean heart, O God. Renew a loyal spirit within me.", r:"Psalm 51:10", season:"Lent" },
   palm_sunday:   { v:"Blessed is he who comes in the name of the Lord! Hosanna in the highest heaven!", r:"Matthew 21:9", season:"Palm Sunday" },
-  holy_week:     { v:"For even the Son of Man did not come to be served but to serve others and to give his life as a ransom for many.", r:"Mark 10:45", season:"Holy Week" },
   holy_thursday: { v:"He got up from the table, wrapped a towel around his waist, and began to wash the disciples' feet.", r:"John 13:4–5", season:"Holy Thursday" },
   good_friday:   { v:"So they took Jesus, and he went out, bearing his own cross, to the place called The Place of a Skull.", r:"John 19:17", season:"Good Friday" },
   easter_day:    { v:"He is not here! He is risen from the dead, just as he said would happen.", r:"Matthew 28:6", season:"Easter Sunday" },
-  easter_season: { v:"I want to know Christ and experience the mighty power that raised him from the dead.", r:"Philippians 3:10", season:"Easter Season" },
   pentecost:     { v:"And everyone present was filled with the Holy Spirit.", r:"Acts 2:4", season:"Pentecost" },
-  advent:        { v:"For I know the plans I have for you, says the Lord — plans for good, to give you a future and a hope.", r:"Jeremiah 29:11", season:"Advent" },
-  christmas:     { v:"The Word became human and made his home among us. He was full of unfailing love and faithfulness.", r:"John 1:14", season:"Christmas Season" },
-  epiphany:      { v:"Arise, Jerusalem! Let your light shine for all to see. For the glory of the Lord rises to shine on you.", r:"Isaiah 60:1", season:"Epiphany" },
 };
 
 // ── 365 scriptures by month/day ───────────────────────────────────────────────
@@ -536,7 +532,7 @@ function CrossMark({ color = "#555" }) {
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
-export default function DailyScripture({ accent = "#2563a8" }) {
+export default function DailyScripture({ accent = "#2563a8", inHeader = false }) {
   const [dismissed, setDismissed] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [showDevotion, setShowDevotion] = useState(false);
@@ -589,12 +585,18 @@ export default function DailyScripture({ accent = "#2563a8" }) {
   const seasonLabel = scripture.season || (isSunday ? "Sunday · Rest & Reflection" : "Today's Word");
 
   return (
-    <div style={{ margin: "10px 14px", borderRadius: "10px", overflow: "hidden", border: "1px solid #222", background: "#111" }}>
+    <div style={{
+      ...(inHeader
+        ? { margin: "0 0 12px 0", borderRadius: "6px", overflow: "hidden", border: "1px solid #2a2a2a", background: "#1a1a1a" }
+        : { margin: "10px 14px", borderRadius: "10px", overflow: "hidden", border: "1px solid #222", background: "#111" }
+      )
+    }}>
 
       {/* Header */}
       <button onClick={() => setExpanded(p => !p)} style={{
         width: "100%", background: "none", border: "none", cursor: "pointer",
-        padding: "13px 15px", display: "flex", alignItems: "flex-start", gap: "12px", textAlign: "left", ...F,
+        padding: inHeader ? "9px 12px" : "13px 15px",
+        display: "flex", alignItems: "flex-start", gap: "10px", textAlign: "left", ...F,
       }}>
         <CrossMark color={accent} />
         <div style={{ flex: 1, minWidth: 0 }}>
