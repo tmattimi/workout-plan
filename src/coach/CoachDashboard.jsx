@@ -6,7 +6,7 @@ import {
   addExerciseToPlanDay, removePlanExercise, reorderPlanExercises,
   assignPlanToClient, getAllExercises, getClientOverview,
   createCoachNote, getMessages, sendMessage, markMessagesRead,
-  inviteClient, getClientIntake
+  inviteClient, getClientIntake, seedClientDataFromIntake
 } from "../lib/supabase";
 import { formatDate } from "../storage";
 import AICoachPanel from "../components/AICoachPanel";
@@ -422,6 +422,20 @@ function ClientDetail({ client, coachId, plans, onBack, onAssignPlan }) {
   const [inviteStatus, setInviteStatus] = useState(client.auth_user_id ? "exists" : null);
   const [inviteError, setInviteError] = useState("");
   const [editForm, setEditForm] = useState({ name: client.name || "", email: client.email || "", phone: client.phone || "", goal: client.goal || "recomp", sex: client.sex || "male", notes: client.notes || "" });
+  const [seeding, setSeeding] = useState(false);
+  const [seedResult, setSeedResult] = useState(null);
+
+  async function handleSeedFromIntake() {
+    if (!intake) return;
+    setSeeding(true);
+    setSeedResult(null);
+    const result = await seedClientDataFromIntake(client.id, intake);
+    setSeedResult(result);
+    setSeeding(false);
+    // Reload overview to reflect new data
+    const data = await getClientOverview(client.id);
+    setOverview(data);
+  }
   const [editSaving, setEditSaving] = useState(false);
   const [editSaved, setEditSaved] = useState(false);
 
@@ -911,7 +925,26 @@ function ClientDetail({ client, coachId, plans, onBack, onAssignPlan }) {
             </div>
           ) : (
             <div>
-              <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.15em", color: "#999", marginBottom: "14px" }}>Client Intake Form</div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
+                <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.15em", color: "#999" }}>Client Intake Form</div>
+                <button onClick={handleSeedFromIntake} disabled={seeding} style={{ background: seeding ? "#ccc" : "#1a1a1a", color: "#f7f6f3", border: "none", borderRadius: "20px", padding: "6px 14px", fontSize: "11px", cursor: seeding ? "wait" : "pointer", ...F }}>
+                  {seeding ? "Seeding..." : "Seed into app data"}
+                </button>
+              </div>
+
+              {seedResult && (
+                <div style={{ background: seedResult.errors.length > 0 ? "#fff5f5" : "#e8f5e9", border: `1px solid ${seedResult.errors.length > 0 ? "#f0b0b0" : "#a5d6a7"}`, borderRadius: "7px", padding: "10px 13px", marginBottom: "12px", fontSize: "11px", lineHeight: "1.6" }}>
+                  {seedResult.errors.length === 0 ? (
+                    <div style={{ color: "#2d7a1e" }}>
+                      Done. {seedResult.hasMeasurements ? "Body measurements logged. " : ""}{seedResult.prCount > 0 ? `${seedResult.prCount} baseline PRs saved. ` : ""}Injury flags and equipment updated on the client profile.
+                    </div>
+                  ) : (
+                    <div style={{ color: "#a02020" }}>
+                      Partial: {seedResult.errors.join(", ")}
+                    </div>
+                  )}
+                </div>
+              )}
               {[
                 { label: "── GOALS ──", value: " " },
                 { label: "Primary Goal", value: intake.primary_goal?.replace("_"," ") },

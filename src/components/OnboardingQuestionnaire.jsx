@@ -358,6 +358,56 @@ export default function OnboardingQuestionnaire({ client, onComplete }) {
         });
       }
 
+      // 4. Save baseline PRs from benchmark strength entries
+      const benchmarkExercises = [
+        { field: "bench_press_lbs",    name: "Dumbbell Bench Press" },
+        { field: "overhead_press_lbs", name: "Seated Dumbbell Overhead Press" },
+        { field: "squat_lbs",          name: "Goblet Squat" },
+        { field: "hip_thrust_lbs",     name: "Hip Thrust (Barbell or Machine)" },
+        { field: "deadlift_lbs",       name: "Romanian Deadlift (Dumbbell)" },
+      ];
+
+      const { data: allExercises } = await supabase.from("exercises").select("id, name").eq("is_active", true);
+      const exByName = {};
+      (allExercises || []).forEach(ex => { exByName[ex.name.toLowerCase()] = ex; });
+
+      const prInserts = [];
+      for (const { field, name } of benchmarkExercises) {
+        const weight = intakeData[field];
+        if (!weight) continue;
+        const ex = exByName[name.toLowerCase()];
+        if (!ex) continue;
+        prInserts.push(
+          supabase.from("personal_records").upsert({
+            client_id: client.id,
+            exercise_id: ex.id,
+            weight_lbs: parseFloat(weight),
+            reps: 5,
+            achieved_at: new Date().toISOString().slice(0, 10),
+            source: "intake_baseline",
+          }, { onConflict: "client_id,exercise_id", ignoreDuplicates: true })
+        );
+      }
+
+      // Pull-up max reps (bodyweight)
+      if (intakeData.pullups_max != null) {
+        const pullupEx = exByName["pull-up (or assisted pull-up)"];
+        if (pullupEx) {
+          prInserts.push(
+            supabase.from("personal_records").upsert({
+              client_id: client.id,
+              exercise_id: pullupEx.id,
+              weight_lbs: 0,
+              reps: parseInt(intakeData.pullups_max),
+              achieved_at: new Date().toISOString().slice(0, 10),
+              source: "intake_baseline",
+            }, { onConflict: "client_id,exercise_id", ignoreDuplicates: true })
+          );
+        }
+      }
+
+      if (prInserts.length > 0) await Promise.all(prInserts);
+
       setStep("complete");
     } catch (err) {
       console.error("Onboarding save error:", err);

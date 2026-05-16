@@ -533,3 +533,114 @@ export async function getClientOverview(clientId) {
     unreadFromClient: messages.data.filter(m => m.sender === 'client' && !m.is_read).length,
   };
 }
+
+// ── Seed client data from intake form ────────────────────────────────────────
+// Maps intake benchmark fields to exercise names in the exercises table
+const INTAKE_EXERCISE_MAP = {
+  bench_press_lbs:     "Dumbbell Bench Press",
+  overhead_press_lbs:  "Seated Dumbbell Overhead Press",
+  squat_lbs:           "Goblet Squat",
+  hip_thrust_lbs:      "Hip Thrust (Barbell or Machine)",
+  deadlift_lbs:        "Romanian Deadlift (Dumbbell)",
+};
+
+// Reps assumed for baseline strength entries (working rep counts, not 1RM)
+const INTAKE_BASELINE_REPS = 5;
+const INTAKE_PULLUP_REPS_KEY = "pullups_max"; // reps, no weight
+
+export async function seedClientDataFromIntake(clientId, intake) {
+  if (!supabase || !intake) return { errors: [] };
+
+  const errors = [];
+  const intakeDate = intake.created_at?.slice(0, 10) || new Date().toISOString().slice(0, 10);
+
+  // 1. Body measurements — log as a single entry on intake date
+  const measurementFields = {
+    weight_lbs:      intake.current_weight_lbs,
+    waist_in:        intake.waist_in,
+    hips_in:         intake.hips_in,
+    chest_in:        intake.chest_in,
+    right_arm_in:    intake.right_arm_in,
+    left_arm_in:     intake.left_arm_in,
+    right_thigh_in:  intake.right_thigh_in,
+    left_thigh_in:   intake.left_thigh_in,
+    body_fat_pct:    intake.body_fat_pct,
+  };
+
+  const hasMeasurements = Object.values(measurementFields).some(v => v != null && v !== "");
+  if (hasMeasurements) {
+    const { error: mErr } = await supabase
+      .from('measurements')
+      .insert({
+        client_id: clientId,
+        measured_at: intakeDate,
+        ...Object.fromEntries(Object.entries(measurementFields).filter(([, v]) => v != null && v !== "")),
+      });
+    if (mErr) errors.push(`Measurements: ${mErr.message}`);
+  }
+
+  // 2. Baseline PRs — map exercise names → exercise IDs then upsert
+  const { data: exercises } = await getAllExercises();
+  const exByName = {};
+  (exercises || []).forEach(ex => { exByName[ex.name.toLowerCase()] = ex; });
+
+  const prUpserts = [];
+
+  // Weighted benchmarks
+  for (const [intakeKey, exerciseName] of Object.entries(INTAKE_EXERCISE_MAP)) {
+    const weight = intake[intakeKey];
+    if (!weight) continue;
+
+    const ex = exByName[exerciseName.toLowerCase()];
+    if (!ex) {
+      errors.push(`Exercise not found in DB: ${exerciseName}`);
+      continue;
+    }
+
+    prUpserts.push(
+      supabase.from('personal_records').upsert({
+        client_id: clientId,
+        exercise_id: ex.id,
+        weight_lbs: parseFloat(weight),
+        reps: INTAKE_BASELINE_REPS,
+        achieved_at: intakeDate,
+        source: 'intake_baseline',
+      }, { onConflict: 'client_id,exercise_id', ignoreDuplicates: false })
+    );
+  }
+
+  // Pull-up max reps (bodyweight — log with weight 0)
+  if (intake[INTAKE_PULLUP_REPS_KEY] != null) {
+    const pullupEx = exByName["pull-up (or assisted pull-up)"];
+    if (pullupEx) {
+      prUpserts.push(
+        supabase.from('personal_records').upsert({
+          client_id: clientId,
+          exercise_id: pullupEx.id,
+          weight_lbs: 0,
+          reps: parseInt(intake[INTAKE_PULLUP_REPS_KEY]),
+          achieved_at: intakeDate,
+          source: 'intake_baseline',
+        }, { onConflict: 'client_id,exercise_id', ignoreDuplicates: false })
+      );
+    }
+  }
+
+  const prResults = await Promise.all(prUpserts);
+  prResults.forEach(({ error }) => { if (error) errors.push(`PR: ${error.message}`); });
+
+  // 3. Injury flags + equipment — update client record
+  const clientUpdates = {};
+  if (intake.injury_flags?.length) clientUpdates.injuries = intake.injury_flags;
+  if (intake.equipment_available?.length) clientUpdates.equipment = intake.equipment_available;
+  if (intake.primary_goal) clientUpdates.goal = intake.primary_goal;
+  if (Object.keys(clientUpdates).length) {
+    const { error: cErr } = await supabase
+      .from('clients')
+      .update({ ...clientUpdates, updated_at: new Date().toISOString() })
+      .eq('id', clientId);
+    if (cErr) errors.push(`Client update: ${cErr.message}`);
+  }
+
+  return { errors, intakeDate, hasMeasurements, prCount: prUpserts.length };
+}
