@@ -894,13 +894,13 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
                         </div>
                       )}
                       {ex.form && ex.form.length > 0 && (
-                        <div style={{ fontSize: "12px", color: "#444", lineHeight: "1.65" }}>
+                        <div style={{ fontSize: "11px", color: "#555", lineHeight: "1.6" }}>
                           {ex.form.map((step, si) => (
-                            <div key={si} style={{ marginBottom: "6px" }}>
-                              <span style={{ fontSize: "10px", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.08em", color: step.label === "Watch for" ? "#a02020" : "#888", marginRight: "6px" }}>
+                            <div key={si} style={{ marginBottom: "4px" }}>
+                              <span style={{ fontSize: "9px", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.08em", color: step.label === "Watch for" ? "#a02020" : "#999", marginRight: "5px" }}>
                                 {step.label}:
                               </span>
-                              <span style={{ color: "#333" }}>{step.text}</span>
+                              <span>{step.text}</span>
                             </div>
                           ))}
                         </div>
@@ -957,14 +957,18 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
                         <SetLogger exercise={ex} sessionKey={sessionKey} logs={logs} onLogsChange={handleLogsChange} accent="#c47a0a" color="#1a1a1a" onSetDone={handleSetDone} prs={prs} />
                       </div>
                     )}
-                    {isOpen && ex.form && (
-                      <div style={{ padding: "0 16px 12px 51px" }}>
-                        {ex.form.map((step, si) => (
-                          <div key={si} style={{ marginBottom: "5px", fontSize: "11px", lineHeight: "1.6", borderLeft: "2px solid #c47a0a", paddingLeft: "10px" }}>
-                            <strong style={{ color: "#c47a0a" }}>{step.label}: </strong>
-                            <span style={{ color: "#333" }}>{step.text}</span>
-                          </div>
-                        ))}
+                    {isOpen && ex.form && ex.form.length > 0 && (
+                      <div style={{ padding: "0 16px 10px 51px" }}>
+                        <div style={{ fontSize: "11px", color: "#555", lineHeight: "1.6" }}>
+                          {ex.form.map((step, si) => (
+                            <div key={si} style={{ marginBottom: "4px" }}>
+                              <span style={{ fontSize: "9px", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.08em", color: step.label === "Watch for" ? "#a02020" : "#999", marginRight: "5px" }}>
+                                {step.label}:
+                              </span>
+                              <span>{step.text}</span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>
