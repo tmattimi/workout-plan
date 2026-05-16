@@ -571,7 +571,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
 
   const tabs = [
     ["plan","Plan"], ["progress","Progress"], ["body","Body"],
-    ["photos","Photos"], ["history","History"], ["muscles","Muscles"],
+    ["photos","Photos"], ["muscles","Muscles"],
     ["alternatives","Alternatives"], ["goals","Goals"],
     ["monthly","Monthly"], ["activity","Activity"], ["injury","Injury"],
     ["cycle","Cycle"], ["health","Health"],
@@ -851,7 +851,6 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
       {tab === "progress" && <NewProgressTab clientId={clientData?.id} bodyweight={clientData?.weight || 170} localLogs={logs} />}
       {tab === "body" && <MeasurementsTracker measurements={measurements} onSave={handleMeasurementsChange} />}
       {tab === "photos" && <PhotosTab photos={photos} onSave={handlePhotosChange} />}
-      {tab === "history" && <HistoryTab logs={logs} activeSchedule={activeSchedule} />}
       {tab === "muscles" && <MuscleScience />}
       {tab === "alternatives" && (
         <AlternativeExercises

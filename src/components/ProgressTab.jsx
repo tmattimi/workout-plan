@@ -108,7 +108,7 @@ function StrengthTestFlow({ clientId, bodyweight, onComplete, onCancel }) {
     const w = parseFloat(testWeight);
     const r = parseInt(testReps);
     if (!w || !r || r < 1) { setError('Enter valid weight and reps.'); return; }
-    if (r > 15) { setError('For accurate e1RM, use a weight you can lift for 15 reps or fewer.'); return; }
+    if (r > 15) { setError('For an accurate result, use a weight you can lift for 15 reps or fewer.'); return; }
     const estimated = epley1RM(w, r);
     setE1rm(estimated);
     setError('');
@@ -144,9 +144,9 @@ function StrengthTestFlow({ clientId, bodyweight, onComplete, onCancel }) {
     <div style={{ padding: '16px 16px 40px' }}>
       <button onClick={onCancel} style={{ background: 'none', border: 'none', fontSize: 12, color: '#888', cursor: 'pointer', marginBottom: 12, padding: 0, ...F }}>← Back</button>
       <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.18em', color: '#999', marginBottom: 4 }}>Strength Assessment</div>
-      <div style={{ fontSize: 20, fontWeight: 'normal', marginBottom: 4, ...F }}>1RM Strength Test</div>
+      <div style={{ fontSize: 20, fontWeight: 'normal', marginBottom: 4, ...F }}>Strength Test</div>
       <p style={{ fontSize: 12, color: '#666', lineHeight: 1.7, marginBottom: 20 }}>
-        Select a lift to test. You will not lift to failure — instead, perform a challenging set of 3 to 8 reps and the app will calculate your estimated one-rep max using the Epley formula. Retest every 12 weeks to track strength progress over time.
+        Select a lift to test. You will not lift to failure — instead, perform a challenging set of 3 to 8 reps and the app will calculate your strength baseline. Retest every 12 weeks to see how far you have come.
       </p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {BENCHMARK_LIFTS.map(lift => (
@@ -251,11 +251,11 @@ function StrengthTestFlow({ clientId, bodyweight, onComplete, onCancel }) {
       {error && <div style={{ color: '#b91c1c', fontSize: 12, marginBottom: 12, padding: '8px 12px', background: '#fee2e2', borderRadius: 7 }}>{error}</div>}
 
       <p style={{ fontSize: 11, color: '#aaa', lineHeight: 1.65, marginBottom: 16, textAlign: 'center' }}>
-        Use a weight you lifted for 3 to 8 reps with good form. The Epley formula works best in this range and gives you a safe, accurate estimated max.
+        Use a weight you can lift for 3 to 8 reps with good form. This range gives the most accurate strength reading.
       </p>
 
       <button onClick={calculateResult} style={{ width: '100%', background: '#111', color: '#fff', border: 'none', borderRadius: 10, padding: '14px', fontSize: 14, cursor: 'pointer', ...F }}>
-        Calculate my 1RM →
+        Calculate my strength →
       </button>
     </div>
   );
@@ -272,19 +272,15 @@ function StrengthTestFlow({ clientId, bodyweight, onComplete, onCancel }) {
       </div>
 
       <div style={{ background: '#111', borderRadius: 12, padding: '24px 20px', marginBottom: 20, textAlign: 'center' }}>
-        <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.15em', color: '#888', marginBottom: 8 }}>Estimated 1-Rep Max</div>
-        <div style={{ fontSize: 52, fontWeight: 700, color: '#fff', letterSpacing: '-1px' }}>{e1rm}</div>
-        <div style={{ fontSize: 14, color: '#888', marginTop: 4 }}>lbs</div>
-        <div style={{ marginTop: 16, padding: '10px 14px', background: '#1a1a1a', borderRadius: 8, display: 'inline-block' }}>
-          <span style={{ fontSize: 12, color: '#aaa' }}>{testWeight} lbs × {testReps} reps</span>
-          <span style={{ fontSize: 11, color: '#555', marginLeft: 8 }}>Epley formula</span>
-        </div>
+        <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.15em', color: '#888', marginBottom: 8 }}>Your strength baseline</div>
+        <div style={{ fontSize: 36, fontWeight: 700, color: '#fff', letterSpacing: '-1px' }}>{testWeight} lbs × {testReps}</div>
+        <div style={{ fontSize: 13, color: '#888', marginTop: 6 }}>Saved and tracked over time</div>
       </div>
 
-      {/* Training zone breakdown */}
+      {/* Working weight recommendations */}
       <div style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: 10, padding: '14px', marginBottom: 20 }}>
-        <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.14em', color: '#aaa', marginBottom: 12 }}>Training zones based on this 1RM</div>
-        {[['Strength (1–3 reps)', 0.90, 0.97], ['Hypertrophy (6–12 reps)', 0.67, 0.85], ['Endurance (15+ reps)', 0.50, 0.65]].map(([label, minPct, maxPct]) => (
+        <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.14em', color: '#aaa', marginBottom: 12 }}>Recommended working weights</div>
+        {[['Strength (low reps, heavy)', 0.90, 0.97], ['Muscle growth (6–12 reps)', 0.67, 0.85], ['Endurance (15+ reps)', 0.50, 0.65]].map(([label, minPct, maxPct]) => (
           <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: '1px solid #f5f5f5' }}>
             <span style={{ fontSize: 12, color: '#555' }}>{label}</span>
             <span style={{ fontSize: 12, fontWeight: 600 }}>{Math.round(e1rm * minPct)}–{Math.round(e1rm * maxPct)} lbs</span>
@@ -367,9 +363,9 @@ function MuscleGroupDetail({ group, muscleScore, allLogs, prs, onBack }) {
       {/* Score summary */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
         <div style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: 8, padding: '11px 12px' }}>
-          <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.1em', color: '#aaa', marginBottom: 4 }}>Weighted Strength Score</div>
+          <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.1em', color: '#aaa', marginBottom: 4 }}>Strength Score</div>
           <div style={{ fontSize: 20, fontWeight: 700, color: mg.color }}>{Math.round(muscleScore?.score || 0)}</div>
-          <div style={{ fontSize: 10, color: '#aaa' }}>lbs (e1RM weighted)</div>
+          <div style={{ fontSize: 10, color: '#aaa' }}>tracked across exercises</div>
         </div>
         <div style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: 8, padding: '11px 12px' }}>
           <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.1em', color: '#aaa', marginBottom: 4 }}>Exercises tracked</div>
@@ -394,13 +390,13 @@ function MuscleGroupDetail({ group, muscleScore, allLogs, prs, onBack }) {
           {latest && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 14 }}>
               {[
-                ['Best e1RM', `${latest.e1rm} lbs`],
+                ['Best set', `${latest.weight} lbs × ${latest.reps}`],
                 ['Sessions', history.length],
-                ['e1RM change', `${change >= 0 ? '+' : ''}${change} lbs`],
+                ['Trend', change > 0 ? `+${change} lbs` : change < 0 ? `${change} lbs` : 'Holding steady'],
               ].map(([label, val]) => (
                 <div key={label} style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: 7, padding: '10px 8px', textAlign: 'center' }}>
                   <div style={{ fontSize: 8, textTransform: 'uppercase', letterSpacing: '.1em', color: '#bbb', marginBottom: 4 }}>{label}</div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: label === 'e1RM change' && change > 0 ? '#16a34a' : '#1a1a1a' }}>{val}</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: label === 'Trend' && change > 0 ? '#16a34a' : label === 'Trend' && change < 0 ? '#b91c1c' : '#1a1a1a' }}>{val}</div>
                 </div>
               ))}
             </div>
@@ -409,7 +405,7 @@ function MuscleGroupDetail({ group, muscleScore, allLogs, prs, onBack }) {
           {/* e1RM sparkline */}
           {history.length >= 2 && (
             <div style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: 8, padding: '12px', marginBottom: 12 }}>
-              <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.1em', color: '#aaa', marginBottom: 8 }}>Estimated 1RM over time</div>
+              <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.1em', color: '#aaa', marginBottom: 8 }}>Strength over time</div>
               <Sparkline data={history.map(d => ({ value: d.e1rm }))} color={mg.color} height={50}/>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
                 <span style={{ fontSize: 9, color: '#bbb' }}>{formatShort(first.date)}</span>
@@ -428,8 +424,8 @@ function MuscleGroupDetail({ group, muscleScore, allLogs, prs, onBack }) {
                   <div style={{ fontSize: 10, color: '#aaa' }}>{d.weight} lbs × {d.reps} reps</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: 13, fontWeight: 700 }}>{d.e1rm} lbs</div>
-                  <div style={{ fontSize: 10, color: '#aaa' }}>e1RM</div>
+                  <div style={{ fontSize: 13, fontWeight: 700 }}>{d.weight} × {d.reps}</div>
+                  <div style={{ fontSize: 10, color: '#aaa' }}>lbs × reps</div>
                 </div>
               </div>
             ))}
@@ -697,11 +693,11 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
                   <div key={i} style={{ padding: '11px 14px', borderBottom: '1px solid #f5f5f5', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
                       <div style={{ fontSize: 12, fontWeight: 500, textTransform: 'capitalize' }}>{pr.name}</div>
-                      <div style={{ fontSize: 10, color: '#aaa', marginTop: 1 }}>{pr.weight} lbs × {pr.reps} reps · {formatShort(pr.date)}</div>
+                      <div style={{ fontSize: 10, color: '#aaa', marginTop: 1 }}>{formatShort(pr.date)}</div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 14, fontWeight: 700 }}>{pr.e1rm}</div>
-                      <div style={{ fontSize: 9, color: '#aaa' }}>e1RM</div>
+                      <div style={{ fontSize: 14, fontWeight: 700 }}>{pr.weight} lbs</div>
+                      <div style={{ fontSize: 9, color: '#aaa' }}>× {pr.reps} reps</div>
                     </div>
                   </div>
                 ))}
