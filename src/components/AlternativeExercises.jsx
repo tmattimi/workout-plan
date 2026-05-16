@@ -49,17 +49,101 @@ const MODIFICATIONS = {
 };
 
 
+// SVG icons for equipment — consistent line-art style
+const EQUIPMENT_ICONS = {
+  barbell: (c) => (
+    <svg viewBox="0 0 32 32" width="20" height="20" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round">
+      <rect x="12" y="13" width="8" height="6" rx="1"/>
+      <line x1="2" y1="16" x2="12" y2="16"/>
+      <line x1="20" y1="16" x2="30" y2="16"/>
+      <rect x="2" y="12" width="3" height="8" rx="1"/>
+      <rect x="27" y="12" width="3" height="8" rx="1"/>
+    </svg>
+  ),
+  dumbbell: (c) => (
+    <svg viewBox="0 0 32 32" width="20" height="20" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round">
+      <line x1="10" y1="16" x2="22" y2="16"/>
+      <rect x="6" y="12" width="4" height="8" rx="1"/>
+      <rect x="22" y="12" width="4" height="8" rx="1"/>
+    </svg>
+  ),
+  cable: (c) => (
+    <svg viewBox="0 0 32 32" width="20" height="20" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round">
+      <rect x="10" y="4" width="12" height="20" rx="2"/>
+      <circle cx="16" cy="10" r="3"/>
+      <line x1="16" y1="20" x2="16" y2="28"/>
+      <circle cx="16" cy="28" r="2" fill={c}/>
+    </svg>
+  ),
+  machine: (c) => (
+    <svg viewBox="0 0 32 32" width="20" height="20" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round">
+      <rect x="4" y="8" width="10" height="18" rx="2"/>
+      <rect x="18" y="14" width="10" height="12" rx="2"/>
+      <line x1="14" y1="14" x2="18" y2="14"/>
+      <line x1="9" y1="8" x2="9" y2="4"/>
+      <circle cx="9" cy="4" r="2"/>
+    </svg>
+  ),
+  bench: (c) => (
+    <svg viewBox="0 0 32 32" width="20" height="20" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round">
+      <rect x="4" y="14" width="24" height="5" rx="2"/>
+      <line x1="7" y1="19" x2="7" y2="26"/>
+      <line x1="25" y1="19" x2="25" y2="26"/>
+      <line x1="4" y1="26" x2="10" y2="26"/>
+      <line x1="22" y1="26" x2="28" y2="26"/>
+    </svg>
+  ),
+  pull_up_bar: (c) => (
+    <svg viewBox="0 0 32 32" width="20" height="20" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round">
+      <line x1="4" y1="8" x2="28" y2="8"/>
+      <line x1="4" y1="4" x2="4" y2="12"/>
+      <line x1="28" y1="4" x2="28" y2="12"/>
+      <line x1="16" y1="8" x2="16" y2="18"/>
+      <path d="M12 18 Q16 22 20 18"/>
+    </svg>
+  ),
+  band: (c) => (
+    <svg viewBox="0 0 32 32" width="20" height="20" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round">
+      <ellipse cx="16" cy="16" rx="12" ry="7"/>
+      <ellipse cx="16" cy="16" rx="6" ry="3"/>
+    </svg>
+  ),
+  bodyweight: (c) => (
+    <svg viewBox="0 0 32 32" width="20" height="20" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round">
+      <circle cx="16" cy="7" r="3"/>
+      <line x1="16" y1="10" x2="16" y2="20"/>
+      <polyline points="10,14 16,17 22,14"/>
+      <line x1="16" y1="20" x2="11" y2="28"/>
+      <line x1="16" y1="20" x2="21" y2="28"/>
+    </svg>
+  ),
+  kettlebell: (c) => (
+    <svg viewBox="0 0 32 32" width="20" height="20" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round">
+      <circle cx="16" cy="20" r="9"/>
+      <path d="M11 14 Q10 6 16 5 Q22 6 21 14"/>
+      <line x1="13" y1="7" x2="19" y2="7"/>
+    </svg>
+  ),
+  ab_wheel: (c) => (
+    <svg viewBox="0 0 32 32" width="20" height="20" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round">
+      <circle cx="16" cy="16" r="12"/>
+      <circle cx="16" cy="16" r="3"/>
+      <line x1="4" y1="16" x2="28" y2="16"/>
+    </svg>
+  ),
+};
+
 const EQUIPMENT_OPTIONS = [
-  { key: "barbell", label: "Barbell", icon: "🏋️" },
-  { key: "dumbbell", label: "Dumbbells", icon: "🪃" },
-  { key: "cable", label: "Cable Machine", icon: "🔗" },
-  { key: "machine", label: "Machines", icon: "⚙️" },
-  { key: "bench", label: "Bench", icon: "🛋️" },
-  { key: "pull_up_bar", label: "Pull-Up Bar", icon: "🔝" },
-  { key: "band", label: "Bands", icon: "🪢" },
-  { key: "bodyweight", label: "Bodyweight Only", icon: "🤸" },
-  { key: "kettlebell", label: "Kettlebell", icon: "🫙" },
-  { key: "ab_wheel", label: "Ab Wheel", icon: "⭕" },
+  { key: "barbell", label: "Barbell" },
+  { key: "dumbbell", label: "Dumbbells" },
+  { key: "cable", label: "Cable Machine" },
+  { key: "machine", label: "Machines" },
+  { key: "bench", label: "Bench" },
+  { key: "pull_up_bar", label: "Pull-Up Bar" },
+  { key: "band", label: "Bands" },
+  { key: "bodyweight", label: "Bodyweight Only" },
+  { key: "kettlebell", label: "Kettlebell" },
+  { key: "ab_wheel", label: "Ab Wheel" },
 ];
 
 const INJURY_OPTIONS = [
@@ -325,7 +409,7 @@ export default function AlternativeExercises({ clientEquipment, clientInjuries, 
                   display: "flex", alignItems: "center", gap: "8px",
                   cursor: "pointer", ...F, textAlign: "left",
                 }}>
-                  <span style={{ fontSize: "18px" }}>{eq.icon}</span>
+                  <span style={{ display: "flex", alignItems: "center" }}>{EQUIPMENT_ICONS[eq.key] ? EQUIPMENT_ICONS[eq.key](selected ? "#f7f6f3" : "#555") : null}</span>
                   <span style={{ fontSize: "12px" }}>{eq.label}</span>
                   {selected && <span style={{ marginLeft: "auto", fontSize: "12px" }}>✓</span>}
                 </button>

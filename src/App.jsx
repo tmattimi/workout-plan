@@ -18,6 +18,7 @@ import { getWarmupForDay } from "./warmups";
 import AlternativeExercises from "./components/AlternativeExercises";
 import { getClientByToken } from "./lib/supabase";
 import NewProgressTab from "./components/ProgressTab";
+import PhotosTab from "./components/PhotosTab";
 import TrackingTab from "./components/TrackingTab";
 import ActivityLog from "./components/ActivityLog";
 import CycleTracking from "./components/CycleTracking";
@@ -349,55 +350,6 @@ function HistoryTab({ logs, activeSchedule }) {
 }
 
 // ── Photos Tab ─────────────────────────────────────────────────────────────────
-function PhotosTab({ photos, onSave }) {
-  const [showAdd, setShowAdd] = useState(false);
-  if (showAdd) return <MonthlyPrompt photos={photos} onSave={onSave} onDismiss={() => setShowAdd(false)} />;
-
-  return (
-    <div style={{ padding: "16px 16px 40px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
-        <div>
-          <div style={{ fontSize: "9px", letterSpacing: "0.2em", textTransform: "uppercase", color: "#999", marginBottom: "2px" }}>Progress Photos</div>
-          <div style={{ fontSize: "16px", fontWeight: "normal" }}>Visual Progress</div>
-        </div>
-        <button onClick={() => setShowAdd(true)} style={{ background: "#111", color: "#fff", border: "none", borderRadius: "20px", padding: "8px 16px", fontSize: "12px", cursor: "pointer", ...F }}>
-          + Photo
-        </button>
-      </div>
-
-      {!photos.length ? (
-        <div style={{ padding: "40px 20px", textAlign: "center", background: "#fff", border: "1px solid #e8e8e8", borderRadius: "8px" }}>
-          <div style={{ fontSize: "36px", marginBottom: "10px" }}>📸</div>
-          <div style={{ fontSize: "14px", color: "#555", marginBottom: "6px" }}>No photos yet</div>
-          <div style={{ fontSize: "12px", color: "#aaa", lineHeight: "1.6" }}>
-            Monthly progress photos reveal body composition changes that the scale completely misses — especially during a recomp.
-          </div>
-        </div>
-      ) : (
-        <>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-            {[...photos].reverse().map((p, i) => (
-              <div key={i} style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "8px", overflow: "hidden" }}>
-                {p.dataUrl && (
-                  <img src={p.dataUrl} alt={p.date} style={{ width: "100%", height: "160px", objectFit: "cover", display: "block" }} />
-                )}
-                <div style={{ padding: "8px 10px" }}>
-                  <div style={{ fontSize: "11px", fontWeight: "600" }}>{formatDate(p.date)}</div>
-                  {p.note && <div style={{ fontSize: "10px", color: "#777", marginTop: "2px" }}>{p.note}</div>}
-                </div>
-              </div>
-            ))}
-          </div>
-          <div style={{ marginTop: "14px", padding: "10px 12px", background: "#f5f5f3", borderRadius: "7px", fontSize: "11px", color: "#666", lineHeight: "1.6" }}>
-            Compare photos taken 4–8 weeks apart for the most visible changes. Body composition shifts show up in photos weeks before they register on the scale.
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-
 // ── Cardio options per session type ───────────────────────────────────────────
 const CARDIO_OPTIONS = [
   {
@@ -1156,7 +1108,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
 
       {tab === "progress" && <NewProgressTab clientId={clientData?.id} bodyweight={clientData?.weight || 170} localLogs={logs} />}
       {tab === "body" && <MeasurementsTracker measurements={measurements} onSave={handleMeasurementsChange} />}
-      {tab === "photos" && <PhotosTab photos={photos} onSave={handlePhotosChange} />}
+      {tab === "photos" && <PhotosTab />}
       {tab === "muscles" && <MuscleScience />}
       {tab === "alternatives" && (
         <AlternativeExercises
