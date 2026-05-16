@@ -60,7 +60,7 @@ function MiniChart({ data, color }) {
 }
 
 // ── Set Logger ─────────────────────────────────────────────────────────────────
-function SetLogger({ exercise, sessionKey, logs, onLogsChange, accent, color, onSetDone, prs }) {
+function SetLogger({ exercise, sessionKey, logs, onLogsChange, accent = '#555', color = '#f5f5f3', onSetDone, prs }) {
   const exKey = `${sessionKey}__${exercise.name}`;
   const exLog = logs[exKey] || { sets: [], notes: "" };
 
@@ -115,11 +115,11 @@ function SetLogger({ exercise, sessionKey, logs, onLogsChange, accent, color, on
 
   return (
     <div style={{ marginTop: "10px", background: "#f9f9f7", borderRadius: "8px", overflow: "hidden", border: "1px solid #e8e8e8" }}>
-      <div style={{ padding: "8px 12px", background: color, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{ fontSize: "11px", fontWeight: "700", color: accent }}>
+      <div style={{ padding: "8px 12px", background: "#f5f5f3", borderBottom: "1px solid #e8e8e8", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span style={{ fontSize: "11px", fontWeight: "600", color: "#555" }}>
           Log Sets {exLog.sets.length > 0 ? `· ${doneSets}/${exLog.sets.length} done` : ""}
         </span>
-        <button onClick={addSet} style={{ background: accent, color: "#fff", border: "none", borderRadius: "20px", padding: "4px 12px", fontSize: "11px", cursor: "pointer", ...F }}>
+        <button onClick={addSet} style={{ background: "#1a1a1a", color: "#fff", border: "none", borderRadius: "20px", padding: "4px 12px", fontSize: "11px", cursor: "pointer", ...F }}>
           + Set
         </button>
       </div>
@@ -133,17 +133,17 @@ function SetLogger({ exercise, sessionKey, logs, onLogsChange, accent, color, on
       )}
 
       {exLog.sets.map((set, i) => (
-        <div key={i} style={{ display: "grid", gridTemplateColumns: exercise.bodyweight ? "24px 1fr 34px 24px" : "24px 1fr 1fr 34px 24px", gap: "4px", padding: "3px 12px", background: set.done ? "#1a1a1a" : "transparent", alignItems: "center", borderBottom: "1px solid #f0f0f0" }}>
+        <div key={i} style={{ display: "grid", gridTemplateColumns: exercise.bodyweight ? "24px 1fr 34px 24px" : "24px 1fr 1fr 34px 24px", gap: "4px", padding: "3px 12px", background: set.done ? "#e8f5e9" : "transparent", alignItems: "center", borderBottom: "1px solid #f0f0f0" }}>
           <span style={{ fontSize: "11px", color: "#aaa", textAlign: "center" }}>{i + 1}</span>
           {!exercise.bodyweight && (
             <input type="number" inputMode="decimal" placeholder="lbs" value={set.weight}
               onChange={e => updateSet(i, "weight", e.target.value)}
-              style={{ width: "100%", padding: "6px", borderRadius: "5px", border: "1px solid #ddd", fontSize: "13px", textAlign: "center", background: set.done ? "rgba(255,255,255,0.1)" : "#fff", color: set.done ? "#f7f6f3" : "#1a1a1a", ...F }} />
+              style={{ width: "100%", padding: "6px", borderRadius: "5px", border: "1px solid #ddd", fontSize: "13px", textAlign: "center", background: set.done ? "rgba(45,122,30,0.08)" : "#fff", color: "#1a1a1a", ...F }} />
           )}
           <input type="number" inputMode="numeric" placeholder={exercise.bodyweight ? "reps / sec" : "reps"} value={set.reps}
             onChange={e => updateSet(i, "reps", e.target.value)}
-            style={{ width: "100%", padding: "6px", borderRadius: "5px", border: "1px solid #ddd", fontSize: "13px", textAlign: "center", background: set.done ? "rgba(255,255,255,0.1)" : "#fff", color: set.done ? "#f7f6f3" : "#1a1a1a", ...F }} />
-          <button onClick={() => toggleDone(i)} style={{ width: "30px", height: "30px", borderRadius: "50%", border: `2px solid ${set.done ? "#c47a0a" : "#ddd"}`, background: set.done ? "#c47a0a" : "transparent", color: set.done ? "#fff" : "#ccc", fontSize: "13px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✓</button>
+            style={{ width: "100%", padding: "6px", borderRadius: "5px", border: "1px solid #ddd", fontSize: "13px", textAlign: "center", background: set.done ? "rgba(45,122,30,0.08)" : "#fff", color: "#1a1a1a", ...F }} />
+          <button onClick={() => toggleDone(i)} style={{ width: "30px", height: "30px", borderRadius: "50%", border: `2px solid ${set.done ? "#2d7a1e" : "#ddd"}`, background: set.done ? "#2d7a1e" : "transparent", color: set.done ? "#fff" : "#ccc", fontSize: "13px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✓</button>
           <button onClick={() => removeSet(i)} style={{ background: "none", border: "none", color: "#ccc", fontSize: "16px", cursor: "pointer" }}>×</button>
         </div>
       ))}
@@ -209,7 +209,7 @@ function ProgressTab({ logs, prs }) {
           <div>
             <div style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.1em", color: "#f59e0b", marginBottom: "2px" }}>Personal Record</div>
             <div style={{ fontSize: "16px", fontWeight: "700", color: "#fff" }}>{pr.weight} lbs × {pr.reps} reps</div>
-            <div style={{ fontSize: "10px", color: "#666" }}>Set on {formatDate(pr.date)}</div>
+            <div style={{ fontSize: "10px", color: "#888" }}>Set on {formatDate(pr.date)}</div>
           </div>
         </div>
       )}
@@ -682,11 +682,11 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
             {activeSchedule.map((d, i) => (
               <button key={d.day} onClick={() => { setActiveDay(i); setExpandedEx(null); setShowLogger({}); }} style={{
                 flex: "0 0 auto", background: "transparent", border: "none",
-                borderBottom: activeDay === i ? "3px solid #c47a0a" : "3px solid transparent",
+                borderBottom: activeDay === i ? "3px solid #1a1a1a" : "3px solid transparent",
                 padding: "11px 12px 8px", cursor: "pointer", ...F,
                 display: "flex", flexDirection: "column", alignItems: "center", gap: "2px", minWidth: "46px",
               }}>
-                <span style={{ fontSize: "8px", fontWeight: "800", letterSpacing: "0.15em", color: activeDay === i ? "#c47a0a" : "#bbb" }}>{d.day}</span>
+                <span style={{ fontSize: "8px", fontWeight: "800", letterSpacing: "0.15em", color: activeDay === i ? "#1a1a1a" : "#bbb" }}>{d.day}</span>
                 <span style={{ fontSize: "9px", color: activeDay === i ? "#1a1a1a" : "#ccc", whiteSpace: "nowrap" }}>{d.label}</span>
               </button>
             ))}
@@ -694,7 +694,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
 
           {/* Session header */}
           <div style={{ background: "#1a1a1a", borderBottom: "1px solid #2a2a2a", padding: "13px 16px" }}>
-            <div style={{ fontSize: "9px", letterSpacing: "0.18em", textTransform: "uppercase", color: "#c47a0a", marginBottom: "3px" }}>
+            <div style={{ fontSize: "9px", letterSpacing: "0.18em", textTransform: "uppercase", color: "#888", marginBottom: "3px" }}>
               {current.day} · {current.muscles.join(", ") || "Recovery"}
             </div>
             <div style={{ fontSize: "17px", color: "#f7f6f3", marginBottom: "10px", fontWeight: "normal" }}>{current.focus}</div>
@@ -703,12 +703,12 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
               <input type="date" value={sessionDate} onChange={e => setSessionDate(e.target.value)}
                 style={{ padding: "5px 8px", borderRadius: "5px", border: "1px solid #333", fontSize: "11px", background: "#111", color: "#888", ...F }} />
               {trackableCount > 0 && (
-                <span style={{ fontSize: "11px", color: "#c47a0a", background: "rgba(196,122,10,0.12)", padding: "4px 10px", borderRadius: "20px", border: "1px solid rgba(196,122,10,0.25)" }}>
+                <span style={{ fontSize: "11px", color: "#555", background: "#f0f0f0", padding: "4px 10px", borderRadius: "20px", border: "1px solid #e0e0e0" }}>
                   {completedExercises}/{trackableCount} started
                 </span>
               )}
               {current.type !== "rest" && (
-                <button onClick={() => setShowWarmup(true)} style={{ background: "rgba(196,122,10,0.12)", color: "#c47a0a", border: "1px solid rgba(196,122,10,0.3)", borderRadius: "20px", padding: "4px 12px", fontSize: "11px", cursor: "pointer", ...F, fontWeight: "600" }}>
+                <button onClick={() => setShowWarmup(true)} style={{ background: "rgba(196,122,10,0.12)", color: "#c47a0a", border: "1px solid #e8e8e8", borderRadius: "20px", padding: "4px 12px", fontSize: "11px", cursor: "pointer", ...F, fontWeight: "600" }}>
                   Warm-Up
                 </button>
               )}
@@ -731,7 +731,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
               return (
                 <div key={i} style={{ borderBottom: "1px solid #ebebeb", background: i % 2 === 0 ? "#fff" : "#fafaf8" }}>
                   <div style={{ padding: "11px 16px", display: "flex", gap: "11px", alignItems: "flex-start" }}>
-                    <div style={{ width: "24px", height: "24px", borderRadius: "50%", background: "#c47a0a", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px", fontWeight: "800", flexShrink: 0, marginTop: "1px" }}>
+                    <div style={{ width: "24px", height: "24px", borderRadius: "50%", background: doneSets > 0 ? "#2d7a1e" : "#e8e8e8", color: doneSets > 0 ? "#fff" : "#888", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px", fontWeight: "800", flexShrink: 0, marginTop: "1px" }}>
                       {doneSets > 0 ? "✓" : ex.order}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -740,11 +740,11 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
                         {ex.name}
                       </div>
                       <div style={{ display: "flex", gap: "5px", flexWrap: "wrap" }}>
-                        <span style={{ fontSize: "10px", background: "#1a1a1a", color: "#c47a0a", padding: "2px 8px", borderRadius: "20px", fontWeight: "700" }}>{ex.sets} × {ex.reps}</span>
+                        <span style={{ fontSize: "10px", background: "#f0f0f0", color: "#333", padding: "2px 8px", borderRadius: "20px", fontWeight: "600" }}>{ex.sets} × {ex.reps}</span>
                         {ex.rest !== "—" && <span style={{ fontSize: "9px", color: "#999", padding: "2px 7px", background: "#f0f0f0", borderRadius: "20px" }}>{ex.rest} rest</span>}
                         {ex.eccentric && ex.eccentric !== "—" && <span style={{ fontSize: "9px", color: "#7a3aa0", padding: "2px 7px", background: "#f3eafa", borderRadius: "20px" }}>{ex.eccentric}</span>}
                         {isStarted && <span style={{ fontSize: "9px", padding: "2px 7px", borderRadius: "20px", background: doneSets > 0 ? "#e8f5e9" : "#f0f0f0", color: doneSets > 0 ? "#2d7a1e" : "#999" }}>{doneSets}/{totalLogged} done</span>}
-                        {ex.imbalanceNote && <span style={{ fontSize: "8px", letterSpacing: "0.1em", textTransform: "uppercase", padding: "2px 6px", borderRadius: "3px", background: "#fef3e4", color: "#c47a0a", border: "1px solid #f0c060" }}>Imbalance</span>}
+                        {ex.imbalanceNote && <span style={{ fontSize: "8px", letterSpacing: "0.1em", textTransform: "uppercase", padding: "2px 6px", borderRadius: "3px", background: "#f5f5f3", color: "#777", border: "1px solid #e0e0e0" }}>Imbalance</span>}
                       </div>
                       {ex.muscles && ex.muscles.length > 0 && (
                         <div style={{ fontSize: "10px", color: "#bbb", marginTop: "4px", display: "flex", gap: "6px", alignItems: "center" }}>
@@ -756,10 +756,15 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
                           )}
                         </div>
                       )}
+                      {ex.note && (
+                        <div style={{ fontSize: "11px", color: "#777", marginTop: "5px", lineHeight: "1.5", fontStyle: "italic" }}>
+                          {ex.note}
+                        </div>
+                      )}
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: "4px", flexShrink: 0 }}>
                       {ex.category !== "Recovery" && ex.category !== "Mobility" && (
-                        <button onClick={() => setShowLogger(p => ({ ...p, [ex.name]: !p[ex.name] }))} style={{ background: logOpen ? "#c47a0a" : "transparent", color: logOpen ? "#fff" : "#c47a0a", border: "1px solid #c47a0a", borderRadius: "5px", padding: "4px 8px", fontSize: "10px", cursor: "pointer", ...F }}>
+                        <button onClick={() => setShowLogger(p => ({ ...p, [ex.name]: !p[ex.name] }))} style={{ background: logOpen ? "#1a1a1a" : "transparent", color: logOpen ? "#fff" : "#555", border: "1px solid #d0d0d0", borderRadius: "5px", padding: "4px 8px", fontSize: "10px", cursor: "pointer", ...F }}>
                           {logOpen ? "Hide" : "Log"}
                         </button>
                       )}
@@ -776,8 +781,8 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
                         sessionKey={sessionKey}
                         logs={logs}
                         onLogsChange={handleLogsChange}
-                        accent="#c47a0a"
-                        color="#1a1a1a"
+                        accent="#555"
+                        color="#f5f5f3"
                         onSetDone={handleSetDone}
                         prs={prs}
                       />
@@ -791,14 +796,14 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
                           <strong>Imbalance note:</strong> {ex.imbalanceNote}
                         </div>
                       )}
-                      {ex.form && (
-                        <div style={{ fontSize: "12px", color: "#444", lineHeight: "1.75" }}>
+                      {ex.form && ex.form.length > 0 && (
+                        <div style={{ fontSize: "12px", color: "#444", lineHeight: "1.65" }}>
                           {ex.form.map((step, si) => (
-                            <div key={si} style={{ display: "flex", gap: "10px", marginBottom: "8px", paddingBottom: "8px", borderBottom: si < ex.form.length - 1 ? "1px solid #f5f5f3" : "none" }}>
-                              <div style={{ minWidth: "90px", fontSize: "9px", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.1em", color: step.label === "Watch for" ? "#a02020" : "#c47a0a", paddingTop: "2px", flexShrink: 0 }}>
-                                {step.label}
-                              </div>
-                              <div style={{ color: "#333", lineHeight: "1.6" }}>{step.text}</div>
+                            <div key={si} style={{ marginBottom: "6px" }}>
+                              <span style={{ fontSize: "10px", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.08em", color: step.label === "Watch for" ? "#a02020" : "#888", marginRight: "6px" }}>
+                                {step.label}:
+                              </span>
+                              <span style={{ color: "#333" }}>{step.text}</span>
                             </div>
                           ))}
                         </div>
@@ -815,7 +820,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
             <div style={{ marginTop: "4px" }}>
               <div style={{ padding: "8px 16px 4px", display: "flex", alignItems: "center", gap: "8px" }}>
                 <div style={{ height: "1px", flex: 1, background: "#e8e8e8" }} />
-                <span style={{ fontSize: "8px", fontWeight: "700", letterSpacing: "0.2em", textTransform: "uppercase", color: "#c47a0a" }}>Core Finisher</span>
+                <span style={{ fontSize: "8px", fontWeight: "700", letterSpacing: "0.2em", textTransform: "uppercase", color: "#999" }}>Core Finisher</span>
                 <div style={{ height: "1px", flex: 1, background: "#e8e8e8" }} />
               </div>
               {current.core_finisher.map((ex, i) => {
@@ -828,13 +833,13 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
                 return (
                   <div key={i} style={{ borderBottom: "1px solid #ebebeb", background: i % 2 === 0 ? "#fff" : "#fafaf8" }}>
                     <div style={{ padding: "11px 16px", display: "flex", gap: "11px", alignItems: "flex-start" }}>
-                      <div style={{ width: "24px", height: "24px", borderRadius: "50%", background: doneSets > 0 ? "#c47a0a" : "#e8e8e8", color: doneSets > 0 ? "#fff" : "#999", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px", fontWeight: "800", flexShrink: 0, marginTop: "1px" }}>
+                      <div style={{ width: "24px", height: "24px", borderRadius: "50%", background: doneSets > 0 ? "#2d7a1e" : "#e8e8e8", color: doneSets > 0 ? "#fff" : "#999", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px", fontWeight: "800", flexShrink: 0, marginTop: "1px" }}>
                         {doneSets > 0 ? "✓" : i + 1}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: "13px", fontWeight: "600", marginBottom: "4px" }}>{ex.name}</div>
                         <div style={{ display: "flex", gap: "5px", flexWrap: "wrap" }}>
-                          <span style={{ fontSize: "10px", background: "#1a1a1a", color: "#c47a0a", padding: "2px 8px", borderRadius: "20px", fontWeight: "700" }}>{ex.sets} × {ex.reps}</span>
+                          <span style={{ fontSize: "10px", background: "#f0f0f0", color: "#333", padding: "2px 8px", borderRadius: "20px", fontWeight: "600" }}>{ex.sets} × {ex.reps}</span>
                           {ex.rest !== "—" && <span style={{ fontSize: "9px", color: "#999", padding: "2px 7px", background: "#f0f0f0", borderRadius: "20px" }}>{ex.rest} rest</span>}
                           {totalLogged > 0 && <span style={{ fontSize: "9px", padding: "2px 7px", borderRadius: "20px", background: doneSets > 0 ? "#e8f5e9" : "#f0f0f0", color: doneSets > 0 ? "#2d7a1e" : "#999" }}>{doneSets}/{totalLogged} done</span>}
                           <span style={{ fontSize: "9px", color: "#bbb", padding: "2px 7px", background: "#f5f5f3", borderRadius: "20px" }}>Bodyweight</span>
@@ -842,7 +847,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
                         {ex.muscles && <div style={{ fontSize: "10px", color: "#bbb", marginTop: "4px" }}>{ex.muscles.join(" · ")}</div>}
                       </div>
                       <div style={{ display: "flex", flexDirection: "column", gap: "4px", flexShrink: 0 }}>
-                        <button onClick={() => setShowLogger(p => ({ ...p, [`cf-${ex.name}`]: !p[`cf-${ex.name}`] }))} style={{ background: logOpen ? "#c47a0a" : "transparent", color: logOpen ? "#fff" : "#c47a0a", border: "1px solid #c47a0a", borderRadius: "5px", padding: "4px 8px", fontSize: "10px", cursor: "pointer", ...F }}>
+                        <button onClick={() => setShowLogger(p => ({ ...p, [`cf-${ex.name}`]: !p[`cf-${ex.name}`] }))} style={{ background: logOpen ? "#1a1a1a" : "transparent", color: logOpen ? "#fff" : "#555", border: "1px solid #d0d0d0", borderRadius: "5px", padding: "4px 8px", fontSize: "10px", cursor: "pointer", ...F }}>
                           {logOpen ? "Hide" : "Log"}
                         </button>
                         <button onClick={() => setExpandedEx(isOpen ? null : `cf-${i}`)} style={{ background: "none", border: "none", color: "#ccc", fontSize: "12px", cursor: "pointer", padding: "4px 0", textAlign: "right" }}>
@@ -874,13 +879,13 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
           {/* Post-lift cardio */}
           {current.cardio && (
             <div style={{ margin: "0 16px 4px", background: "#fff", border: "1px solid #e8e8e8", borderRadius: "10px", overflow: "hidden" }}>
-              <div style={{ background: "#1a1a1a", borderLeft: "4px solid #c47a0a", padding: "12px 14px" }}>
-                <div style={{ fontSize: "9px", letterSpacing: "0.15em", textTransform: "uppercase", color: "#c47a0a", marginBottom: "3px" }}>
+              <div style={{ background: "#f9f9f7", borderLeft: "4px solid #1a1a1a", padding: "12px 14px" }}>
+                <div style={{ fontSize: "9px", letterSpacing: "0.15em", textTransform: "uppercase", color: "#888", marginBottom: "3px" }}>
                   Post-Lift Cardio · {current.cardio.zone}
                 </div>
-                <div style={{ fontSize: "13px", fontWeight: "600", color: "#f7f6f3", marginBottom: "5px" }}>{current.cardio.name}</div>
-                <div style={{ fontSize: "11px", color: "#aaa", lineHeight: "1.55" }}>{current.cardio.protocol}</div>
-                <div style={{ fontSize: "10px", color: "#666", marginTop: "5px", lineHeight: "1.5", borderTop: "1px solid #2a2a2a", paddingTop: "6px" }}>
+                <div style={{ fontSize: "13px", fontWeight: "600", color: "#1a1a1a", marginBottom: "5px" }}>{current.cardio.name}</div>
+                <div style={{ fontSize: "11px", color: "#444", lineHeight: "1.55" }}>{current.cardio.protocol}</div>
+                <div style={{ fontSize: "10px", color: "#888", marginTop: "5px", lineHeight: "1.5", borderTop: "1px solid #ebebeb", paddingTop: "6px" }}>
                   {current.cardio.feel}
                 </div>
               </div>
@@ -901,14 +906,14 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
               <button
                 onClick={() => setShowStretches(true)}
                 style={{
-                  width: "100%", background: "#fff", border: "1px solid rgba(196,122,10,0.3)",
+                  width: "100%", background: "#fff", border: "1px solid #e8e8e8",
                   borderRadius: "10px", padding: "13px 16px", cursor: "pointer", ...F,
                   display: "flex", justifyContent: "space-between", alignItems: "center",
                   textAlign: "left",
                 }}
               >
                 <div>
-                  <div style={{ fontSize: "9px", letterSpacing: "0.15em", textTransform: "uppercase", color: "#c47a0a", marginBottom: "3px" }}>
+                  <div style={{ fontSize: "9px", letterSpacing: "0.15em", textTransform: "uppercase", color: "#999", marginBottom: "3px" }}>
                     After Your Workout
                   </div>
                   <div style={{ fontSize: "13px", color: "#1a1a1a", fontWeight: "500" }}>Cool Down & Stretch</div>
@@ -918,7 +923,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
             </div>
           )}
 
-          <div style={{ margin: "12px 16px 80px", padding: "10px 12px", background: "#111", borderRadius: "7px", color: "#f7f6f3", fontSize: "11px", lineHeight: "1.55" }}>
+          <div style={{ margin: "12px 16px 80px", padding: "10px 12px", background: "#f0f0ee", borderRadius: "7px", color: "#777", fontSize: "11px", lineHeight: "1.55" }}>
             Tap <strong>Warm-Up</strong> before lifting. Tap <strong>Log</strong> on any exercise to record sets — the rest timer starts automatically. Tap <strong>Stretch</strong> when you're done to cool down. Tap ▼ for form cues.
           </div>
         </>
