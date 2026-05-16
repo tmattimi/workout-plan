@@ -3,6 +3,52 @@ import { getAlternatives, getAllExercises } from "../lib/supabase";
 
 const F = { fontFamily: "'Georgia','Times New Roman',serif" };
 
+const MODIFICATIONS = {
+  shoulder: {
+    avoid: ["Overhead Press", "Behind-the-Neck Press", "Upright Row", "Dip"],
+    swap: [
+      { from: "Overhead Press", to: "Landmine Press", why: "Shoulder-friendly arc of motion" },
+      { from: "Lateral Raise", to: "Cable Lateral (low anchor)", why: "Constant tension, less impingement" },
+      { from: "Bench Press", to: "DB Press (neutral grip)", why: "Reduces shoulder external rotation stress" },
+    ],
+    tips: ["Prioritize face pulls and rear delt work to restore balance", "Avoid overhead movements until pain-free through full range", "Check scapular retraction cue on all pressing movements"],
+  },
+  knee: {
+    avoid: ["Leg Extension", "Bulgarian Split Squat", "Lunge", "Box Jump"],
+    swap: [
+      { from: "Bulgarian Split Squat", to: "Leg Press (feet high)", why: "Less knee flexion stress" },
+      { from: "Leg Extension", to: "Terminal Knee Extension (band)", why: "Low-load quad at safe angle" },
+    ],
+    tips: ["Avoid knee flexion past 90° until pain-free", "Keep knee tracking over second toe", "Strengthen hips — weak glutes frequently overload the knee"],
+  },
+  lower_back: {
+    avoid: ["Romanian Deadlift", "Deadlift", "Good Morning", "Back Squat"],
+    swap: [
+      { from: "Romanian Deadlift", to: "Leg Curl (machine)", why: "No spinal loading" },
+      { from: "Hip Thrust", to: "Glute Bridge (bodyweight)", why: "Lower load, same activation pattern" },
+      { from: "Back Squat", to: "Leg Press", why: "Removes axial spine compression" },
+    ],
+    tips: ["Avoid heavy hip hinge movements until pain-free", "Focus on core anti-extension: plank, dead bug", "Ice 15–20 min post-session if inflamed"],
+  },
+  elbow: {
+    avoid: ["Barbell Curl", "Pushup"],
+    swap: [
+      { from: "Barbell Curl", to: "Hammer Curl (neutral grip)", why: "Neutral wrist position reduces stress" },
+      { from: "Pushup", to: "Pushup on fists or handles", why: "Keeps wrist in neutral" },
+    ],
+    tips: ["Use wrist wraps for pressing movements short-term", "Neutral grip reduces elbow and wrist stress significantly", "Wrist circles and forearm stretches daily"],
+  },
+  hip: {
+    avoid: ["Hip Thrust", "Squat", "Lunge", "Deadlift"],
+    swap: [
+      { from: "Hip Thrust", to: "Clamshell (band)", why: "No hip flexion loading" },
+      { from: "Squat", to: "Seated Leg Press (shallow)", why: "Controlled hip angle" },
+    ],
+    tips: ["Avoid deep hip flexion under load", "Hip flexor stretching and glute activation work daily"],
+  },
+};
+
+
 const EQUIPMENT_OPTIONS = [
   { key: "barbell", label: "Barbell", icon: "🏋️" },
   { key: "dumbbell", label: "Dumbbells", icon: "🪃" },
@@ -319,9 +365,51 @@ export default function AlternativeExercises({ clientEquipment, clientInjuries, 
               </button>
             );
           })}
-          <div style={{ marginTop: "6px", padding: "10px 12px", background: "#f5f5f3", borderRadius: "7px", fontSize: "10px", color: "#888", lineHeight: "1.5" }}>
-            <strong>Disclaimer:</strong> Pain flagging provides general exercise guidance only. This is not a substitute for evaluation by a licensed physical therapist or physician. If you are in significant pain, stop training the affected area and seek professional medical advice.
+          <div style={{ marginTop: "6px", padding: "10px 12px", background: "#fef3e4", border: "1px solid #f0c060", borderRadius: "7px", fontSize: "10px", color: "#7a5010", lineHeight: "1.6" }}>
+            <strong>Disclaimer:</strong> Tara Mattimiro is a personal trainer, not a physical therapist. These modifications are general guidelines only. If you are in significant pain, stop training the affected area and consult a licensed physical therapist or physician before continuing.
           </div>
+
+          {/* Detailed modifications for flagged areas */}
+          {injuries.length > 0 && injuries.map(inj => {
+            const mods = MODIFICATIONS[inj];
+            if (!mods) return null;
+            return (
+              <div key={inj} style={{ marginTop: "14px", background: "#fff", border: "1px solid #e8e8e8", borderRadius: "8px", padding: "14px" }}>
+                <div style={{ fontSize: "10px", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.1em", color: "#c47a0a", marginBottom: "10px" }}>
+                  {INJURY_OPTIONS.find(o => o.key === inj)?.label} — Modifications
+                </div>
+                {mods.avoid.length > 0 && (
+                  <div style={{ marginBottom: "10px" }}>
+                    <div style={{ fontSize: "9px", color: "#a02020", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "4px" }}>Avoid or reduce</div>
+                    {mods.avoid.map((ex, i) => (
+                      <div key={i} style={{ fontSize: "11px", color: "#a02020", marginBottom: "2px" }}>— {ex}</div>
+                    ))}
+                  </div>
+                )}
+                {mods.swap.length > 0 && (
+                  <div style={{ marginBottom: "10px" }}>
+                    <div style={{ fontSize: "9px", color: "#555", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "6px" }}>Suggested swaps</div>
+                    {mods.swap.map((s, i) => (
+                      <div key={i} style={{ marginBottom: "6px", fontSize: "11px" }}>
+                        <span style={{ color: "#a02020", textDecoration: "line-through" }}>{s.from}</span>
+                        <span style={{ color: "#bbb", margin: "0 6px" }}>→</span>
+                        <span style={{ color: "#2d7a1e", fontWeight: "600" }}>{s.to}</span>
+                        <div style={{ fontSize: "10px", color: "#aaa", marginTop: "1px" }}>{s.why}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div>
+                  <div style={{ fontSize: "9px", color: "#555", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "4px" }}>Guidelines</div>
+                  {mods.tips.map((tip, i) => (
+                    <div key={i} style={{ fontSize: "11px", color: "#444", marginBottom: "3px", lineHeight: "1.5", display: "flex", gap: "6px" }}>
+                      <span style={{ color: "#c47a0a" }}>·</span><span>{tip}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </div>
 
         <button onClick={() => setView("browse")} style={{ width: "100%", background: "#111", color: "#fff", border: "none", borderRadius: "8px", padding: "14px", fontSize: "14px", cursor: "pointer", ...F }}>

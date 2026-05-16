@@ -20,7 +20,6 @@ import { getClientByToken } from "./lib/supabase";
 import NewProgressTab from "./components/ProgressTab";
 import GoalTracker from "./components/GoalTracker";
 import MonthlyGoals from "./components/MonthlyGoals";
-import InjuryAwareness from "./components/InjuryAwareness";
 import ActivityLog from "./components/ActivityLog";
 import CycleTracking from "./components/CycleTracking";
 import HealthIntegration from "./components/HealthIntegration";
@@ -82,13 +81,18 @@ function SetLogger({ exercise, sessionKey, logs, onLogsChange, accent, color, on
     const newSets = exLog.sets.map((s, idx) => idx === i ? { ...s, done: newDone } : s);
     updateLog({ ...exLog, sets: newSets });
 
-    if (newDone && set.weight && set.reps) {
-      // Set was just marked done — check if it's a PR
-      const w = parseFloat(set.weight);
-      const r = parseInt(set.reps);
-      const prevPR = prs[exercise.name];
-      const isPR = !prevPR || w > prevPR.weight || (w === prevPR.weight && r > prevPR.reps);
-      onSetDone && onSetDone({ exercise: exercise.name, weight: w, reps: r, isPR, rest: exercise.rest, setNumber: i + 1 });
+    if (newDone && set.reps && !exercise.bodyweight) {
+      // Set was just marked done — check if it's a PR (skip for bodyweight exercises)
+      if (set.weight) {
+        const w = parseFloat(set.weight);
+        const r = parseInt(set.reps);
+        const prevPR = prs[exercise.name];
+        const isPR = !prevPR || w > prevPR.weight || (w === prevPR.weight && r > prevPR.reps);
+        onSetDone && onSetDone({ exercise: exercise.name, weight: w, reps: r, isPR, rest: exercise.rest, setNumber: i + 1 });
+      }
+    } else if (newDone && exercise.bodyweight && set.reps) {
+      // Bodyweight exercise — trigger rest timer only, no PR tracking
+      onSetDone && onSetDone({ exercise: exercise.name, weight: 0, reps: parseInt(set.reps), isPR: false, rest: exercise.rest, setNumber: i + 1, bodyweight: true });
     } else if (!newDone) {
       // Set was unchecked — recalculate PR from remaining done sets
       const remainingDone = newSets.filter(s => s.done && s.weight && s.reps);
@@ -121,23 +125,25 @@ function SetLogger({ exercise, sessionKey, logs, onLogsChange, accent, color, on
       </div>
 
       {exLog.sets.length > 0 && (
-        <div style={{ display: "grid", gridTemplateColumns: "24px 1fr 1fr 34px 24px", gap: "4px", padding: "5px 12px 2px" }}>
-          {["", "Weight", "Reps", "✓", ""].map((h, i) => (
+        <div style={{ display: "grid", gridTemplateColumns: exercise.bodyweight ? "24px 1fr 34px 24px" : "24px 1fr 1fr 34px 24px", gap: "4px", padding: "5px 12px 2px" }}>
+          {(exercise.bodyweight ? ["", "Reps", "✓", ""] : ["", "Weight", "Reps", "✓", ""]).map((h, i) => (
             <span key={i} style={{ fontSize: "9px", color: "#bbb", textTransform: "uppercase", letterSpacing: "0.1em", textAlign: "center" }}>{h}</span>
           ))}
         </div>
       )}
 
       {exLog.sets.map((set, i) => (
-        <div key={i} style={{ display: "grid", gridTemplateColumns: "24px 1fr 1fr 34px 24px", gap: "4px", padding: "3px 12px", background: set.done ? color : "transparent", alignItems: "center", borderBottom: "1px solid #f0f0f0" }}>
+        <div key={i} style={{ display: "grid", gridTemplateColumns: exercise.bodyweight ? "24px 1fr 34px 24px" : "24px 1fr 1fr 34px 24px", gap: "4px", padding: "3px 12px", background: set.done ? "#1a1a1a" : "transparent", alignItems: "center", borderBottom: "1px solid #f0f0f0" }}>
           <span style={{ fontSize: "11px", color: "#aaa", textAlign: "center" }}>{i + 1}</span>
-          <input type="number" inputMode="decimal" placeholder="lbs" value={set.weight}
-            onChange={e => updateSet(i, "weight", e.target.value)}
-            style={{ width: "100%", padding: "6px", borderRadius: "5px", border: "1px solid #ddd", fontSize: "13px", textAlign: "center", background: set.done ? "rgba(255,255,255,0.7)" : "#fff", ...F }} />
-          <input type="number" inputMode="numeric" placeholder="reps" value={set.reps}
+          {!exercise.bodyweight && (
+            <input type="number" inputMode="decimal" placeholder="lbs" value={set.weight}
+              onChange={e => updateSet(i, "weight", e.target.value)}
+              style={{ width: "100%", padding: "6px", borderRadius: "5px", border: "1px solid #ddd", fontSize: "13px", textAlign: "center", background: set.done ? "rgba(255,255,255,0.1)" : "#fff", color: set.done ? "#f7f6f3" : "#1a1a1a", ...F }} />
+          )}
+          <input type="number" inputMode="numeric" placeholder={exercise.bodyweight ? "reps / sec" : "reps"} value={set.reps}
             onChange={e => updateSet(i, "reps", e.target.value)}
-            style={{ width: "100%", padding: "6px", borderRadius: "5px", border: "1px solid #ddd", fontSize: "13px", textAlign: "center", background: set.done ? "rgba(255,255,255,0.7)" : "#fff", ...F }} />
-          <button onClick={() => toggleDone(i)} style={{ width: "30px", height: "30px", borderRadius: "50%", border: `2px solid ${set.done ? accent : "#ddd"}`, background: set.done ? accent : "transparent", color: set.done ? "#fff" : "#ccc", fontSize: "13px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✓</button>
+            style={{ width: "100%", padding: "6px", borderRadius: "5px", border: "1px solid #ddd", fontSize: "13px", textAlign: "center", background: set.done ? "rgba(255,255,255,0.1)" : "#fff", color: set.done ? "#f7f6f3" : "#1a1a1a", ...F }} />
+          <button onClick={() => toggleDone(i)} style={{ width: "30px", height: "30px", borderRadius: "50%", border: `2px solid ${set.done ? "#c47a0a" : "#ddd"}`, background: set.done ? "#c47a0a" : "transparent", color: set.done ? "#fff" : "#ccc", fontSize: "13px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✓</button>
           <button onClick={() => removeSet(i)} style={{ background: "none", border: "none", color: "#ccc", fontSize: "16px", cursor: "pointer" }}>×</button>
         </div>
       ))}
@@ -488,7 +494,12 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
   }, []);
 
   // Called whenever a set is marked done
-  async function handleSetDone({ exercise, weight, reps, isPR, rest, setNumber, recalculate, cleared }) {
+  async function handleSetDone({ exercise, weight, reps, isPR, rest, setNumber, recalculate, cleared, bodyweight }) {
+    // Skip PR logic for bodyweight exercises — just trigger rest timer
+    if (bodyweight) {
+      if (rest) { const s = parseRestSeconds(rest); if (s > 0) setRestTimer({ seconds: s }); }
+      return;
+    }
     // 1. Local state updates immediately
     if (cleared) {
       // All sets unchecked — don't change the all-time PR, just skip
@@ -573,7 +584,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
     ["plan","Plan"], ["progress","Progress"], ["body","Body"],
     ["photos","Photos"], ["muscles","Muscles"],
     ["alternatives","Alternatives"], ["goals","Goals"],
-    ["monthly","Monthly"], ["activity","Activity"], ["injury","Injury"],
+    ["monthly","Monthly"], ["activity","Activity"],
     ["cycle","Cycle"], ["health","Health"],
     ["guide","Guide"],
   ];
@@ -780,18 +791,85 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
                           <strong>Imbalance note:</strong> {ex.imbalanceNote}
                         </div>
                       )}
-                      {ex.form && ex.form.map((step, si) => (
-                        <div key={si} style={{ marginBottom: "5px", fontSize: "11px", lineHeight: "1.6", borderLeft: "2px solid #c47a0a", paddingLeft: "10px" }}>
-                          <strong style={{ color: "#c47a0a" }}>{step.label}: </strong>
-                          <span style={{ color: "#333" }}>{step.text}</span>
+                      {ex.form && (
+                        <div style={{ fontSize: "12px", color: "#444", lineHeight: "1.75" }}>
+                          {ex.form.map((step, si) => (
+                            <div key={si} style={{ display: "flex", gap: "10px", marginBottom: "8px", paddingBottom: "8px", borderBottom: si < ex.form.length - 1 ? "1px solid #f5f5f3" : "none" }}>
+                              <div style={{ minWidth: "90px", fontSize: "9px", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.1em", color: step.label === "Watch for" ? "#a02020" : "#c47a0a", paddingTop: "2px", flexShrink: 0 }}>
+                                {step.label}
+                              </div>
+                              <div style={{ color: "#333", lineHeight: "1.6" }}>{step.text}</div>
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      )}
                     </div>
                   )}
                 </div>
               );
             })}
           </div>
+
+          {/* Core Finisher */}
+          {current.core_finisher && current.core_finisher.length > 0 && (
+            <div style={{ marginTop: "4px" }}>
+              <div style={{ padding: "8px 16px 4px", display: "flex", alignItems: "center", gap: "8px" }}>
+                <div style={{ height: "1px", flex: 1, background: "#e8e8e8" }} />
+                <span style={{ fontSize: "8px", fontWeight: "700", letterSpacing: "0.2em", textTransform: "uppercase", color: "#c47a0a" }}>Core Finisher</span>
+                <div style={{ height: "1px", flex: 1, background: "#e8e8e8" }} />
+              </div>
+              {current.core_finisher.map((ex, i) => {
+                const isOpen = expandedEx === `cf-${i}`;
+                const logOpen = showLogger[`cf-${ex.name}`];
+                const exKey = `${sessionKey}__${ex.name}`;
+                const exLog = logs[exKey];
+                const doneSets = exLog?.sets?.filter(s => s.done).length || 0;
+                const totalLogged = exLog?.sets?.length || 0;
+                return (
+                  <div key={i} style={{ borderBottom: "1px solid #ebebeb", background: i % 2 === 0 ? "#fff" : "#fafaf8" }}>
+                    <div style={{ padding: "11px 16px", display: "flex", gap: "11px", alignItems: "flex-start" }}>
+                      <div style={{ width: "24px", height: "24px", borderRadius: "50%", background: doneSets > 0 ? "#c47a0a" : "#e8e8e8", color: doneSets > 0 ? "#fff" : "#999", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px", fontWeight: "800", flexShrink: 0, marginTop: "1px" }}>
+                        {doneSets > 0 ? "✓" : i + 1}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: "13px", fontWeight: "600", marginBottom: "4px" }}>{ex.name}</div>
+                        <div style={{ display: "flex", gap: "5px", flexWrap: "wrap" }}>
+                          <span style={{ fontSize: "10px", background: "#1a1a1a", color: "#c47a0a", padding: "2px 8px", borderRadius: "20px", fontWeight: "700" }}>{ex.sets} × {ex.reps}</span>
+                          {ex.rest !== "—" && <span style={{ fontSize: "9px", color: "#999", padding: "2px 7px", background: "#f0f0f0", borderRadius: "20px" }}>{ex.rest} rest</span>}
+                          {totalLogged > 0 && <span style={{ fontSize: "9px", padding: "2px 7px", borderRadius: "20px", background: doneSets > 0 ? "#e8f5e9" : "#f0f0f0", color: doneSets > 0 ? "#2d7a1e" : "#999" }}>{doneSets}/{totalLogged} done</span>}
+                          <span style={{ fontSize: "9px", color: "#bbb", padding: "2px 7px", background: "#f5f5f3", borderRadius: "20px" }}>Bodyweight</span>
+                        </div>
+                        {ex.muscles && <div style={{ fontSize: "10px", color: "#bbb", marginTop: "4px" }}>{ex.muscles.join(" · ")}</div>}
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "4px", flexShrink: 0 }}>
+                        <button onClick={() => setShowLogger(p => ({ ...p, [`cf-${ex.name}`]: !p[`cf-${ex.name}`] }))} style={{ background: logOpen ? "#c47a0a" : "transparent", color: logOpen ? "#fff" : "#c47a0a", border: "1px solid #c47a0a", borderRadius: "5px", padding: "4px 8px", fontSize: "10px", cursor: "pointer", ...F }}>
+                          {logOpen ? "Hide" : "Log"}
+                        </button>
+                        <button onClick={() => setExpandedEx(isOpen ? null : `cf-${i}`)} style={{ background: "none", border: "none", color: "#ccc", fontSize: "12px", cursor: "pointer", padding: "4px 0", textAlign: "right" }}>
+                          {isOpen ? "▲" : "▼"}
+                        </button>
+                      </div>
+                    </div>
+                    {logOpen && (
+                      <div style={{ padding: "0 16px 12px 51px" }}>
+                        <SetLogger exercise={ex} sessionKey={sessionKey} logs={logs} onLogsChange={handleLogsChange} accent="#c47a0a" color="#1a1a1a" onSetDone={handleSetDone} prs={prs} />
+                      </div>
+                    )}
+                    {isOpen && ex.form && (
+                      <div style={{ padding: "0 16px 12px 51px" }}>
+                        {ex.form.map((step, si) => (
+                          <div key={si} style={{ marginBottom: "5px", fontSize: "11px", lineHeight: "1.6", borderLeft: "2px solid #c47a0a", paddingLeft: "10px" }}>
+                            <strong style={{ color: "#c47a0a" }}>{step.label}: </strong>
+                            <span style={{ color: "#333" }}>{step.text}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
           {/* Post-lift cardio */}
           {current.cardio && (
@@ -862,7 +940,6 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
       {tab === "goals" && <GoalTracker />}
       {tab === "monthly" && <MonthlyGoals />}
       {tab === "activity" && <ActivityLog />}
-      {tab === "injury" && <InjuryAwareness />}
       {tab === "cycle" && <CycleTracking />}
       {tab === "health" && <HealthIntegration />}
 
