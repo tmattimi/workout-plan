@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { schedule, principles } from "./data";
+import { getAllNames } from "./data/exercises";
 import {
   loadWorkoutLogs, saveWorkoutLogs, loadMeasurements, saveMeasurements,
   loadPRs, savePRs, loadProgressPhotos, saveProgressPhotos,
@@ -1037,7 +1038,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
 
           {/* Add exercise */}
           {current.type !== "rest" && (() => {
-            const EXERCISE_CATALOG = ["Ab Wheel Rollout", "Alternating Dumbbell Curl", "Arnold Press", "Bulgarian Split Squat (Dumbbell)", "Cable Crunch", "Cable Curl (Low Pulley)", "Cable Fly (Low-to-High)", "Cable Lateral Raise (Single-Arm)", "Cat-Cow", "Chest and Shoulder Doorway Stretch", "Chest-Supported DB Row", "Dead Bug", "Dumbbell Bench Press", "Face Pull (Rope Attachment)", "Foam Roll", "Goblet Squat", "Hammer Curl", "Hanging Knee Raise", "Hip Flexor Stretch", "Hip Thrust (Barbell or Machine)", "Incline Dumbbell Curl", "Incline Dumbbell Press", "Incline Treadmill", "Lat Pulldown (Wide Overhand)", "Lateral Raise", "Leg Extension", "Leg Press", "Light Walk", "Overhead Tricep Extension", "Pallof Press (Cable)", "Plank", "Pull-Up (or Assisted Pull-Up)", "Rear Delt Fly (Bent-Over)", "Romanian Deadlift (Dumbbell)", "Rowing Machine", "Rowing Machine or Incline Treadmill", "Seated Cable Row (Neutral Grip)", "Seated Calf Raise", "Seated Dumbbell Overhead Press", "Side Plank", "Single-Arm Dumbbell Row", "Single-Arm Overhead DB Press", "Single-Leg Hamstring Curl", "Standing Calf Raise", "Stationary Bike", "Stationary Bike or Brisk Walk", "Straight-Arm Cable Pulldown", "Tricep Rope Pushdown"];
+            const EXERCISE_CATALOG = getAllNames() || ["Ab Wheel Rollout", "Alternating Dumbbell Curl", "Arnold Press", "Bulgarian Split Squat (Dumbbell)", "Cable Crunch", "Cable Curl (Low Pulley)", "Cable Fly (Low-to-High)", "Cable Lateral Raise (Single-Arm)", "Cat-Cow", "Chest and Shoulder Doorway Stretch", "Chest-Supported DB Row", "Dead Bug", "Dumbbell Bench Press", "Face Pull (Rope Attachment)", "Foam Roll", "Goblet Squat", "Hammer Curl", "Hanging Knee Raise", "Hip Flexor Stretch", "Hip Thrust (Barbell or Machine)", "Incline Dumbbell Curl", "Incline Dumbbell Press", "Incline Treadmill", "Lat Pulldown (Wide Overhand)", "Lateral Raise", "Leg Extension", "Leg Press", "Light Walk", "Overhead Tricep Extension", "Pallof Press (Cable)", "Plank", "Pull-Up (or Assisted Pull-Up)", "Rear Delt Fly (Bent-Over)", "Romanian Deadlift (Dumbbell)", "Rowing Machine", "Rowing Machine or Incline Treadmill", "Seated Cable Row (Neutral Grip)", "Seated Calf Raise", "Seated Dumbbell Overhead Press", "Side Plank", "Single-Arm Dumbbell Row", "Single-Arm Overhead DB Press", "Single-Leg Hamstring Curl", "Standing Calf Raise", "Stationary Bike", "Stationary Bike or Brisk Walk", "Straight-Arm Cable Pulldown", "Tricep Rope Pushdown"];
             const cmKey = `${current.day}_${sessionDate}`;
             const dayMovements = customMovements[cmKey] || [];
             const searchTerm = newMovement.name.toLowerCase();
