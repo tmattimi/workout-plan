@@ -627,14 +627,18 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
   }
 
   return (
-    <div style={{ ...F, background: "#f7f6f3", minHeight: "100vh", color: "#1a1a1a", maxWidth: 640, margin: "0 auto" }}>
+    <div style={{ background: "#e8e8e8", minHeight: "100vh" }}>
+    <div style={{ ...F, background: "#f7f6f3", minHeight: "100vh", color: "#1a1a1a", maxWidth: 640, margin: "0 auto", boxShadow: "0 0 60px rgba(0,0,0,0.1)" }}>
 
       {/* Header */}
       <div style={{ background: "#111", color: "#f7f6f3", padding: "22px 18px 0" }}>
-        <div style={{ fontSize: "9px", letterSpacing: "0.25em", textTransform: "uppercase", color: "#555", marginBottom: "3px" }}>Push Pull Legs × 2 · 6 Days</div>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "10px" }}>
-          <h1 style={{ margin: 0, fontSize: "21px", fontWeight: "normal", letterSpacing: "-0.5px" }}>
-            {clientData?.name ? `${clientData.name.split(" ")[0]}'s Plan` : "Workout Plan"}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "2px" }}>
+          <h1 style={{ margin: 0, fontSize: "22px", fontWeight: "normal", letterSpacing: "-0.5px" }}>
+            {(() => {
+              const h = new Date().getHours();
+              const greeting = h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
+              return clientData?.name ? `${greeting}, ${clientData.name.split(" ")[0]}` : greeting;
+            })()}
           </h1>
           {onSignOut && (
             <button onClick={onSignOut} style={{ background: "none", border: "1px solid #333", color: "#555", borderRadius: "20px", padding: "5px 12px", fontSize: "10px", cursor: "pointer", ...F, whiteSpace: "nowrap" }}>
@@ -642,9 +646,10 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
             </button>
           )}
         </div>
+        <div style={{ fontSize: "9px", letterSpacing: "0.22em", textTransform: "uppercase", color: "#555", marginBottom: "10px" }}>Push Pull Legs · 6 Days</div>
         {/* Scripture — inline in header */}
         <DailyScripture accent="#c47a0a" inHeader />
-        <div style={{ display: "flex", gap: "3px", overflowX: "auto", paddingBottom: "1px" }}>
+        <div style={{ display: "flex", gap: "3px", overflowX: "auto", paddingBottom: "1px", msOverflowStyle: "none", scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}>
           {tabs.map(([t, label]) => (
             <button key={t} onClick={() => setTab(t)} style={{
               flex: "0 0 auto", background: tab === t ? "#f7f6f3" : "transparent",
@@ -662,48 +667,41 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
       {tab === "plan" && (
         <>
           {/* Day selector */}
-          <div style={{ display: "flex", overflowX: "auto", background: "#fff", borderBottom: "1px solid #e5e5e5" }}>
+          <div style={{ display: "flex", overflowX: "auto", background: "#fff", borderBottom: "1px solid #e5e5e5", msOverflowStyle: "none", scrollbarWidth: "none" }}>
             {activeSchedule.map((d, i) => (
               <button key={d.day} onClick={() => { setActiveDay(i); setExpandedEx(null); setShowLogger({}); }} style={{
                 flex: "0 0 auto", background: "transparent", border: "none",
-                borderBottom: activeDay === i ? `3px solid ${d.accent}` : "3px solid transparent",
+                borderBottom: activeDay === i ? "3px solid #c47a0a" : "3px solid transparent",
                 padding: "11px 12px 8px", cursor: "pointer", ...F,
                 display: "flex", flexDirection: "column", alignItems: "center", gap: "2px", minWidth: "46px",
               }}>
-                <span style={{ fontSize: "8px", fontWeight: "800", letterSpacing: "0.15em", color: activeDay === i ? d.accent : "#bbb" }}>{d.day}</span>
+                <span style={{ fontSize: "8px", fontWeight: "800", letterSpacing: "0.15em", color: activeDay === i ? "#c47a0a" : "#bbb" }}>{d.day}</span>
                 <span style={{ fontSize: "9px", color: activeDay === i ? "#1a1a1a" : "#ccc", whiteSpace: "nowrap" }}>{d.label}</span>
               </button>
             ))}
           </div>
 
           {/* Session header */}
-          <div style={{ background: current.color, borderLeft: `4px solid ${current.accent}`, padding: "13px 16px" }}>
-            <div style={{ fontSize: "9px", letterSpacing: "0.18em", textTransform: "uppercase", color: current.accent, marginBottom: "2px" }}>
+          <div style={{ background: "#1a1a1a", borderBottom: "1px solid #2a2a2a", padding: "13px 16px" }}>
+            <div style={{ fontSize: "9px", letterSpacing: "0.18em", textTransform: "uppercase", color: "#c47a0a", marginBottom: "3px" }}>
               {current.day} · {current.muscles.join(", ") || "Recovery"}
             </div>
-            <div style={{ fontSize: "16px", marginBottom: "8px" }}>{current.focus}</div>
+            <div style={{ fontSize: "17px", color: "#f7f6f3", marginBottom: "10px", fontWeight: "normal" }}>{current.focus}</div>
 
-            <div style={{ display: "flex", gap: "8px", alignItems: "center", marginBottom: "8px", flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
               <input type="date" value={sessionDate} onChange={e => setSessionDate(e.target.value)}
-                style={{ padding: "5px 8px", borderRadius: "5px", border: "1px solid rgba(0,0,0,0.1)", fontSize: "11px", background: "rgba(255,255,255,0.7)", color: "#333", ...F }} />
+                style={{ padding: "5px 8px", borderRadius: "5px", border: "1px solid #333", fontSize: "11px", background: "#111", color: "#888", ...F }} />
               {trackableCount > 0 && (
-                <span style={{ fontSize: "11px", color: current.accent, background: "rgba(255,255,255,0.6)", padding: "4px 10px", borderRadius: "20px" }}>
+                <span style={{ fontSize: "11px", color: "#c47a0a", background: "rgba(196,122,10,0.12)", padding: "4px 10px", borderRadius: "20px", border: "1px solid rgba(196,122,10,0.25)" }}>
                   {completedExercises}/{trackableCount} started
                 </span>
               )}
-              {/* Warm-up button */}
               {current.type !== "rest" && (
-                <button onClick={() => setShowWarmup(true)} style={{ background: "rgba(255,255,255,0.7)", color: current.accent, border: `1px solid ${current.accent}44`, borderRadius: "20px", padding: "4px 12px", fontSize: "11px", cursor: "pointer", ...F, fontWeight: "600" }}>
+                <button onClick={() => setShowWarmup(true)} style={{ background: "rgba(196,122,10,0.12)", color: "#c47a0a", border: "1px solid rgba(196,122,10,0.3)", borderRadius: "20px", padding: "4px 12px", fontSize: "11px", cursor: "pointer", ...F, fontWeight: "600" }}>
                   Warm-Up
                 </button>
               )}
             </div>
-
-            {current.sessionNote && (
-              <div style={{ fontSize: "11px", color: "#444", background: "rgba(255,255,255,0.65)", borderRadius: "5px", padding: "8px 10px", lineHeight: "1.55" }}>
-                {current.sessionNote}
-              </div>
-            )}
           </div>
 
           {/* Exercises */}
@@ -722,7 +720,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
               return (
                 <div key={i} style={{ borderBottom: "1px solid #ebebeb", background: i % 2 === 0 ? "#fff" : "#fafaf8" }}>
                   <div style={{ padding: "11px 16px", display: "flex", gap: "11px", alignItems: "flex-start" }}>
-                    <div style={{ width: "24px", height: "24px", borderRadius: "50%", background: current.accent, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px", fontWeight: "800", flexShrink: 0, marginTop: "1px" }}>
+                    <div style={{ width: "24px", height: "24px", borderRadius: "50%", background: "#c47a0a", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px", fontWeight: "800", flexShrink: 0, marginTop: "1px" }}>
                       {doneSets > 0 ? "✓" : ex.order}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -731,7 +729,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
                         {ex.name}
                       </div>
                       <div style={{ display: "flex", gap: "5px", flexWrap: "wrap" }}>
-                        <span style={{ fontSize: "10px", background: current.color, color: current.accent, padding: "2px 8px", borderRadius: "20px", fontWeight: "700" }}>{ex.sets} × {ex.reps}</span>
+                        <span style={{ fontSize: "10px", background: "#1a1a1a", color: "#c47a0a", padding: "2px 8px", borderRadius: "20px", fontWeight: "700" }}>{ex.sets} × {ex.reps}</span>
                         {ex.rest !== "—" && <span style={{ fontSize: "9px", color: "#999", padding: "2px 7px", background: "#f0f0f0", borderRadius: "20px" }}>{ex.rest} rest</span>}
                         {ex.eccentric && ex.eccentric !== "—" && <span style={{ fontSize: "9px", color: "#7a3aa0", padding: "2px 7px", background: "#f3eafa", borderRadius: "20px" }}>{ex.eccentric}</span>}
                         {isStarted && <span style={{ fontSize: "9px", padding: "2px 7px", borderRadius: "20px", background: doneSets > 0 ? "#e8f5e9" : "#f0f0f0", color: doneSets > 0 ? "#2d7a1e" : "#999" }}>{doneSets}/{totalLogged} done</span>}
@@ -750,7 +748,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: "4px", flexShrink: 0 }}>
                       {ex.category !== "Recovery" && ex.category !== "Mobility" && (
-                        <button onClick={() => setShowLogger(p => ({ ...p, [ex.name]: !p[ex.name] }))} style={{ background: logOpen ? current.accent : "transparent", color: logOpen ? "#fff" : current.accent, border: `1px solid ${current.accent}`, borderRadius: "5px", padding: "4px 8px", fontSize: "10px", cursor: "pointer", ...F }}>
+                        <button onClick={() => setShowLogger(p => ({ ...p, [ex.name]: !p[ex.name] }))} style={{ background: logOpen ? "#c47a0a" : "transparent", color: logOpen ? "#fff" : "#c47a0a", border: "1px solid #c47a0a", borderRadius: "5px", padding: "4px 8px", fontSize: "10px", cursor: "pointer", ...F }}>
                           {logOpen ? "Hide" : "Log"}
                         </button>
                       )}
@@ -767,8 +765,8 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
                         sessionKey={sessionKey}
                         logs={logs}
                         onLogsChange={handleLogsChange}
-                        accent={current.accent}
-                        color={current.color}
+                        accent="#c47a0a"
+                        color="#1a1a1a"
                         onSetDone={handleSetDone}
                         prs={prs}
                       />
@@ -783,8 +781,8 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
                         </div>
                       )}
                       {ex.form && ex.form.map((step, si) => (
-                        <div key={si} style={{ marginBottom: "5px", fontSize: "11px", lineHeight: "1.6", borderLeft: `2px solid ${current.accent}`, paddingLeft: "10px" }}>
-                          <strong style={{ color: current.accent }}>{step.label}: </strong>
+                        <div key={si} style={{ marginBottom: "5px", fontSize: "11px", lineHeight: "1.6", borderLeft: "2px solid #c47a0a", paddingLeft: "10px" }}>
+                          <strong style={{ color: "#c47a0a" }}>{step.label}: </strong>
                           <span style={{ color: "#333" }}>{step.text}</span>
                         </div>
                       ))}
@@ -798,13 +796,13 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
           {/* Post-lift cardio */}
           {current.cardio && (
             <div style={{ margin: "0 16px 4px", background: "#fff", border: "1px solid #e8e8e8", borderRadius: "10px", overflow: "hidden" }}>
-              <div style={{ background: current.color, borderLeft: `4px solid ${current.accent}`, padding: "12px 14px" }}>
-                <div style={{ fontSize: "9px", letterSpacing: "0.15em", textTransform: "uppercase", color: current.accent, marginBottom: "3px" }}>
+              <div style={{ background: "#1a1a1a", borderLeft: "4px solid #c47a0a", padding: "12px 14px" }}>
+                <div style={{ fontSize: "9px", letterSpacing: "0.15em", textTransform: "uppercase", color: "#c47a0a", marginBottom: "3px" }}>
                   Post-Lift Cardio · {current.cardio.zone}
                 </div>
-                <div style={{ fontSize: "13px", fontWeight: "600", marginBottom: "5px" }}>{current.cardio.name}</div>
-                <div style={{ fontSize: "11px", color: "#444", lineHeight: "1.55" }}>{current.cardio.protocol}</div>
-                <div style={{ fontSize: "10px", color: "#777", marginTop: "5px", lineHeight: "1.5", borderTop: "1px solid rgba(0,0,0,0.06)", paddingTop: "6px" }}>
+                <div style={{ fontSize: "13px", fontWeight: "600", color: "#f7f6f3", marginBottom: "5px" }}>{current.cardio.name}</div>
+                <div style={{ fontSize: "11px", color: "#aaa", lineHeight: "1.55" }}>{current.cardio.protocol}</div>
+                <div style={{ fontSize: "10px", color: "#666", marginTop: "5px", lineHeight: "1.5", borderTop: "1px solid #2a2a2a", paddingTop: "6px" }}>
                   {current.cardio.feel}
                 </div>
               </div>
@@ -825,14 +823,14 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
               <button
                 onClick={() => setShowStretches(true)}
                 style={{
-                  width: "100%", background: "#fff", border: `1px solid ${current.accent}44`,
+                  width: "100%", background: "#fff", border: "1px solid rgba(196,122,10,0.3)",
                   borderRadius: "10px", padding: "13px 16px", cursor: "pointer", ...F,
                   display: "flex", justifyContent: "space-between", alignItems: "center",
                   textAlign: "left",
                 }}
               >
                 <div>
-                  <div style={{ fontSize: "9px", letterSpacing: "0.15em", textTransform: "uppercase", color: current.accent, marginBottom: "3px" }}>
+                  <div style={{ fontSize: "9px", letterSpacing: "0.15em", textTransform: "uppercase", color: "#c47a0a", marginBottom: "3px" }}>
                     After Your Workout
                   </div>
                   <div style={{ fontSize: "13px", color: "#1a1a1a", fontWeight: "500" }}>Cool Down & Stretch</div>
@@ -869,30 +867,31 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
       {tab === "health" && <HealthIntegration />}
 
       {tab === "guide" && (
-        <div style={{ padding: "16px 16px 40px" }}>
-          <div style={{ fontSize: "9px", letterSpacing: "0.2em", textTransform: "uppercase", color: "#999", marginBottom: "14px" }}>Training Guidelines</div>
-          {principles.map((p, i) => (
-            <div key={i} style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "6px", marginBottom: "7px", overflow: "hidden" }}>
-              <button onClick={() => setExpandedPrinciple(expandedPrinciple === i ? null : i)} style={{ width: "100%", background: "transparent", border: "none", padding: "12px 14px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", ...F, textAlign: "left" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                  <span style={{ fontSize: "17px" }}>{p.icon}</span>
-                  <span style={{ fontSize: "13px", fontWeight: "600" }}>{p.title}</span>
-                </div>
-                <span style={{ color: "#ccc", fontSize: "12px" }}>{expandedPrinciple === i ? "▲" : "▼"}</span>
-              </button>
-              {expandedPrinciple === i && (
-                <div style={{ padding: "0 14px 12px 40px", fontSize: "11px", color: "#444", lineHeight: "1.75", borderTop: "1px solid #f0f0f0", paddingTop: "10px" }}>
-                  {p.body}
-                </div>
-              )}
+        <div style={{ padding: "16px 16px 60px" }}>
+          <div style={{ fontSize: "9px", letterSpacing: "0.2em", textTransform: "uppercase", color: "#999", marginBottom: "16px" }}>Training Guide</div>
+          {principles.map((section, si) => (
+            <div key={si} style={{ marginBottom: "20px" }}>
+              <div style={{ fontSize: "8px", fontWeight: "700", letterSpacing: "0.2em", textTransform: "uppercase", color: "#c47a0a", marginBottom: "8px", paddingBottom: "6px", borderBottom: "1px solid #ebebeb" }}>
+                {section.section}
+              </div>
+              {section.entries.map((p, i) => {
+                const key = `${si}-${i}`;
+                return (
+                  <div key={i} style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "6px", marginBottom: "6px", overflow: "hidden" }}>
+                    <button onClick={() => setExpandedPrinciple(expandedPrinciple === key ? null : key)} style={{ width: "100%", background: "transparent", border: "none", padding: "11px 14px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", ...F, textAlign: "left" }}>
+                      <span style={{ fontSize: "13px", fontWeight: "600", color: "#1a1a1a" }}>{p.title}</span>
+                      <span style={{ color: "#ccc", fontSize: "11px", flexShrink: 0, marginLeft: "8px" }}>{expandedPrinciple === key ? "▲" : "▼"}</span>
+                    </button>
+                    {expandedPrinciple === key && (
+                      <div style={{ padding: "0 14px 12px", fontSize: "12px", color: "#444", lineHeight: "1.8", borderTop: "1px solid #f5f5f3" }}>
+                        <div style={{ paddingTop: "10px" }}>{p.body}</div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           ))}
-          <div style={{ marginTop: "10px", padding: "14px", background: "#111", borderRadius: "7px", color: "#f7f6f3" }}>
-            <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.15em", color: "#555", marginBottom: "6px" }}>The Big Picture</div>
-            <div style={{ fontSize: "11px", color: "#aaa", lineHeight: "1.8" }}>
-              At 170 lbs with a 450 lb hip thrust and a 130 lb overhead press, there is already a strong foundation to build on. Every muscle gets hit twice a week at the right volume. The heaviest movements go first in every session. The core progression starts where it should — from the inside out. Unilateral work is targeted and purposeful. Progressive overload and consistent logging drive everything else. Measure monthly and the numbers will tell the story.
-            </div>
-          </div>
         </div>
       )}
 
@@ -914,6 +913,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
           onDismiss={handlePRDismiss}
         />
       )}
+    </div>
     </div>
   );
 }

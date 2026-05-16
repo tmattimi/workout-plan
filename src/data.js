@@ -5,8 +5,6 @@ export const schedule = [
     day: "MON", label: "Push", type: "push",
     focus: "Push — Chest Focus",
     muscles: ["Chest", "Shoulders", "Triceps"],
-    color: "#e9f0fb", accent: "#2563a8",
-    sessionNote: "Chest leads today. Shoulders and triceps follow.",
     cardio: { name: "Incline Treadmill", protocol: "4.0–4.5 mph at 8–12% incline for 20 minutes", zone: "Zone 3 (65–75% max HR)", feel: "Breathing is noticeably elevated. Short sentences only — not fully conversational. That's the target and it stays there the whole 20 minutes." },
     exercises: [
       { name: "Dumbbell Bench Press", muscles: ["Chest", "Front Delt", "Tricep"], category: "Compound Bilateral", order: 1, sets: 4, reps: "6–10", rest: "2–3 min", eccentric: "3s down", why: "Opens the session as the primary chest compound. Dumbbells mean each side has to generate its own force independently — the right side cannot carry the left, which is what makes them better than a barbell for catching and correcting asymmetry.", form: [{ label: "Setup", text: "Lie flat with feet firmly planted. Pull the shoulder blades together and down toward your back pockets — hold that position the entire set." }, { label: "Elbows", text: "Hold the dumbbells at chest height with elbows at roughly 45–60° from your torso. Wrists stacked directly over elbows." }, { label: "Descent", text: "Take 3 full seconds to lower until you feel a deep stretch across the chest. Don't let elbows drop below your torso plane." }, { label: "Press", text: "Drive back up along the same arc. Think about pushing the chest up toward the ceiling. Stop just short of full lockout so the chest stays under tension." }, { label: "Breathing", text: "Breathe in on the way down. Brace your core hard at the bottom, then exhale as you press." }, { label: "Watch for", text: "Hips lifting off the bench, wrists collapsing backward, or dumbbells drifting too far over the face or stomach." }] },
@@ -22,8 +20,6 @@ export const schedule = [
     day: "TUE", label: "Pull", type: "pull",
     focus: "Pull — Back Focus",
     muscles: ["Back", "Biceps", "Rear Delts"],
-    color: "#ebf5e6", accent: "#2d7a1e",
-    sessionNote: "Back compounds lead. Biceps and rear delts finish.",
     cardio: { name: "Rowing Machine or Incline Treadmill", protocol: "Rower: moderate pace, damper 4–5 for 20 minutes. Treadmill: 4.0 mph at 10% incline.", zone: "Zone 3 (65–75% max HR)", feel: "The rower reinforces the pulling pattern at low load post-session. Breathing elevated throughout." },
     exercises: [
       { name: "Lat Pulldown (Wide Overhand)", muscles: ["Lats", "Bicep", "Rear Delt"], category: "Compound Bilateral", order: 1, sets: 4, reps: "6–10", rest: "2–3 min", eccentric: "3s return", why: "Heaviest pull of the session, so it goes first. Wide grip builds lat width and develops the strength pattern for unassisted pull-ups.", form: [{ label: "Setup", text: "Grip just outside shoulder width. Lock knees firmly under the pad. Lean back about 20°." }, { label: "Pull", text: "Think about driving the elbows down toward your back pockets. Bring the bar to the upper chest." }, { label: "Return", text: "3 full seconds back to the top. Let the bar travel all the way up — the shoulder blades spread at the top. That full stretch is part of the range." }, { label: "Watch for", text: "Pulling the bar behind the neck, excessive lower back arch, or cutting the return short." }] },
@@ -39,8 +35,6 @@ export const schedule = [
     day: "WED", label: "Legs", type: "legs",
     focus: "Legs — Posterior Chain",
     muscles: ["Glutes", "Hamstrings", "Quads", "Calves"],
-    color: "#fef3e4", accent: "#c47a0a",
-    sessionNote: "Hip thrust opens the session — posterior chain first. Quads follow.",
     cardio: { name: "Stationary Bike", protocol: "Resistance 6–8 out of 10 for 20 minutes", zone: "Zone 3 (65–75% max HR)", feel: "Legs will be fatigued — that's fine. Hold the elevated heart rate steady. Consistent pedaling, not sprinting." },
     exercises: [
       { name: "Hip Thrust (Barbell or Machine)", muscles: ["Glutes", "Hamstrings"], category: "Compound Bilateral", order: 1, sets: 4, reps: "8–10", rest: "2–3 min", eccentric: "3s down", why: "The single most effective glute exercise — loads the glute at full hip extension where peak resistance occurs. Progressive overload is the primary week-over-week focus here.", form: [{ label: "Setup", text: "Upper back on bench just below the shoulder blades. Feet flat, hip-width, toes slightly out. Barbell padded across the hip crease." }, { label: "Before driving", text: "Breathe in, brace the core, tuck the chin. Chin stays tucked the entire set." }, { label: "Drive", text: "Push through the heels. Drive hips up until the body forms a straight line from shoulders to knees." }, { label: "Top", text: "Squeeze glutes hard and hold for one full second. If you feel it in the lower back the hips are going too high." }, { label: "Watch for", text: "Lower back hyperextending, knees caving inward, or pushing through the toes instead of heels." }] },
@@ -55,8 +49,6 @@ export const schedule = [
     day: "THU", label: "Push", type: "push",
     focus: "Push — Shoulder Focus",
     muscles: ["Shoulders", "Chest", "Triceps"],
-    color: "#f3eafa", accent: "#7a3aa0",
-    sessionNote: "Shoulders lead today. Chest gets its second weekly hit after.",
     cardio: { name: "Incline Treadmill", protocol: "4.0–4.5 mph at 8–12% incline for 20 minutes", zone: "Zone 3 (65–75% max HR)", feel: "Same target as Monday. Short sentences only, breathing noticeably elevated." },
     exercises: [
       { name: "Seated Dumbbell Overhead Press", muscles: ["Shoulder", "Tricep", "Upper Chest"], category: "Compound Bilateral", order: 1, sets: 4, reps: "6–10", rest: "2–3 min", eccentric: "3s down", why: "Primary shoulder compound first. Seated removes lower back involvement. Dumbbells let each shoulder work independently.", form: [{ label: "Setup", text: "Upright bench at 90°. Dumbbells at shoulder height, palms forward." }, { label: "Core", text: "Breathe in, brace hard, press lower back into the bench. It stays in contact throughout." }, { label: "Press", text: "Drive both dumbbells up in a slight inward arc. Exhale on the press." }, { label: "Watch for", text: "Lower back arching away from the bench, wrists collapsing backward." }] },
@@ -72,8 +64,6 @@ export const schedule = [
     day: "FRI", label: "Pull", type: "pull",
     focus: "Pull — Bicep Focus & Core",
     muscles: ["Back", "Biceps", "Rear Delts", "Core"],
-    color: "#e5f7f0", accent: "#147a50",
-    sessionNote: "Pull-up opens the session. Core finishes.",
     cardio: { name: "Rowing Machine", protocol: "Moderate pace at damper 4–5 for 20 minutes", zone: "Zone 3 (65–75% max HR)", feel: "Rower post-Pull keeps the back and arms engaged through the recovery window. Breathing elevated." },
     exercises: [
       { name: "Pull-Up (or Assisted Pull-Up)", muscles: ["Lats", "Bicep", "Core"], category: "Compound Bilateral", order: 1, sets: 4, reps: "Max reps (or 6–8 assisted)", rest: "2–3 min", eccentric: "3s down", why: "Primary compound and the key weekly progress marker. Currently at 6 wide-grip — tracking rep increases week over week is one of the clearest indicators of lat and bicep development.", form: [{ label: "Grip", text: "Overhand, just outside shoulder width. Full dead hang at the bottom." }, { label: "Before pulling", text: "Depress and retract the shoulder blades before initiating the pull." }, { label: "Pull", text: "Drive the elbows down and back. Pull until the chin clears the bar." }, { label: "Eccentric", text: "3 full seconds on the way down. This is the fastest path to unassisted pull-ups." }, { label: "Watch for", text: "Kipping, not reaching a dead hang at the bottom, or craning the neck." }] },
@@ -90,8 +80,6 @@ export const schedule = [
     day: "SAT", label: "Legs", type: "legs",
     focus: "Legs — Quad Focus & Core",
     muscles: ["Quads", "Glutes", "Hamstrings", "Calves", "Core"],
-    color: "#fce8e8", accent: "#a02a2a",
-    sessionNote: "Quads lead today. Hip thrust follows. Core finishes.",
     cardio: { name: "Stationary Bike or Brisk Walk", protocol: "Bike: resistance 6–8 out of 10 for 20 minutes. Walk: brisk with hills if available.", zone: "Zone 3 (65–75% max HR)", feel: "End of the training week. Legs will be more fatigued than Wednesday — hold the heart rate target regardless." },
     exercises: [
       { name: "Leg Press", category: "Compound Bilateral", order: 1, sets: 4, reps: "8–10", rest: "2–3 min", eccentric: "3s down", why: "Quad-focused bilateral compound placed first today. Lower rep range and higher load than Wednesday for a different stimulus.", form: [{ label: "Today", text: "Slightly lower foot position than Wednesday to increase quad bias. Same core brace throughout." }] },
@@ -109,8 +97,6 @@ export const schedule = [
     day: "SUN", label: "Rest", type: "rest",
     focus: "Active Recovery",
     muscles: [],
-    color: "#f4f4f2", accent: "#888",
-    sessionNote: "No lifting today. Easy movement, blood flow, recovery.",
     exercises: [
       { name: "Light Walk", muscles: ["Full Body"], category: "Recovery", order: 1, sets: 1, reps: "20–30 min", rest: "—", eccentric: "—", why: "Easy movement supports blood flow and nutrient delivery.", form: [{ label: "Pace", text: "Fully conversational. Outdoors if possible." }] },
       { name: "Hip Flexor Stretch", muscles: ["Hip Flexors"], category: "Mobility", order: 2, sets: 2, reps: "60 sec each side", rest: "30 sec", eccentric: "—", why: "Heavy split squats and lunges shorten the hip flexors over time.", form: [{ label: "Position", text: "Kneeling lunge. Push the front hip gently forward. 60 seconds each side." }] },
@@ -122,12 +108,54 @@ export const schedule = [
 ];
 
 export const principles = [
-  { icon: "↑", title: "Progressive Overload", body: "Add one rep or 2.5–5 lbs per exercise per week. When the top of the rep range is hit on all sets with clean form, add weight next session. Log every session — without data there is no overload and without overload there is no growth. This is the only mechanism." },
-  { icon: "◎", title: "Core Bracing", body: "Before every compound set: breathe into the belly so it expands (not the chest), then brace the abs like preparing to take a punch. Hold that brace for the entire rep. This intra-abdominal pressure protects the spine and transfers more force to the working muscle." },
-  { icon: "▣", title: "Core Progression", body: "Stage 1 is deep stability — TVA and diaphragm activation through Dead Bug and Plank. Stage 2 is anti-movement — Pallof Press and Side Plank. Stage 3 is loaded and dynamic — Hanging Knee Raise and Ab Wheel Rollout. The deep core must be solid before loading the superficial abs." },
-  { icon: "◷", title: "Eccentric Phase", body: "The lowering phase of every rep is where most of the hypertrophic stimulus occurs. Every exercise in this plan has a 2–3 second descent prescribed. Lower the weight with control — don't drop it." },
-  { icon: "⇌", title: "Addressing Imbalances", body: "There is a documented left/right difference in both the arms and thighs. Always start with the left side, match the right exactly, and never add weight until both sides are equal for two sessions in a row. The gap should visibly close within 8–12 weeks." },
-  { icon: "—", title: "Rest Periods", body: "2–3 minutes between compound sets. 90 seconds to 2 minutes between isolation sets. Longer rest means better performance on the next set, which means more total volume, which means more growth. Time them." },
-  { icon: "→", title: "Cardio Placement and Intensity", body: "Cardio always comes after lifting — never before. Zone 3 means 65–75% of max heart rate, where breathing is noticeably elevated and a full comfortable conversation isn't possible. 20 minutes post-lift, 6 days a week." },
-  { icon: "◆", title: "Nutrition", body: "The 170–200g protein target daily is right — keep it. Training days should land around 2,600 calories and rest days around 2,100. This creates the cycling needed to drive fat loss while supporting muscle growth simultaneously." },
+  {
+    section: "Training Principles",
+    entries: [
+      { title: "Progressive Overload", body: "The only mechanism that drives strength and muscle growth over time. Add one rep or 2.5 to 5 lbs per exercise per session — whichever comes first. When you hit the top of the rep range across all sets with clean form, increase the load next session. Log every session. Without data there is no overload, and without overload there is no adaptation. NASM refers to this as the principle of progressive overload within the OPT model." },
+      { title: "Eccentric Phase", body: "The lowering portion of every rep — also called the negative — is where the majority of the hypertrophic stimulus occurs. Eccentric loading causes more muscle fiber recruitment and greater micro-damage, which drives the repair and growth response. Every exercise in this program prescribes a 2 to 3 second descent. Control the weight down. Do not drop it." },
+      { title: "Rest Periods", body: "2 to 3 minutes between compound sets. 90 seconds to 2 minutes between isolation sets. Longer rest periods allow the phosphocreatine energy system to partially replenish, which means better performance on the next set, which means more total volume over the session. Volume is the primary driver of hypertrophy. Time your rest — guessing always undershoots it." },
+      { title: "Compound vs. Isolation Exercises", body: "Compound movements recruit multiple muscle groups and joints simultaneously — presses, rows, squats, hinges. They go first in every session when the neuromuscular system is fresh and can handle the heaviest loads. Isolation exercises target a single muscle — curls, fly variations, lateral raises. They follow compounds to accumulate volume in specific areas. NASM classifies these as multi-joint and single-joint movements within the resistance training component of the OPT model." },
+      { title: "Training Frequency", body: "Every muscle group in this program is trained twice per week. This is supported by research as the optimal frequency for hypertrophy for most individuals — enough stimulus per week to drive adaptation, with enough recovery between sessions to allow it. The Push Pull Legs structure achieves this naturally: each muscle pattern appears once in the first three days and repeats in the second three." },
+    ]
+  },
+  {
+    section: "Program Structure",
+    entries: [
+      { title: "Why Push Pull Legs", body: "Push Pull Legs splits training by movement pattern rather than arbitrary muscle groupings. Push sessions — chest, shoulders, triceps — involve muscles that push or extend. Pull sessions — back, biceps, rear delts — involve muscles that pull or flex. Legs — quads, glutes, hamstrings, calves — get their own dedicated sessions. Running this twice per week gives every muscle group two quality sessions at sufficient volume without overlap or overuse." },
+      { title: "Exercise Order Within Sessions", body: "Heaviest compound movements go first — always. The central nervous system performs best at the start of a session before fatigue accumulates. Placing heavy bilateral compounds at the top of the session means more weight moved, better form, and greater strength development. Unilateral exercises follow bilateral. Isolation exercises come last. Core and abs finish every session — fatigued stabilizers during heavy compound movements increase injury risk." },
+      { title: "Core Progression — Stages 1, 2, and 3", body: "Core training follows a three-stage progression aligned with NASM's stabilization-strength-power model. Stage 1 is deep stabilization — exercises like Dead Bug and Plank that train the transverse abdominis and diaphragm to resist spinal movement. Stage 2 is anti-movement — Pallof Press and Side Plank train the core to resist rotation and lateral flexion, which is what it actually does during every compound lift. Stage 3 is loaded and dynamic — Hanging Knee Raise and Ab Wheel Rollout add external load and full range of motion. Each stage must be solid before progressing." },
+      { title: "Addressing Left-Right Imbalances", body: "Bilateral exercises — where both sides move together — can mask strength and size differences because the dominant side compensates for the weaker. Unilateral exercises remove that compensation. This program includes single-arm and single-leg variations throughout to identify and close those gaps. Always start with the weaker side. Match exactly with the stronger side. Never add load until both sides are equal for two consecutive sessions." },
+      { title: "Cardio — Placement and Zone", body: "Cardio is placed after resistance training — never before. Performing cardio first depletes glycogen and accumulates fatigue that directly reduces performance on compound movements. Post-lift cardio takes advantage of elevated heart rate and metabolic demand already present. Zone 3 training — 65 to 75 percent of maximum heart rate — targets aerobic capacity and fat oxidation without the recovery cost of higher-intensity work. Breathing is noticeably elevated at Zone 3 but sustainable for 20 minutes." },
+    ]
+  },
+  {
+    section: "Recovery",
+    entries: [
+      { title: "Core Bracing", body: "Before every compound set: breathe into the belly so the abdomen expands, not the chest. Then brace the abs like you are about to take a hit — hard in all directions. Hold that brace for the entire rep. This creates intra-abdominal pressure, which stabilizes the spine, protects the intervertebral discs, and allows more force to transfer to the working muscle. Releasing the brace mid-rep on heavy loads is where injuries happen." },
+      { title: "Sleep and Recovery", body: "Muscle repair and growth hormone release occur primarily during deep sleep. 7 to 9 hours per night is the evidence-based target for active individuals. Sleep deprivation reduces testosterone, increases cortisol, impairs neuromuscular performance, and slows fat loss — all working against what training is trying to accomplish. Recovery is not separate from training. It is half of it." },
+      { title: "Active Recovery", body: "On rest days, light movement — walking, mobility work, foam rolling — promotes blood flow and nutrient delivery to recovering muscles without adding training stress. This is why Sunday includes a structured light session rather than complete rest. Complete inactivity on rest days can actually slow recovery relative to light movement." },
+      { title: "Delayed Onset Muscle Soreness (DOMS)", body: "DOMS is the soreness felt 24 to 72 hours after training — caused by the micro-damage of eccentric loading that triggers the repair and growth response. It is normal, expected, and does not indicate injury. DOMS is most pronounced when a new exercise, rep range, or load is introduced. It diminishes as the body adapts. Training through mild DOMS is appropriate. Sharp or joint-level pain is not DOMS — it is a signal to stop and assess." },
+    ]
+  },
+  {
+    section: "Nutrition Basics",
+    entries: [
+      { title: "Protein and Muscle Protein Synthesis", body: "Muscle protein synthesis — the process of building new muscle tissue — requires dietary protein as the substrate. 1.6 to 2.2 grams of protein per kilogram of bodyweight per day is the evidence-based range for maximizing muscle growth in resistance-trained individuals. Spreading intake across 4 or more meals throughout the day optimizes synthesis rates better than consuming the same total in one or two large meals." },
+      { title: "Caloric Targets and Body Composition", body: "Body recomposition — gaining muscle while losing fat simultaneously — requires a relatively small caloric deficit, adequate protein, and consistent resistance training. Aggressive caloric deficits accelerate fat loss but also accelerate muscle loss. Moderate deficits of 300 to 500 calories below maintenance, combined with high protein and progressive training, support muscle retention while losing fat. Training days and rest days can be cycled at different caloric levels to manage this." },
+      { title: "Hydration", body: "Even mild dehydration — 2 percent of bodyweight — measurably reduces strength, power output, and cognitive performance. For a 170-pound individual, that is roughly 3.4 pounds or about 1.5 liters of water loss before performance is noticeably impaired. Training, sweating, and Zone 3 cardio all accelerate fluid loss. Water before, during, and after sessions is not optional." },
+    ]
+  },
+  {
+    section: "Glossary",
+    entries: [
+      { title: "1RM (One-Rep Max)", body: "The maximum weight you can lift for exactly one full repetition with proper form. Used as a baseline to set training loads. In this app, working weights are calculated as percentages of your estimated 1RM to give you target ranges for each goal — strength, muscle growth, or endurance." },
+      { title: "Hypertrophy", body: "Skeletal muscle growth — the increase in size of individual muscle fibers in response to progressive resistance training and adequate nutrition. Hypertrophy is maximized in the 6 to 12 rep range at 67 to 85 percent of 1RM, with sufficient volume (sets) and appropriate rest." },
+      { title: "Periodization", body: "The systematic variation of training variables — volume, intensity, frequency, exercise selection — over time to prevent plateaus, manage fatigue, and drive continued adaptation. NASM's OPT model is a periodization framework: it progresses from stabilization to strength to power phases across a training cycle." },
+      { title: "RPE (Rate of Perceived Exertion)", body: "A subjective scale from 1 to 10 used to measure how hard a set feels. RPE 7 means 3 reps left in the tank. RPE 8 means 2 reps left. RPE 9 means 1 rep left. RPE 10 is absolute failure. Most working sets in this program target RPE 7 to 9 — challenging but not to failure." },
+      { title: "FITT Principle", body: "A framework from NASM for designing training programs: Frequency (how often), Intensity (how hard), Time (how long), and Type (what kind of training). Every program decision — how many days per week, what heart rate zone for cardio, session duration, and training split — can be traced back to these four variables." },
+      { title: "Supination and Pronation", body: "Supination is the rotation of the forearm so the palm faces upward. Pronation is the rotation so the palm faces downward. Relevant in curling movements: supinating during a curl maximizes bicep peak contraction. Neutral grip — thumb pointing up — targets the brachialis, the muscle underneath the bicep." },
+      { title: "Bilateral vs. Unilateral", body: "Bilateral exercises involve both limbs simultaneously — barbell squat, dumbbell bench press, leg press. Unilateral exercises involve one limb at a time — single-arm row, Bulgarian split squat, single-leg curl. Bilateral exercises allow heavier loading. Unilateral exercises reveal and correct left-right strength asymmetries that bilateral exercises can mask." },
+      { title: "Zone 3 Cardio", body: "Zone 3 is 65 to 75 percent of maximum heart rate. At this intensity, breathing is elevated — full comfortable conversation is not possible, but short sentences are. Zone 3 targets aerobic capacity and fat oxidation. It is harder than easy walking but easier than high-intensity intervals. 20 minutes post-lift at Zone 3 is the cardio target in this program." },
+    ]
+  },
 ];
