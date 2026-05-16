@@ -474,7 +474,7 @@ function getTodayScripture() {
   // Pick from monthly array by day
   const arr = BY_MONTH[month] || BY_MONTH[1];
   const entry = arr[(day - 1) % arr.length];
-  return { v: entry.v, r: entry.r, season: null, isSunday: now.getDay() === 0 };
+  return { v: entry.v, r: entry.r, d: entry.d || null, season: null, isSunday: now.getDay() === 0 };
 }
 
 // ── Sunday reflection prompts ─────────────────────────────────────────────────
