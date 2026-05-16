@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   signInCoach, signOutCoach, getCoachSession, onAuthChange,
   getMyClients, createClient_db, updateClient_db,
@@ -51,25 +51,51 @@ function LoginScreen({ onLogin }) {
 }
 
 // ── Client Card ────────────────────────────────────────────────────────────────
-function ClientCard({ client, onSelect, unreadCount }) {
+function ClientCard({ client, onSelect, unreadCount, lastActive, sessionCount }) {
   const initials = client.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
+
+  // Compliance color based on last active
+  function getStatusColor() {
+    if (!lastActive) return "#e0e0e0";
+    const days = Math.floor((Date.now() - new Date(lastActive)) / 86400000);
+    if (days <= 3) return "#2d7a1e";
+    if (days <= 7) return "#c47a0a";
+    return "#a02020";
+  }
+
+  function getStatusLabel() {
+    if (!lastActive) return "No sessions yet";
+    const days = Math.floor((Date.now() - new Date(lastActive)) / 86400000);
+    if (days === 0) return "Today";
+    if (days === 1) return "Yesterday";
+    if (days <= 7) return `${days}d ago`;
+    return `${Math.floor(days / 7)}w ago`;
+  }
+
+  const statusColor = getStatusColor();
+
   return (
     <button onClick={() => onSelect(client)} style={{
       width: "100%", background: "#fff", border: "1px solid #e8e8e8", borderRadius: "10px",
-      padding: "14px 16px", marginBottom: "8px", display: "flex", alignItems: "center",
+      padding: "13px 16px", marginBottom: "8px", display: "flex", alignItems: "center",
       gap: "12px", cursor: "pointer", ...F, textAlign: "left",
     }}>
-      <div style={{ width: "40px", height: "40px", borderRadius: "50%", background: "#111", color: "#f7f6f3", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "14px", fontWeight: "700", flexShrink: 0 }}>
-        {initials}
+      <div style={{ position: "relative", flexShrink: 0 }}>
+        <div style={{ width: "40px", height: "40px", borderRadius: "50%", background: "#111", color: "#f7f6f3", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "14px", fontWeight: "700" }}>
+          {initials}
+        </div>
+        <div style={{ position: "absolute", bottom: 0, right: 0, width: "11px", height: "11px", borderRadius: "50%", background: statusColor, border: "2px solid #fff" }} />
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: "14px", fontWeight: "600", marginBottom: "2px" }}>{client.name}</div>
-        <div style={{ fontSize: "11px", color: "#aaa" }}>
-          {client.goal ? client.goal.replace("_", " ") : "No goal set"} · {client.is_active ? "Active" : "Inactive"}
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <span style={{ fontSize: "11px", color: "#aaa", textTransform: "capitalize" }}>{client.goal?.replace("_", " ") || "No goal"}</span>
+          <span style={{ fontSize: "10px", color: statusColor, fontWeight: "600" }}>{getStatusLabel()}</span>
+          {sessionCount > 0 && <span style={{ fontSize: "10px", color: "#bbb" }}>{sessionCount} sessions</span>}
         </div>
       </div>
       {unreadCount > 0 && (
-        <div style={{ background: "#a02a2a", color: "#fff", borderRadius: "20px", padding: "2px 8px", fontSize: "11px", fontWeight: "700" }}>
+        <div style={{ background: "#a02020", color: "#fff", borderRadius: "20px", padding: "2px 8px", fontSize: "11px", fontWeight: "700", flexShrink: 0 }}>
           {unreadCount}
         </div>
       )}
@@ -431,9 +457,10 @@ function ClientDetail({ client, coachId, plans, onBack, onAssignPlan }) {
     }
   }
 
+  const pollRef = useRef(null);
+
   useEffect(() => {
     async function load() {
-      // Recalculate PRs from actual logs first (ensures accuracy)
       const { recalculatePRsFromLogs } = await import("../lib/supabase");
       await recalculatePRsFromLogs(client.id);
       const [data, intakeResult] = await Promise.all([
@@ -446,6 +473,14 @@ function ClientDetail({ client, coachId, plans, onBack, onAssignPlan }) {
       markMessagesRead(client.id, "client");
     }
     load();
+
+    // Poll messages every 30s when on messages tab
+    pollRef.current = setInterval(async () => {
+      const { data } = await getMessages(client.id);
+      if (data) setMessages(data);
+    }, 30000);
+
+    return () => clearInterval(pollRef.current);
   }, [client.id]);
 
   async function handleSendNote() {
@@ -474,9 +509,14 @@ function ClientDetail({ client, coachId, plans, onBack, onAssignPlan }) {
 
       {/* Client header */}
       <div style={{ background: "#111", borderRadius: "10px", padding: "16px", marginBottom: "14px", color: "#f7f6f3" }}>
-        <div style={{ fontSize: "18px", fontWeight: "normal", marginBottom: "4px" }}>{client.name}</div>
-        <div style={{ fontSize: "11px", color: "#666", marginBottom: "10px" }}>
-          {client.goal?.replace("_"," ")} · {client.sex} · {client.is_active ? "Active" : "Inactive"}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "4px" }}>
+          <div style={{ fontSize: "18px", fontWeight: "normal" }}>{client.name}</div>
+          <div style={{ fontSize: "9px", letterSpacing: "0.12em", textTransform: "uppercase", color: client.is_active ? "#2d7a1e" : "#555", background: client.is_active ? "rgba(45,122,30,0.15)" : "rgba(255,255,255,0.05)", padding: "3px 8px", borderRadius: "20px" }}>
+            {client.is_active ? "Active" : "Inactive"}
+          </div>
+        </div>
+        <div style={{ fontSize: "11px", color: "#555", marginBottom: "10px", textTransform: "capitalize" }}>
+          {client.goal?.replace("_"," ")} · {client.sex}
         </div>
         <div style={{ display: "flex", gap: "6px", marginTop: "4px" }}>
           <button onClick={handleSendInvite} disabled={inviting || !!inviteStatus} style={{ flex: 1, background: inviteStatus === "sent" ? "#2d7a1e" : "#333", color: "#fff", border: "none", borderRadius: "5px", padding: "8px 10px", fontSize: "11px", cursor: "pointer", ...F }}>
@@ -491,7 +531,7 @@ function ClientDetail({ client, coachId, plans, onBack, onAssignPlan }) {
 
       {/* Sub-nav */}
       <div style={{ display: "flex", gap: "5px", marginBottom: "16px", overflowX: "auto" }}>
-        {[["overview","Overview"],["ai","AI Analysis"],["program","Build Program"],["intake","Intake Form"],["notes","Coach Notes"],["messages","Messages"],["assign","Assign Plan"],["edit","Edit Client"]].map(([v, label]) => (
+        {[["overview","Overview"],["workout_notes","Workout Notes"],["ai","AI Analysis"],["program","Build Program"],["intake","Intake Form"],["notes","Coach Notes"],["messages","Messages"],["assign","Assign Plan"],["edit","Edit Client"]].map(([v, label]) => (
           <button key={v} onClick={() => setView(v)} style={{ flex: "0 0 auto", background: view === v ? "#111" : "#fff", color: view === v ? "#fff" : "#555", border: "1px solid #e0e0e0", borderRadius: "20px", padding: "6px 14px", fontSize: "11px", cursor: "pointer", ...F, whiteSpace: "nowrap" }}>
             {label}{v === "messages" && overview?.unreadFromClient > 0 ? ` (${overview.unreadFromClient})` : ""}
           </button>
@@ -524,19 +564,54 @@ function ClientDetail({ client, coachId, plans, onBack, onAssignPlan }) {
 
         return (
           <>
-            {/* Stats row */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px", marginBottom: "16px" }}>
-              {[
-                ["Sessions", sessions.length],
-                ["PRs", overview.prs?.length || 0],
-                ["Unread", overview.unreadFromClient || 0]
-              ].map(([label, val]) => (
-                <div key={label} style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "7px", padding: "10px 8px", textAlign: "center" }}>
-                  <div style={{ fontSize: "8px", textTransform: "uppercase", letterSpacing: "0.1em", color: "#bbb", marginBottom: "4px" }}>{label}</div>
-                  <div style={{ fontSize: "18px", fontWeight: "700", color: label === "Unread" && val > 0 ? "#a02a2a" : "#1a1a1a" }}>{val}</div>
-                </div>
-              ))}
-            </div>
+            {/* Compliance + stats */}
+            {(() => {
+              // Calculate compliance: sessions in last 14 days vs expected (6/week)
+              const twoWeeksAgo = new Date(Date.now() - 14 * 86400000).toISOString().slice(0, 10);
+              const recentSessions = sessions.filter(([d]) => d >= twoWeeksAgo);
+              const expectedSessions = 12; // 6/week × 2 weeks
+              const compliancePct = Math.min(100, Math.round((recentSessions.length / expectedSessions) * 100));
+              const complianceColor = compliancePct >= 75 ? "#2d7a1e" : compliancePct >= 50 ? "#c47a0a" : "#a02020";
+
+              // Avg check-in scores
+              const checkins = overview.checkins || [];
+              const recent3 = checkins.slice(-3);
+              const avgEnergy = recent3.length ? (recent3.reduce((s,c) => s + (c.energy_level || 5), 0) / recent3.length).toFixed(1) : null;
+              const avgSleep = recent3.length ? (recent3.reduce((s,c) => s + (c.sleep_quality || 5), 0) / recent3.length).toFixed(1) : null;
+
+              return (
+                <>
+                  {/* Compliance bar */}
+                  <div style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "8px", padding: "12px 14px", marginBottom: "10px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                      <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.12em", color: "#aaa" }}>2-week compliance</div>
+                      <div style={{ fontSize: "13px", fontWeight: "700", color: complianceColor }}>{compliancePct}%</div>
+                    </div>
+                    <div style={{ background: "#f0f0f0", borderRadius: "20px", height: "5px" }}>
+                      <div style={{ background: complianceColor, borderRadius: "20px", height: "5px", width: `${compliancePct}%`, transition: "width 0.5s ease" }} />
+                    </div>
+                    <div style={{ fontSize: "10px", color: "#bbb", marginTop: "5px" }}>
+                      {recentSessions.length} of {expectedSessions} expected sessions logged
+                    </div>
+                  </div>
+
+                  {/* Stats row */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "7px", marginBottom: "14px" }}>
+                    {[
+                      ["Sessions", sessions.length, null],
+                      ["PRs", overview.prs?.length || 0, null],
+                      ["Energy", avgEnergy ? `${avgEnergy}/10` : "—", null],
+                      ["Unread", overview.unreadFromClient || 0, overview.unreadFromClient > 0 ? "#a02020" : null],
+                    ].map(([label, val, color]) => (
+                      <div key={label} style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "7px", padding: "9px 6px", textAlign: "center" }}>
+                        <div style={{ fontSize: "8px", textTransform: "uppercase", letterSpacing: "0.08em", color: "#bbb", marginBottom: "3px" }}>{label}</div>
+                        <div style={{ fontSize: "16px", fontWeight: "700", color: color || "#1a1a1a" }}>{val}</div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              );
+            })()}
 
             {/* Recent sessions grouped by date */}
             {sessions.length > 0 && (
@@ -609,9 +684,9 @@ function ClientDetail({ client, coachId, plans, onBack, onAssignPlan }) {
 
             {/* Measurements */}
             {latestMeasurement && (
-              <div style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "8px", padding: "12px 14px" }}>
+              <div style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "8px", padding: "12px 14px", marginBottom: "12px" }}>
                 <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.1em", color: "#aaa", marginBottom: "10px" }}>
-                  Latest Measurements · {formatDate(latestMeasurement.measured_at)}
+                  Measurements · {formatDate(latestMeasurement.measured_at)}
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
                   {[
@@ -641,6 +716,48 @@ function ClientDetail({ client, coachId, plans, onBack, onAssignPlan }) {
                 </div>
               </div>
             )}
+
+            {/* Check-in history */}
+            {overview.checkins && overview.checkins.length > 0 && (
+              <div style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "8px", padding: "12px 14px", marginBottom: "12px" }}>
+                <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.1em", color: "#aaa", marginBottom: "10px" }}>Recent Check-ins</div>
+                {overview.checkins.slice(-4).reverse().map((c, i) => (
+                  <div key={i} style={{ marginBottom: "8px", paddingBottom: "8px", borderBottom: i < Math.min(3, overview.checkins.length - 1) ? "1px solid #f5f5f5" : "none" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+                      <span style={{ fontSize: "11px", color: "#555" }}>{formatDate(c.checked_in_at?.slice(0, 10))}</span>
+                      <div style={{ display: "flex", gap: "8px" }}>
+                        {c.energy_level && <span style={{ fontSize: "10px", color: c.energy_level >= 7 ? "#2d7a1e" : c.energy_level >= 4 ? "#c47a0a" : "#a02020" }}>Energy {c.energy_level}/10</span>}
+                        {c.sleep_quality && <span style={{ fontSize: "10px", color: "#aaa" }}>Sleep {c.sleep_quality}/10</span>}
+                        {c.soreness_level && <span style={{ fontSize: "10px", color: "#aaa" }}>Sore {c.soreness_level}/10</span>}
+                      </div>
+                    </div>
+                    {c.notes && <div style={{ fontSize: "11px", color: "#888", fontStyle: "italic", lineHeight: "1.5" }}>"{c.notes}"</div>}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Quick actions */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+              <button onClick={() => setView("notes")} style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "8px", padding: "11px 14px", cursor: "pointer", textAlign: "left", ...F }}>
+                <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.1em", color: "#aaa", marginBottom: "3px" }}>Coach Notes</div>
+                <div style={{ fontSize: "12px", color: "#333" }}>Add a note →</div>
+              </button>
+              <button onClick={() => setView("program")} style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "8px", padding: "11px 14px", cursor: "pointer", textAlign: "left", ...F }}>
+                <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.1em", color: "#aaa", marginBottom: "3px" }}>AI Program</div>
+                <div style={{ fontSize: "12px", color: "#333" }}>Build program →</div>
+              </button>
+              <button onClick={() => setView("messages")} style={{ background: overview?.unreadFromClient > 0 ? "#fff5f5" : "#fff", border: `1px solid ${overview?.unreadFromClient > 0 ? "#f0b0b0" : "#e8e8e8"}`, borderRadius: "8px", padding: "11px 14px", cursor: "pointer", textAlign: "left", ...F }}>
+                <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.1em", color: "#aaa", marginBottom: "3px" }}>Messages</div>
+                <div style={{ fontSize: "12px", color: overview?.unreadFromClient > 0 ? "#a02020" : "#333" }}>
+                  {overview?.unreadFromClient > 0 ? `${overview.unreadFromClient} unread →` : "View thread →"}
+                </div>
+              </button>
+              <button onClick={() => setView("ai")} style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "8px", padding: "11px 14px", cursor: "pointer", textAlign: "left", ...F }}>
+                <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.1em", color: "#aaa", marginBottom: "3px" }}>AI Analysis</div>
+                <div style={{ fontSize: "12px", color: "#333" }}>Run analysis →</div>
+              </button>
+            </div>
           </>
         );
       })()}
@@ -661,6 +778,50 @@ function ClientDetail({ client, coachId, plans, onBack, onAssignPlan }) {
           equipment={client.equipment || ["barbell","dumbbell","cable","machine","bench","pull_up_bar","band"]}
           injuries={client.injuries || []}
         />
+      )}
+
+      {/* Workout Notes — read all exercise notes left by the client */}
+      {view === "workout_notes" && (
+        <div>
+          <div style={{ fontSize: "9px", letterSpacing: "0.15em", textTransform: "uppercase", color: "#999", marginBottom: "12px" }}>
+            Exercise notes from {client.name}
+          </div>
+          {!overview ? (
+            <div style={{ textAlign: "center", padding: "20px", color: "#bbb", fontSize: "12px" }}>Loading...</div>
+          ) : (() => {
+            // Collect all set-level notes from recent logs
+            const logsWithNotes = (overview.recentLogs || []).filter(log => log.notes && log.notes.trim());
+            if (logsWithNotes.length === 0) {
+              return (
+                <div style={{ textAlign: "center", padding: "30px 20px", color: "#bbb" }}>
+                  <div style={{ fontSize: "13px", marginBottom: "4px" }}>No exercise notes yet</div>
+                  <div style={{ fontSize: "11px" }}>Notes that {client.name} leaves on exercises will appear here.</div>
+                </div>
+              );
+            }
+            // Group by date
+            const byDate = {};
+            logsWithNotes.forEach(log => {
+              const d = log.session_date;
+              if (!byDate[d]) byDate[d] = [];
+              byDate[d].push(log);
+            });
+            return Object.entries(byDate).sort((a,b) => b[0].localeCompare(a[0])).map(([date, logs]) => (
+              <div key={date} style={{ marginBottom: "14px" }}>
+                <div style={{ fontSize: "10px", color: "#aaa", letterSpacing: "0.08em", marginBottom: "6px" }}>{formatDate(date)}</div>
+                {logs.map((log, i) => (
+                  <div key={i} style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "7px", padding: "11px 13px", marginBottom: "6px" }}>
+                    <div style={{ fontSize: "11px", fontWeight: "600", color: "#555", marginBottom: "4px" }}>
+                      {log.exercises?.name || "Exercise"}
+                      {log.weight_lbs && <span style={{ fontSize: "10px", color: "#bbb", fontWeight: "400", marginLeft: "6px" }}>{log.weight_lbs} lbs × {log.reps}</span>}
+                    </div>
+                    <div style={{ fontSize: "12px", color: "#333", lineHeight: "1.6", ...F, fontStyle: "italic" }}>"{log.notes}"</div>
+                  </div>
+                ))}
+              </div>
+            ));
+          })()}
+        </div>
       )}
 
       {/* Coach Notes */}
@@ -685,26 +846,54 @@ function ClientDetail({ client, coachId, plans, onBack, onAssignPlan }) {
       {/* Messages */}
       {view === "messages" && (
         <>
-          <div style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "8px", overflow: "hidden", marginBottom: "12px" }}>
-            <div style={{ maxHeight: "350px", overflowY: "auto", padding: "12px" }}>
-              {messages.length === 0 && <div style={{ textAlign: "center", color: "#aaa", fontSize: "13px", padding: "20px" }}>No messages yet</div>}
-              {messages.map((msg, i) => (
-                <div key={i} style={{ marginBottom: "10px", display: "flex", justifyContent: msg.sender === "coach" ? "flex-end" : "flex-start" }}>
-                  <div style={{ maxWidth: "80%", background: msg.sender === "coach" ? "#111" : "#f5f5f3", color: msg.sender === "coach" ? "#fff" : "#333", borderRadius: "10px", padding: "8px 12px", fontSize: "12px", lineHeight: "1.5" }}>
-                    {msg.message}
-                    <div style={{ fontSize: "9px", color: msg.sender === "coach" ? "rgba(255,255,255,0.4)" : "#bbb", marginTop: "3px" }}>
-                      {formatDate(msg.created_at?.slice(0, 10))}
+          <div style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "8px", overflow: "hidden", marginBottom: "10px" }}>
+            <div style={{ padding: "8px 12px", borderBottom: "1px solid #f0f0f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.12em", color: "#aaa" }}>
+                {client.name}
+              </div>
+              {overview?.unreadFromClient > 0 && (
+                <div style={{ fontSize: "10px", color: "#a02020" }}>{overview.unreadFromClient} unread</div>
+              )}
+            </div>
+            <div style={{ maxHeight: "380px", overflowY: "auto", padding: "12px", display: "flex", flexDirection: "column", gap: "8px" }}>
+              {messages.length === 0 && (
+                <div style={{ textAlign: "center", color: "#bbb", fontSize: "12px", padding: "30px 0" }}>No messages yet</div>
+              )}
+              {messages.map((msg, i) => {
+                const isCoach = msg.sender === "coach";
+                const showDate = i === 0 || messages[i-1]?.created_at?.slice(0,10) !== msg.created_at?.slice(0,10);
+                return (
+                  <div key={i}>
+                    {showDate && (
+                      <div style={{ textAlign: "center", fontSize: "9px", color: "#ccc", margin: "4px 0 8px", letterSpacing: "0.08em" }}>
+                        {formatDate(msg.created_at?.slice(0, 10))}
+                      </div>
+                    )}
+                    <div style={{ display: "flex", justifyContent: isCoach ? "flex-end" : "flex-start" }}>
+                      <div style={{
+                        maxWidth: "78%", background: isCoach ? "#1a1a1a" : "#f0f0ee",
+                        color: isCoach ? "#f7f6f3" : "#333",
+                        borderRadius: isCoach ? "10px 10px 2px 10px" : "10px 10px 10px 2px",
+                        padding: "9px 12px", fontSize: "12px", lineHeight: "1.6",
+                      }}>
+                        <div>{msg.message}</div>
+                        <div style={{ fontSize: "9px", color: isCoach ? "rgba(255,255,255,0.35)" : "#bbb", marginTop: "3px" }}>
+                          {msg.created_at ? new Date(msg.created_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : ""}
+                          {isCoach && " · You"}
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
           <div style={{ display: "flex", gap: "8px" }}>
-            <input type="text" value={reply} onChange={e => setReply(e.target.value)} placeholder="Reply to client..."
+            <input type="text" value={reply} onChange={e => setReply(e.target.value)}
+              placeholder={`Message ${client.name.split(" ")[0]}...`}
               onKeyDown={e => e.key === "Enter" && handleSendReply()}
               style={{ flex: 1, padding: "10px 12px", borderRadius: "7px", border: "1px solid #e0e0e0", fontSize: "13px", ...F }} />
-            <button onClick={handleSendReply} style={{ background: "#111", color: "#fff", border: "none", borderRadius: "7px", padding: "10px 16px", fontSize: "13px", cursor: "pointer", ...F }}>
+            <button onClick={handleSendReply} disabled={!reply.trim()} style={{ background: reply.trim() ? "#111" : "#e0e0e0", color: reply.trim() ? "#fff" : "#aaa", border: "none", borderRadius: "7px", padding: "10px 16px", fontSize: "13px", cursor: reply.trim() ? "pointer" : "default", ...F }}>
               Send
             </button>
           </div>
@@ -852,6 +1041,112 @@ function ClientDetail({ client, coachId, plans, onBack, onAssignPlan }) {
   );
 }
 
+// ── Client List View ───────────────────────────────────────────────────────────
+function ClientListView({ clients, loading, unreadCounts, onSelect, onNewClient }) {
+  const [search, setSearch] = useState("");
+  const [sort, setSort] = useState("recent"); // recent | name | unread
+
+  // Build activity summary from clients data
+  function getLastActive(client) {
+    return client.last_workout_at || client.updated_at || null;
+  }
+
+  function getSessionCount(client) {
+    return client.total_sessions || 0;
+  }
+
+  const filtered = clients
+    .filter(c => !search || c.name.toLowerCase().includes(search.toLowerCase()))
+    .sort((a, b) => {
+      if (sort === "name") return a.name.localeCompare(b.name);
+      if (sort === "unread") return (unreadCounts[b.id] || 0) - (unreadCounts[a.id] || 0);
+      // recent: sort by last active
+      const da = getLastActive(a) ? new Date(getLastActive(a)) : new Date(0);
+      const db = getLastActive(b) ? new Date(getLastActive(b)) : new Date(0);
+      return db - da;
+    });
+
+  // Group into attention-needed and others
+  const needsAttention = filtered.filter(c => {
+    const la = getLastActive(c);
+    if (!la) return false;
+    const days = Math.floor((Date.now() - new Date(la)) / 86400000);
+    return days > 7;
+  });
+  const active = filtered.filter(c => {
+    const la = getLastActive(c);
+    if (!la) return true;
+    const days = Math.floor((Date.now() - new Date(la)) / 86400000);
+    return days <= 7;
+  });
+
+  return (
+    <div style={{ padding: "16px 16px 60px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+        <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.15em", color: "#999" }}>
+          {clients.length} client{clients.length !== 1 ? "s" : ""}
+        </div>
+        <button onClick={onNewClient} style={{ background: "#111", color: "#fff", border: "none", borderRadius: "20px", padding: "7px 16px", fontSize: "12px", cursor: "pointer", ...F }}>
+          + New Client
+        </button>
+      </div>
+
+      {/* Search + sort */}
+      {clients.length > 2 && (
+        <div style={{ display: "flex", gap: "6px", marginBottom: "14px" }}>
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search clients..."
+            style={{ flex: 1, padding: "8px 12px", border: "1px solid #e0e0e0", borderRadius: "7px", fontSize: "12px", ...F }} />
+          <select value={sort} onChange={e => setSort(e.target.value)}
+            style={{ padding: "8px 10px", border: "1px solid #e0e0e0", borderRadius: "7px", fontSize: "11px", background: "#fff" }}>
+            <option value="recent">Recent</option>
+            <option value="name">Name</option>
+            <option value="unread">Unread</option>
+          </select>
+        </div>
+      )}
+
+      {loading && <div style={{ textAlign: "center", color: "#aaa", padding: "20px", fontSize: "13px" }}>Loading clients...</div>}
+
+      {!loading && clients.length === 0 && (
+        <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa" }}>
+          <div style={{ fontSize: "13px", marginBottom: "6px" }}>No clients yet</div>
+          <div style={{ fontSize: "11px" }}>Tap "+ New Client" to get started</div>
+        </div>
+      )}
+
+      {/* Needs attention */}
+      {needsAttention.length > 0 && (
+        <div style={{ marginBottom: "14px" }}>
+          <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.15em", color: "#a02020", marginBottom: "8px", fontWeight: "700" }}>
+            Needs attention ({needsAttention.length})
+          </div>
+          {needsAttention.map(client => (
+            <ClientCard key={client.id} client={client} onSelect={onSelect}
+              unreadCount={unreadCounts[client.id] || 0}
+              lastActive={getLastActive(client)}
+              sessionCount={getSessionCount(client)} />
+          ))}
+        </div>
+      )}
+
+      {/* Active clients */}
+      {active.length > 0 && (
+        <div>
+          {needsAttention.length > 0 && (
+            <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.15em", color: "#999", marginBottom: "8px" }}>Active</div>
+          )}
+          {active.map(client => (
+            <ClientCard key={client.id} client={client} onSelect={onSelect}
+              unreadCount={unreadCounts[client.id] || 0}
+              lastActive={getLastActive(client)}
+              sessionCount={getSessionCount(client)} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main Dashboard ─────────────────────────────────────────────────────────────
 export default function CoachDashboard() {
   const [session, setSession] = useState(null);
@@ -899,11 +1194,19 @@ export default function CoachDashboard() {
       <div style={{ background: "#111", color: "#f7f6f3", padding: "20px 18px 0" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "14px" }}>
           <div>
-            <div style={{ fontSize: "9px", letterSpacing: "0.25em", textTransform: "uppercase", color: "#555", marginBottom: "3px" }}>Coach</div>
-            <h1 style={{ margin: 0, fontSize: "21px", fontWeight: "normal" }}>Dashboard</h1>
+            <div style={{ fontSize: "9px", letterSpacing: "0.25em", textTransform: "uppercase", color: "#555", marginBottom: "3px" }}>Tara Mattimiro Fitness</div>
+            <h1 style={{ margin: "0 0 2px", fontSize: "21px", fontWeight: "normal" }}>Coach Dashboard</h1>
+            <div style={{ fontSize: "11px", color: "#444" }}>
+              {clients.length} client{clients.length !== 1 ? "s" : ""}
+              {Object.values(unreadCounts).reduce((s, n) => s + n, 0) > 0 && (
+                <span style={{ color: "#a02020", marginLeft: "8px", fontWeight: "600" }}>
+                  {Object.values(unreadCounts).reduce((s, n) => s + n, 0)} unread
+                </span>
+              )}
+            </div>
           </div>
           <button onClick={signOutCoach} style={{ background: "none", border: "1px solid #333", color: "#666", borderRadius: "20px", padding: "5px 12px", fontSize: "11px", cursor: "pointer", ...F }}>
-            Sign Out
+            Sign out
           </button>
         </div>
         <div style={{ display: "flex", gap: "3px" }}>
@@ -924,25 +1227,13 @@ export default function CoachDashboard() {
           onAssignPlan={handleAssignPlan}
         />
       ) : view === "clients" ? (
-        <div style={{ padding: "16px 16px 40px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
-            <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.15em", color: "#999" }}>{clients.length} client{clients.length !== 1 ? "s" : ""}</div>
-            <button onClick={() => setShowCreateClient(true)} style={{ background: "#111", color: "#fff", border: "none", borderRadius: "20px", padding: "8px 16px", fontSize: "12px", cursor: "pointer", ...F }}>
-              + New Client
-            </button>
-          </div>
-          {loading && <div style={{ textAlign: "center", color: "#aaa", padding: "20px" }}>Loading...</div>}
-          {!loading && clients.length === 0 && (
-            <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa" }}>
-              <div style={{ fontSize: "36px", marginBottom: "10px" }}>👤</div>
-              <div style={{ fontSize: "14px", marginBottom: "6px" }}>No clients yet</div>
-              <div style={{ fontSize: "12px" }}>Tap "+ New Client" to get started</div>
-            </div>
-          )}
-          {clients.map(client => (
-            <ClientCard key={client.id} client={client} onSelect={setSelectedClient} unreadCount={unreadCounts[client.id] || 0} />
-          ))}
-        </div>
+        <ClientListView
+          clients={clients}
+          loading={loading}
+          unreadCounts={unreadCounts}
+          onSelect={setSelectedClient}
+          onNewClient={() => setShowCreateClient(true)}
+        />
       ) : (
         <PlanBuilder coachId={session.user.id} onBack={() => setView("clients")} />
       )}
