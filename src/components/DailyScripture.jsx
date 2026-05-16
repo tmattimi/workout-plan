@@ -508,6 +508,7 @@ function CrossMark({ color = "#555" }) {
 export default function DailyScripture({ accent = "#2563a8", inHeader = false }) {
   const today = new Date().toISOString().slice(0, 10);
   const notesKey = `scripture_notes_${today}`;
+  const [expanded, setExpanded] = useState(false);
   const [notes, setNotes] = useState(() => {
     try { return localStorage.getItem(notesKey) || ""; } catch { return ""; }
   });
@@ -533,67 +534,82 @@ export default function DailyScripture({ accent = "#2563a8", inHeader = false })
       ),
       ...F,
     }}>
-      {/* Top — cross + label */}
-      <div style={{ padding: inHeader ? "10px 12px 0" : "14px 15px 0", display: "flex", alignItems: "center", gap: "9px" }}>
+
+      {/* Always-visible header — tap to expand */}
+      <button onClick={() => setExpanded(p => !p)} style={{
+        width: "100%", background: "none", border: "none", cursor: "pointer",
+        padding: inHeader ? "10px 12px" : "13px 15px",
+        display: "flex", alignItems: "flex-start", gap: "10px", textAlign: "left", ...F,
+      }}>
         <CrossMark color={accent} />
-        <div style={{ fontSize: "8px", letterSpacing: "0.22em", textTransform: "uppercase", color: accent }}>
-          {seasonLabel}
-        </div>
-      </div>
-
-      {/* Verse */}
-      <div style={{ padding: inHeader ? "8px 12px 6px" : "10px 15px 6px" }}>
-        <div style={{ fontSize: "13px", color: "#e8e0cc", lineHeight: "1.7", fontStyle: "italic" }}>
-          "{scripture.v}"
-        </div>
-        <div style={{ fontSize: "10px", color: accent, marginTop: "6px", letterSpacing: "0.06em" }}>
-          — {scripture.r}
-        </div>
-      </div>
-
-      {/* Reflection */}
-      {scripture.d && (
-        <div style={{ padding: inHeader ? "6px 12px 10px" : "6px 15px 12px", borderTop: "1px solid #1e1e1e" }}>
-          <div style={{ fontSize: "8px", letterSpacing: "0.18em", textTransform: "uppercase", color: "#444", marginBottom: "7px", marginTop: "8px" }}>
-            Reflection
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: "8px", letterSpacing: "0.22em", textTransform: "uppercase", color: accent, marginBottom: "5px" }}>
+            {seasonLabel}
           </div>
-          <div style={{ fontSize: "12px", color: "#a8a090", lineHeight: "1.8" }}>
-            {scripture.d}
+          {/* Full verse always shown */}
+          <div style={{ fontSize: "13px", color: "#e8e0cc", lineHeight: "1.7", fontStyle: "italic" }}>
+            "{scripture.v}"
           </div>
+          {/* Reference always shown */}
+          <div style={{ fontSize: "10px", color: accent, marginTop: "6px", letterSpacing: "0.06em" }}>
+            — {scripture.r}
+          </div>
+        </div>
+        <span style={{ color: "#444", fontSize: "10px", flexShrink: 0, paddingTop: "2px" }}>
+          {expanded ? "▲" : "▼"}
+        </span>
+      </button>
+
+      {/* Expanded section — reflection + notes */}
+      {expanded && (
+        <div style={{ borderTop: "1px solid #1e1e1e" }}>
+
+          {/* Reflection */}
+          {scripture.d && (
+            <div style={{ padding: "14px 15px 12px" }}>
+              <div style={{ fontSize: "8px", letterSpacing: "0.18em", textTransform: "uppercase", color: "#555", marginBottom: "9px" }}>
+                Reflection
+              </div>
+              <div style={{ fontSize: "13px", color: "#b8b0a0", lineHeight: "1.85" }}>
+                {scripture.d}
+              </div>
+            </div>
+          )}
+
+          {/* Sunday prompt */}
+          {isSunday && sundayPrompt && (
+            <div style={{ padding: "10px 15px 12px", borderTop: "1px solid #1e1e1e" }}>
+              <div style={{ fontSize: "8px", letterSpacing: "0.18em", textTransform: "uppercase", color: "#555", marginBottom: "9px" }}>
+                This week
+              </div>
+              <div style={{ fontSize: "13px", color: "#b8b0a0", lineHeight: "1.8", fontStyle: "italic" }}>
+                {sundayPrompt}
+              </div>
+            </div>
+          )}
+
+          {/* Personal notes */}
+          <div style={{ padding: "10px 15px 14px", borderTop: "1px solid #1e1e1e" }}>
+            <div style={{ fontSize: "8px", letterSpacing: "0.18em", textTransform: "uppercase", color: "#444", marginBottom: "7px" }}>
+              Your notes
+            </div>
+            <textarea
+              value={notes}
+              onChange={handleNotes}
+              placeholder="Add your own reflection..."
+              style={{
+                width: "100%", boxSizing: "border-box",
+                background: "#1a1a1a", border: "1px solid #2a2a2a",
+                borderRadius: "5px", color: "#c8c0b0", fontSize: "12px",
+                lineHeight: "1.65", padding: "8px 10px", resize: "none",
+                outline: "none", minHeight: "70px", ...F,
+              }}
+              rows={3}
+            />
+          </div>
+
         </div>
       )}
-
-      {/* Sunday prompt */}
-      {isSunday && sundayPrompt && (
-        <div style={{ padding: "8px 15px 10px", borderTop: "1px solid #1e1e1e" }}>
-          <div style={{ fontSize: "8px", letterSpacing: "0.18em", textTransform: "uppercase", color: "#444", marginBottom: "7px" }}>
-            This week
-          </div>
-          <div style={{ fontSize: "12px", color: "#a8a090", lineHeight: "1.8", fontStyle: "italic" }}>
-            {sundayPrompt}
-          </div>
-        </div>
-      )}
-
-      {/* Personal notes */}
-      <div style={{ padding: "0 15px 14px", borderTop: "1px solid #1e1e1e", paddingTop: "10px" }}>
-        <div style={{ fontSize: "8px", letterSpacing: "0.18em", textTransform: "uppercase", color: "#333", marginBottom: "6px" }}>
-          Your notes
-        </div>
-        <textarea
-          value={notes}
-          onChange={handleNotes}
-          placeholder="Add your own reflection..."
-          style={{
-            width: "100%", boxSizing: "border-box",
-            background: "#1a1a1a", border: "1px solid #2a2a2a",
-            borderRadius: "5px", color: "#c8c0b0", fontSize: "12px",
-            lineHeight: "1.65", padding: "8px 10px", resize: "none",
-            outline: "none", minHeight: "60px", ...F,
-          }}
-          rows={3}
-        />
-      </div>
     </div>
   );
 }
