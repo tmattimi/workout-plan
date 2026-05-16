@@ -24,6 +24,7 @@ import TrackingTab from "./components/TrackingTab";
 import ActivityLog from "./components/ActivityLog";
 import CycleTracking from "./components/CycleTracking";
 import HealthIntegration from "./components/HealthIntegration";
+import NutritionTab from "./components/NutritionTab";
 
 const F = { fontFamily: "'Georgia','Times New Roman',serif" };
 function makeSessionKey(day, date) { return `${day}_${date}`; }
@@ -636,6 +637,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
     ["alternatives","Alternatives"], ["tracking","Tracking"],
     ["activity","Activity"],
     ["cycle","Cycle"], ["health","Health"],
+    ["nutrition","Nutrition"],
     ["guide","Guide"],
   ];
 
@@ -1124,6 +1126,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
       {tab === "activity" && <ActivityLog />}
       {tab === "cycle" && <CycleTracking />}
       {tab === "health" && <HealthIntegration />}
+      {tab === "nutrition" && <NutritionTab />}
 
       {tab === "guide" && (
         <div style={{ padding: "16px 16px 60px" }}>
