@@ -438,15 +438,14 @@ const CARDIO_OPTIONS = [
 
 function CardioSwapCard({ sessionType, onLog }) {
   const F = { fontFamily: "'Georgia','Times New Roman',serif" };
-  const [expanded, setExpanded] = useState(false);
-  const [selected, setSelected] = useState(null);
+  const recommended = CARDIO_OPTIONS.find(o => o.bestFor.includes(sessionType) && !o.warningFor?.includes(sessionType)) || CARDIO_OPTIONS[2];
+  const [selected, setSelected] = useState(recommended);
+  const [showAlts, setShowAlts] = useState(false);
   const [logged, setLogged] = useState(false);
-
-  const recommended = CARDIO_OPTIONS.find(o => o.bestFor.includes(sessionType) && !o.warningFor?.includes(sessionType))
-    || CARDIO_OPTIONS[2]; // fallback to incline walk
 
   function handleSelect(option) {
     setSelected(option);
+    setShowAlts(false);
     if (!logged) {
       setLogged(true);
       onLog && onLog({ type: option.id, name: option.name, duration: 20 });
@@ -455,56 +454,33 @@ function CardioSwapCard({ sessionType, onLog }) {
 
   return (
     <div style={{ borderBottom: "1px solid #ebebeb", background: "#f9f9f7" }}>
-      <button
-        onClick={() => setExpanded(p => !p)}
-        style={{ width: "100%", background: "none", border: "none", padding: "11px 16px", display: "flex", gap: "11px", alignItems: "flex-start", cursor: "pointer", textAlign: "left" }}
-      >
+      <div style={{ padding: "11px 16px", display: "flex", gap: "11px", alignItems: "flex-start" }}>
         <div style={{ width: "24px", height: "24px", borderRadius: "50%", background: logged ? "#2d7a1e" : "#e8e8e8", color: logged ? "#fff" : "#888", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "8px", fontWeight: "800", flexShrink: 0, marginTop: "1px" }}>
           {logged ? "✓" : "Z3"}
         </div>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: "9px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#999", marginBottom: "2px" }}>Post-Lift Cardio · Zone 3</div>
-          <div style={{ fontSize: "13px", fontWeight: "600", color: "#1a1a1a", marginBottom: "2px" }}>
-            {selected ? selected.name : "Choose your cardio"}
-          </div>
-          {!expanded && !selected && (
-            <div style={{ fontSize: "11px", color: "#aaa", ...F }}>Tap to see options — {recommended.name} recommended today</div>
+          <div style={{ fontSize: "9px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#999", marginBottom: "2px" }}>Cardio · Zone 3 · 20 min</div>
+          <div style={{ fontSize: "13px", fontWeight: "600", color: "#1a1a1a", marginBottom: "3px" }}>{selected.name}</div>
+          <div style={{ fontSize: "11px", color: "#555", lineHeight: "1.5", marginBottom: "5px", ...F }}>{selected.protocol}</div>
+          <div style={{ fontSize: "10px", color: "#888", lineHeight: "1.5", fontStyle: "italic", ...F }}>{selected.benefit}</div>
+          {selected.warningFor?.includes(sessionType) && (
+            <div style={{ marginTop: "5px", fontSize: "10px", color: "#a02020", lineHeight: "1.5" }}>{selected.warning}</div>
           )}
-          {!expanded && selected && (
-            <div style={{ fontSize: "11px", color: "#555", ...F }}>{selected.protocol}</div>
-          )}
+          <button onClick={() => setShowAlts(p => !p)} style={{ marginTop: "8px", background: "none", border: "none", color: "#aaa", fontSize: "10px", cursor: "pointer", padding: 0, textDecoration: "underline" }}>
+            {showAlts ? "Close" : "Switch cardio"}
+          </button>
         </div>
-        <span style={{ color: "#ccc", fontSize: "11px", flexShrink: 0, marginTop: "3px" }}>{expanded ? "▲" : "▼"}</span>
-      </button>
+      </div>
 
-      {expanded && (
-        <div style={{ padding: "0 16px 14px 51px" }}>
-          {CARDIO_OPTIONS.map(option => {
-            const isRecommended = option.id === recommended.id;
-            const isSelected = selected?.id === option.id;
+      {showAlts && (
+        <div style={{ padding: "0 16px 12px 51px" }}>
+          {CARDIO_OPTIONS.filter(o => o.id !== selected.id).map(option => {
             const hasWarning = option.warningFor?.includes(sessionType);
             return (
-              <button
-                key={option.id}
-                onClick={() => { handleSelect(option); setExpanded(false); }}
-                style={{
-                  width: "100%", textAlign: "left", background: isSelected ? "#f0f0ee" : "#fff",
-                  border: "1px solid " + (isSelected ? "#1a1a1a" : isRecommended ? "#c8c8c8" : "#e8e8e8"),
-                  borderRadius: "7px", padding: "10px 12px", marginBottom: "6px", cursor: "pointer",
-                }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "3px" }}>
-                  <span style={{ fontSize: "12px", fontWeight: "600", color: "#1a1a1a", ...F }}>{option.name}</span>
-                  <div style={{ display: "flex", gap: "5px" }}>
-                    {isRecommended && <span style={{ fontSize: "8px", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.1em", background: "#1a1a1a", color: "#f7f6f3", padding: "2px 7px", borderRadius: "20px" }}>Recommended</span>}
-                    {isSelected && <span style={{ fontSize: "8px", fontWeight: "700", textTransform: "uppercase", color: "#2d7a1e" }}>Selected</span>}
-                  </div>
-                </div>
-                <div style={{ fontSize: "10px", color: "#888", marginBottom: "3px" }}>{option.protocol}</div>
-                <div style={{ fontSize: "10px", color: "#777", lineHeight: "1.5", ...F }}>{option.benefit}</div>
-                {hasWarning && (
-                  <div style={{ marginTop: "5px", fontSize: "10px", color: "#a02020", lineHeight: "1.5" }}>⚠ {option.warning}</div>
-                )}
+              <button key={option.id} onClick={() => handleSelect(option)} style={{ width: "100%", textAlign: "left", background: "#fff", border: "1px solid #e8e8e8", borderRadius: "7px", padding: "9px 12px", marginBottom: "5px", cursor: "pointer" }}>
+                <div style={{ fontSize: "12px", fontWeight: "600", color: "#1a1a1a", marginBottom: "2px", ...F }}>{option.name}</div>
+                <div style={{ fontSize: "10px", color: "#888" }}>{option.protocol}</div>
+                {hasWarning && <div style={{ fontSize: "10px", color: "#a02020", marginTop: "3px" }}>{option.warning}</div>}
               </button>
             );
           })}
@@ -863,7 +839,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
                       <div style={{ display: "flex", gap: "5px", flexWrap: "wrap" }}>
                         <span style={{ fontSize: "10px", background: "#f0f0f0", color: "#333", padding: "2px 8px", borderRadius: "20px", fontWeight: "600" }}>{ex.sets} × {ex.reps}</span>
                         {ex.rest !== "—" && <span style={{ fontSize: "9px", color: "#999", padding: "2px 7px", background: "#f0f0f0", borderRadius: "20px" }}>{ex.rest} rest</span>}
-                        {ex.eccentric && ex.eccentric !== "—" && <span style={{ fontSize: "9px", color: "#7a3aa0", padding: "2px 7px", background: "#f3eafa", borderRadius: "20px" }}>{ex.eccentric}</span>}
+                        
                         {isStarted && <span style={{ fontSize: "9px", padding: "2px 7px", borderRadius: "20px", background: doneSets > 0 ? "#e8f5e9" : "#f0f0f0", color: doneSets > 0 ? "#2d7a1e" : "#999" }}>{doneSets}/{totalLogged} done</span>}
                         {ex.imbalanceNote && <span style={{ fontSize: "8px", letterSpacing: "0.1em", textTransform: "uppercase", padding: "2px 6px", borderRadius: "3px", background: "#f5f5f3", color: "#777", border: "1px solid #e0e0e0" }}>Imbalance</span>}
                       </div>
@@ -999,6 +975,12 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
 
           {/* Post-lift cardio — swappable */}
           {current.cardio && current.type !== "rest" && (
+            <div style={{ marginTop: "12px" }}>
+            <div style={{ padding: "6px 16px 4px", display: "flex", alignItems: "center", gap: "8px" }}>
+              <div style={{ height: "1px", flex: 1, background: "#e8e8e8" }} />
+              <span style={{ fontSize: "8px", fontWeight: "700", letterSpacing: "0.2em", textTransform: "uppercase", color: "#999" }}>Cardio</span>
+              <div style={{ height: "1px", flex: 1, background: "#e8e8e8" }} />
+            </div>
             <CardioSwapCard
               sessionType={current.type}
               onLog={(activity) => {
@@ -1010,6 +992,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
                 } catch(e) {}
               }}
             />
+            </div>
           )}
 
           {/* Overload suggestions */}
@@ -1096,58 +1079,70 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
             );
           })()}
 
-          {/* Add custom movement */}
-          {current.type !== "rest" && (
-            <div style={{ margin: "8px 16px 4px" }}>
-              {!showAddMovement ? (
-                <button onClick={() => setShowAddMovement(true)} style={{ width: "100%", background: "none", border: "1px dashed #ddd", borderRadius: "8px", padding: "10px 14px", cursor: "pointer", color: "#aaa", fontSize: "11px", ...F, textAlign: "left" }}>
-                  + Add a movement or class
-                </button>
-              ) : (
-                <div style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "8px", padding: "14px" }}>
-                  <div style={{ fontSize: "9px", letterSpacing: "0.15em", textTransform: "uppercase", color: "#999", marginBottom: "10px" }}>Add movement</div>
-                  <input value={newMovement.name} onChange={e => setNewMovement(p => ({ ...p, name: e.target.value }))} placeholder="e.g. Spin class, extra sets, mobility"
-                    style={{ width: "100%", padding: "7px 10px", border: "1px solid #e0e0e0", borderRadius: "5px", fontSize: "12px", boxSizing: "border-box", marginBottom: "8px", ...F }} />
-                  <div style={{ display: "flex", gap: "8px", marginBottom: "8px" }}>
-                    <input value={newMovement.sets} onChange={e => setNewMovement(p => ({ ...p, sets: e.target.value }))} placeholder="Sets or duration"
-                      style={{ flex: 1, padding: "7px 10px", border: "1px solid #e0e0e0", borderRadius: "5px", fontSize: "12px", boxSizing: "border-box" }} />
-                    <input value={newMovement.reps} onChange={e => setNewMovement(p => ({ ...p, reps: e.target.value }))} placeholder="Reps or minutes"
-                      style={{ flex: 1, padding: "7px 10px", border: "1px solid #e0e0e0", borderRadius: "5px", fontSize: "12px", boxSizing: "border-box" }} />
-                  </div>
-                  <input value={newMovement.notes} onChange={e => setNewMovement(p => ({ ...p, notes: e.target.value }))} placeholder="Notes (optional)"
-                    style={{ width: "100%", padding: "7px 10px", border: "1px solid #e0e0e0", borderRadius: "5px", fontSize: "12px", boxSizing: "border-box", marginBottom: "10px" }} />
-                  <div style={{ display: "flex", gap: "8px" }}>
+          {/* Add exercise */}
+          {current.type !== "rest" && (() => {
+            const EXERCISE_CATALOG = ["Ab Wheel Rollout", "Alternating Dumbbell Curl", "Arnold Press", "Bulgarian Split Squat (Dumbbell)", "Cable Crunch", "Cable Curl (Low Pulley)", "Cable Fly (Low-to-High)", "Cable Lateral Raise (Single-Arm)", "Cat-Cow", "Chest and Shoulder Doorway Stretch", "Chest-Supported DB Row", "Dead Bug", "Dumbbell Bench Press", "Face Pull (Rope Attachment)", "Foam Roll", "Goblet Squat", "Hammer Curl", "Hanging Knee Raise", "Hip Flexor Stretch", "Hip Thrust (Barbell or Machine)", "Incline Dumbbell Curl", "Incline Dumbbell Press", "Incline Treadmill", "Lat Pulldown (Wide Overhand)", "Lateral Raise", "Leg Extension", "Leg Press", "Light Walk", "Overhead Tricep Extension", "Pallof Press (Cable)", "Plank", "Pull-Up (or Assisted Pull-Up)", "Rear Delt Fly (Bent-Over)", "Romanian Deadlift (Dumbbell)", "Rowing Machine", "Rowing Machine or Incline Treadmill", "Seated Cable Row (Neutral Grip)", "Seated Calf Raise", "Seated Dumbbell Overhead Press", "Side Plank", "Single-Arm Dumbbell Row", "Single-Arm Overhead DB Press", "Single-Leg Hamstring Curl", "Standing Calf Raise", "Stationary Bike", "Stationary Bike or Brisk Walk", "Straight-Arm Cable Pulldown", "Tricep Rope Pushdown"];
+            const cmKey = `${current.day}_${sessionDate}`;
+            const dayMovements = customMovements[cmKey] || [];
+            const searchTerm = newMovement.name.toLowerCase();
+            const matches = searchTerm.length > 1
+              ? EXERCISE_CATALOG.filter(n => n.toLowerCase().includes(searchTerm)).slice(0, 6)
+              : [];
+
+            function addMovement(name) {
+              const updated = { ...customMovements, [cmKey]: [...dayMovements, { id: Date.now(), name }] };
+              setCustomMovements(updated);
+              try { localStorage.setItem("custom_movements_v1", JSON.stringify(updated)); } catch {}
+              setNewMovement({ name: "", sets: "", reps: "", notes: "" });
+              setShowAddMovement(false);
+            }
+
+            return (
+              <div style={{ margin: "8px 16px 4px" }}>
+                {dayMovements.map(m => (
+                  <div key={m.id} style={{ marginBottom: "6px", background: "#fff", border: "1px solid #e8e8e8", borderRadius: "7px", padding: "10px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ fontSize: "12px", fontWeight: "600" }}>{m.name}</div>
                     <button onClick={() => {
-                      if (!newMovement.name.trim()) return;
-                      const key = `${current.day}_${sessionDate}`;
-                      const updated = { ...customMovements, [key]: [...(customMovements[key] || []), { ...newMovement, id: Date.now() }] };
+                      const updated = { ...customMovements, [cmKey]: dayMovements.filter(x => x.id !== m.id) };
                       setCustomMovements(updated);
                       try { localStorage.setItem("custom_movements_v1", JSON.stringify(updated)); } catch {}
-                      setNewMovement({ name: "", sets: "", reps: "", notes: "" });
-                      setShowAddMovement(false);
-                    }} style={{ background: "#1a1a1a", color: "#fff", border: "none", borderRadius: "5px", padding: "7px 16px", fontSize: "12px", cursor: "pointer", ...F }}>Add</button>
-                    <button onClick={() => setShowAddMovement(false)} style={{ background: "none", border: "1px solid #ddd", color: "#999", borderRadius: "5px", padding: "7px 12px", fontSize: "12px", cursor: "pointer" }}>Cancel</button>
+                    }} style={{ background: "none", border: "none", color: "#e0e0e0", cursor: "pointer", fontSize: "18px" }}>×</button>
                   </div>
-                </div>
-              )}
-              {/* Show logged custom movements for this day */}
-              {(customMovements[`${current.day}_${sessionDate}`] || []).map((m, i) => (
-                <div key={m.id} style={{ marginTop: "6px", background: "#fff", border: "1px solid #e8e8e8", borderRadius: "7px", padding: "10px 12px", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                  <div>
-                    <div style={{ fontSize: "12px", fontWeight: "600" }}>{m.name}</div>
-                    {(m.sets || m.reps) && <div style={{ fontSize: "10px", color: "#aaa", marginTop: "2px" }}>{m.sets}{m.sets && m.reps ? " · " : ""}{m.reps}</div>}
-                    {m.notes && <div style={{ fontSize: "10px", color: "#aaa", marginTop: "1px", fontStyle: "italic" }}>{m.notes}</div>}
+                ))}
+
+                {!showAddMovement ? (
+                  <button onClick={() => setShowAddMovement(true)} style={{ width: "100%", background: "none", border: "1px dashed #ddd", borderRadius: "7px", padding: "9px 14px", cursor: "pointer", color: "#bbb", fontSize: "12px", textAlign: "left", ...F }}>
+                    + Add exercise
+                  </button>
+                ) : (
+                  <div style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "8px", padding: "12px" }}>
+                    <input
+                      autoFocus
+                      value={newMovement.name}
+                      onChange={e => setNewMovement(p => ({ ...p, name: e.target.value }))}
+                      placeholder="Search exercises"
+                      style={{ width: "100%", padding: "8px 10px", border: "1px solid #e0e0e0", borderRadius: "5px", fontSize: "12px", boxSizing: "border-box", ...F }}
+                    />
+                    {matches.length > 0 && (
+                      <div style={{ marginTop: "4px", border: "1px solid #e8e8e8", borderRadius: "5px", overflow: "hidden" }}>
+                        {matches.map(name => (
+                          <button key={name} onClick={() => addMovement(name)} style={{ width: "100%", textAlign: "left", padding: "9px 12px", border: "none", borderBottom: "1px solid #f5f5f5", background: "#fff", fontSize: "12px", cursor: "pointer", ...F }}>
+                            {name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {newMovement.name.length > 1 && matches.length === 0 && (
+                      <button onClick={() => addMovement(newMovement.name.trim())} style={{ marginTop: "6px", width: "100%", background: "#1a1a1a", color: "#fff", border: "none", borderRadius: "5px", padding: "8px", fontSize: "12px", cursor: "pointer", ...F }}>
+                        Add "{newMovement.name}"
+                      </button>
+                    )}
+                    <button onClick={() => { setShowAddMovement(false); setNewMovement({ name: "", sets: "", reps: "", notes: "" }); }} style={{ marginTop: "6px", background: "none", border: "none", color: "#bbb", fontSize: "11px", cursor: "pointer" }}>Cancel</button>
                   </div>
-                  <button onClick={() => {
-                    const key = `${current.day}_${sessionDate}`;
-                    const updated = { ...customMovements, [key]: (customMovements[key] || []).filter(x => x.id !== m.id) };
-                    setCustomMovements(updated);
-                    try { localStorage.setItem("custom_movements_v1", JSON.stringify(updated)); } catch {}
-                  }} style={{ background: "none", border: "none", color: "#e0e0e0", cursor: "pointer", fontSize: "16px" }}>×</button>
-                </div>
-              ))}
-            </div>
-          )}
+                )}
+              </div>
+            );
+          })()}
 
           <div style={{ margin: "12px 16px 80px", padding: "10px 12px", background: "#f0f0ee", borderRadius: "7px", color: "#777", fontSize: "11px", lineHeight: "1.55" }}>
             Tap <strong>Warm-Up</strong> before lifting. Tap <strong>Log</strong> on any exercise to record sets — the rest timer starts automatically. Tap <strong>Stretch</strong> when you're done to cool down. Tap ▼ for form cues.
