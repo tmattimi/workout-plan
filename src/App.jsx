@@ -18,8 +18,7 @@ import { getWarmupForDay } from "./warmups";
 import AlternativeExercises from "./components/AlternativeExercises";
 import { getClientByToken } from "./lib/supabase";
 import NewProgressTab from "./components/ProgressTab";
-import GoalTracker from "./components/GoalTracker";
-import MonthlyGoals from "./components/MonthlyGoals";
+import TrackingTab from "./components/TrackingTab";
 import ActivityLog from "./components/ActivityLog";
 import CycleTracking from "./components/CycleTracking";
 import HealthIntegration from "./components/HealthIntegration";
@@ -398,6 +397,123 @@ function PhotosTab({ photos, onSave }) {
   );
 }
 
+
+// ── Cardio options per session type ───────────────────────────────────────────
+const CARDIO_OPTIONS = [
+  {
+    id: "rowing",
+    name: "Rowing Machine",
+    icon: "Row",
+    protocol: "Damper 4–5, moderate pace · 20 min",
+    benefit: "Upper body dominant. Best active recovery for push and pull days — keeps the pattern moving at low load.",
+    bestFor: ["push", "pull"],
+  },
+  {
+    id: "stairmaster",
+    name: "Stair Master",
+    icon: "Stair",
+    protocol: "Level 8–10 · 20 min",
+    benefit: "High glute and quad demand. Strong choice on upper body days when legs are fresh.",
+    bestFor: ["push", "pull"],
+    warningFor: ["legs"],
+    warning: "Your legs are already fatigued from this session. Consider rowing or incline walk instead.",
+  },
+  {
+    id: "incline_walk",
+    name: "Incline Treadmill",
+    icon: "Walk",
+    protocol: "4.0–4.5 mph · 8–12% incline · 20 min",
+    benefit: "Low joint stress, consistent Zone 3. Works on any day. Good choice when legs are tired.",
+    bestFor: ["push", "pull", "legs"],
+  },
+  {
+    id: "assault_bike",
+    name: "Assault Bike",
+    icon: "Bike",
+    protocol: "Moderate effort, consistent pace · 20 min",
+    benefit: "Full body demand. Lung-heavy. Best on pull days — matches the pulling pattern and spares the chest.",
+    bestFor: ["pull", "legs"],
+  },
+];
+
+function CardioSwapCard({ sessionType, onLog }) {
+  const F = { fontFamily: "'Georgia','Times New Roman',serif" };
+  const [expanded, setExpanded] = useState(false);
+  const [selected, setSelected] = useState(null);
+  const [logged, setLogged] = useState(false);
+
+  const recommended = CARDIO_OPTIONS.find(o => o.bestFor.includes(sessionType) && !o.warningFor?.includes(sessionType))
+    || CARDIO_OPTIONS[2]; // fallback to incline walk
+
+  function handleSelect(option) {
+    setSelected(option);
+    if (!logged) {
+      setLogged(true);
+      onLog && onLog({ type: option.id, name: option.name, duration: 20 });
+    }
+  }
+
+  return (
+    <div style={{ borderBottom: "1px solid #ebebeb", background: "#f9f9f7" }}>
+      <button
+        onClick={() => setExpanded(p => !p)}
+        style={{ width: "100%", background: "none", border: "none", padding: "11px 16px", display: "flex", gap: "11px", alignItems: "flex-start", cursor: "pointer", textAlign: "left" }}
+      >
+        <div style={{ width: "24px", height: "24px", borderRadius: "50%", background: logged ? "#2d7a1e" : "#e8e8e8", color: logged ? "#fff" : "#888", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "8px", fontWeight: "800", flexShrink: 0, marginTop: "1px" }}>
+          {logged ? "✓" : "Z3"}
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: "9px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#999", marginBottom: "2px" }}>Post-Lift Cardio · Zone 3</div>
+          <div style={{ fontSize: "13px", fontWeight: "600", color: "#1a1a1a", marginBottom: "2px" }}>
+            {selected ? selected.name : "Choose your cardio"}
+          </div>
+          {!expanded && !selected && (
+            <div style={{ fontSize: "11px", color: "#aaa", ...F }}>Tap to see options — {recommended.name} recommended today</div>
+          )}
+          {!expanded && selected && (
+            <div style={{ fontSize: "11px", color: "#555", ...F }}>{selected.protocol}</div>
+          )}
+        </div>
+        <span style={{ color: "#ccc", fontSize: "11px", flexShrink: 0, marginTop: "3px" }}>{expanded ? "▲" : "▼"}</span>
+      </button>
+
+      {expanded && (
+        <div style={{ padding: "0 16px 14px 51px" }}>
+          {CARDIO_OPTIONS.map(option => {
+            const isRecommended = option.id === recommended.id;
+            const isSelected = selected?.id === option.id;
+            const hasWarning = option.warningFor?.includes(sessionType);
+            return (
+              <button
+                key={option.id}
+                onClick={() => { handleSelect(option); setExpanded(false); }}
+                style={{
+                  width: "100%", textAlign: "left", background: isSelected ? "#f0f0ee" : "#fff",
+                  border: "1px solid " + (isSelected ? "#1a1a1a" : isRecommended ? "#c8c8c8" : "#e8e8e8"),
+                  borderRadius: "7px", padding: "10px 12px", marginBottom: "6px", cursor: "pointer",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "3px" }}>
+                  <span style={{ fontSize: "12px", fontWeight: "600", color: "#1a1a1a", ...F }}>{option.name}</span>
+                  <div style={{ display: "flex", gap: "5px" }}>
+                    {isRecommended && <span style={{ fontSize: "8px", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.1em", background: "#1a1a1a", color: "#f7f6f3", padding: "2px 7px", borderRadius: "20px" }}>Recommended</span>}
+                    {isSelected && <span style={{ fontSize: "8px", fontWeight: "700", textTransform: "uppercase", color: "#2d7a1e" }}>Selected</span>}
+                  </div>
+                </div>
+                <div style={{ fontSize: "10px", color: "#888", marginBottom: "3px" }}>{option.protocol}</div>
+                <div style={{ fontSize: "10px", color: "#777", lineHeight: "1.5", ...F }}>{option.benefit}</div>
+                {hasWarning && (
+                  <div style={{ marginTop: "5px", fontSize: "10px", color: "#a02020", lineHeight: "1.5" }}>⚠ {option.warning}</div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main App ───────────────────────────────────────────────────────────────────
 export default function App({ clientData, adaptedSchedule, onSignOut }) {
   // Use coach-assigned plan if available, otherwise fall back to default
@@ -414,6 +530,11 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
   const [showLogger, setShowLogger] = useState({});
   const [sessionDate, setSessionDate] = useState(today());
   const [showWarmup, setShowWarmup] = useState(false);
+  const [customMovements, setCustomMovements] = useState(() => { try { return JSON.parse(localStorage.getItem("custom_movements_v1") || "{}"); } catch { return {}; } });
+  const [showAddMovement, setShowAddMovement] = useState(false);
+  const [newMovement, setNewMovement] = useState({ name: "", sets: "", reps: "", notes: "" });
+  const [dailyHealth, setDailyHealth] = useState(() => { try { return JSON.parse(localStorage.getItem("daily_health_v1") || "{}"); } catch { return {}; } });
+  const [showHealthLog, setShowHealthLog] = useState(false);
   const [showStretches, setShowStretches] = useState(false);
 
   // State from storage
@@ -583,8 +704,8 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
   const tabs = [
     ["plan","Plan"], ["progress","Progress"], ["body","Body"],
     ["photos","Photos"], ["muscles","Muscles"],
-    ["alternatives","Alternatives"], ["goals","Goals"],
-    ["monthly","Monthly"], ["activity","Activity"],
+    ["alternatives","Alternatives"], ["tracking","Tracking"],
+    ["activity","Activity"],
     ["cycle","Cycle"], ["health","Health"],
     ["guide","Guide"],
   ];
@@ -876,20 +997,19 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
             </div>
           )}
 
-          {/* Post-lift cardio */}
-          {current.cardio && (
-            <div style={{ margin: "0 16px 4px", background: "#fff", border: "1px solid #e8e8e8", borderRadius: "10px", overflow: "hidden" }}>
-              <div style={{ background: "#f9f9f7", borderLeft: "4px solid #1a1a1a", padding: "12px 14px" }}>
-                <div style={{ fontSize: "9px", letterSpacing: "0.15em", textTransform: "uppercase", color: "#888", marginBottom: "3px" }}>
-                  Post-Lift Cardio · {current.cardio.zone}
-                </div>
-                <div style={{ fontSize: "13px", fontWeight: "600", color: "#1a1a1a", marginBottom: "5px" }}>{current.cardio.name}</div>
-                <div style={{ fontSize: "11px", color: "#444", lineHeight: "1.55" }}>{current.cardio.protocol}</div>
-                <div style={{ fontSize: "10px", color: "#888", marginTop: "5px", lineHeight: "1.5", borderTop: "1px solid #ebebeb", paddingTop: "6px" }}>
-                  {current.cardio.feel}
-                </div>
-              </div>
-            </div>
+          {/* Post-lift cardio — swappable */}
+          {current.cardio && current.type !== "rest" && (
+            <CardioSwapCard
+              sessionType={current.type}
+              onLog={(activity) => {
+                // auto-log to activity log
+                try {
+                  const existing = JSON.parse(localStorage.getItem("activity_log_v1") || "[]");
+                  const entry = { id: Date.now(), type: activity.type, duration: activity.duration, date: sessionDate, intensity: "moderate", notes: `${current.focus} — post-lift cardio`, autoLogged: true };
+                  localStorage.setItem("activity_log_v1", JSON.stringify([entry, ...existing]));
+                } catch(e) {}
+              }}
+            />
           )}
 
           {/* Overload suggestions */}
@@ -923,6 +1043,112 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
             </div>
           )}
 
+          {/* Steps + sleep nudge */}
+          {(() => {
+            const todayKey = sessionDate;
+            const health = dailyHealth[todayKey] || {};
+            const needsSteps = !health.steps;
+            const needsSleep = !health.sleep;
+            if (!needsSteps && !needsSleep) return null;
+            return (
+              <div style={{ margin: "8px 16px 4px", background: "#fff", border: "1px solid #e8e8e8", borderRadius: "8px", overflow: "hidden" }}>
+                <div style={{ padding: "10px 14px", borderBottom: "1px solid #f0f0f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: "11px", color: "#777", ...F }}>
+                    {needsSteps && needsSleep ? "Log steps + sleep" : needsSteps ? "Log today's steps" : "Log last night's sleep"}
+                  </span>
+                  <button onClick={() => setShowHealthLog(p => !p)} style={{ fontSize: "10px", color: "#555", background: "none", border: "1px solid #e0e0e0", borderRadius: "20px", padding: "3px 10px", cursor: "pointer" }}>
+                    {showHealthLog ? "Close" : "Log"}
+                  </button>
+                </div>
+                {showHealthLog && (
+                  <div style={{ padding: "10px 14px", display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                    {needsSteps && (
+                      <div style={{ flex: 1, minWidth: "120px" }}>
+                        <div style={{ fontSize: "10px", color: "#999", marginBottom: "4px" }}>Steps today (goal: 10,000)</div>
+                        <input type="number" placeholder="e.g. 8500"
+                          onBlur={e => {
+                            if (!e.target.value) return;
+                            const updated = { ...dailyHealth, [todayKey]: { ...(dailyHealth[todayKey] || {}), steps: parseInt(e.target.value) } };
+                            setDailyHealth(updated);
+                            try { localStorage.setItem("daily_health_v1", JSON.stringify(updated)); } catch {}
+                            setShowHealthLog(false);
+                          }}
+                          style={{ width: "100%", padding: "7px 10px", border: "1px solid #e0e0e0", borderRadius: "5px", fontSize: "12px", boxSizing: "border-box" }} />
+                      </div>
+                    )}
+                    {needsSleep && (
+                      <div style={{ flex: 1, minWidth: "120px" }}>
+                        <div style={{ fontSize: "10px", color: "#999", marginBottom: "4px" }}>Sleep last night (goal: 8 hrs)</div>
+                        <input type="number" step="0.5" placeholder="e.g. 7.5"
+                          onBlur={e => {
+                            if (!e.target.value) return;
+                            const updated = { ...dailyHealth, [todayKey]: { ...(dailyHealth[todayKey] || {}), sleep: parseFloat(e.target.value) } };
+                            setDailyHealth(updated);
+                            try { localStorage.setItem("daily_health_v1", JSON.stringify(updated)); } catch {}
+                            setShowHealthLog(false);
+                          }}
+                          style={{ width: "100%", padding: "7px 10px", border: "1px solid #e0e0e0", borderRadius: "5px", fontSize: "12px", boxSizing: "border-box" }} />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* Add custom movement */}
+          {current.type !== "rest" && (
+            <div style={{ margin: "8px 16px 4px" }}>
+              {!showAddMovement ? (
+                <button onClick={() => setShowAddMovement(true)} style={{ width: "100%", background: "none", border: "1px dashed #ddd", borderRadius: "8px", padding: "10px 14px", cursor: "pointer", color: "#aaa", fontSize: "11px", ...F, textAlign: "left" }}>
+                  + Add a movement or class
+                </button>
+              ) : (
+                <div style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "8px", padding: "14px" }}>
+                  <div style={{ fontSize: "9px", letterSpacing: "0.15em", textTransform: "uppercase", color: "#999", marginBottom: "10px" }}>Add movement</div>
+                  <input value={newMovement.name} onChange={e => setNewMovement(p => ({ ...p, name: e.target.value }))} placeholder="e.g. Spin class, extra sets, mobility"
+                    style={{ width: "100%", padding: "7px 10px", border: "1px solid #e0e0e0", borderRadius: "5px", fontSize: "12px", boxSizing: "border-box", marginBottom: "8px", ...F }} />
+                  <div style={{ display: "flex", gap: "8px", marginBottom: "8px" }}>
+                    <input value={newMovement.sets} onChange={e => setNewMovement(p => ({ ...p, sets: e.target.value }))} placeholder="Sets or duration"
+                      style={{ flex: 1, padding: "7px 10px", border: "1px solid #e0e0e0", borderRadius: "5px", fontSize: "12px", boxSizing: "border-box" }} />
+                    <input value={newMovement.reps} onChange={e => setNewMovement(p => ({ ...p, reps: e.target.value }))} placeholder="Reps or minutes"
+                      style={{ flex: 1, padding: "7px 10px", border: "1px solid #e0e0e0", borderRadius: "5px", fontSize: "12px", boxSizing: "border-box" }} />
+                  </div>
+                  <input value={newMovement.notes} onChange={e => setNewMovement(p => ({ ...p, notes: e.target.value }))} placeholder="Notes (optional)"
+                    style={{ width: "100%", padding: "7px 10px", border: "1px solid #e0e0e0", borderRadius: "5px", fontSize: "12px", boxSizing: "border-box", marginBottom: "10px" }} />
+                  <div style={{ display: "flex", gap: "8px" }}>
+                    <button onClick={() => {
+                      if (!newMovement.name.trim()) return;
+                      const key = `${current.day}_${sessionDate}`;
+                      const updated = { ...customMovements, [key]: [...(customMovements[key] || []), { ...newMovement, id: Date.now() }] };
+                      setCustomMovements(updated);
+                      try { localStorage.setItem("custom_movements_v1", JSON.stringify(updated)); } catch {}
+                      setNewMovement({ name: "", sets: "", reps: "", notes: "" });
+                      setShowAddMovement(false);
+                    }} style={{ background: "#1a1a1a", color: "#fff", border: "none", borderRadius: "5px", padding: "7px 16px", fontSize: "12px", cursor: "pointer", ...F }}>Add</button>
+                    <button onClick={() => setShowAddMovement(false)} style={{ background: "none", border: "1px solid #ddd", color: "#999", borderRadius: "5px", padding: "7px 12px", fontSize: "12px", cursor: "pointer" }}>Cancel</button>
+                  </div>
+                </div>
+              )}
+              {/* Show logged custom movements for this day */}
+              {(customMovements[`${current.day}_${sessionDate}`] || []).map((m, i) => (
+                <div key={m.id} style={{ marginTop: "6px", background: "#fff", border: "1px solid #e8e8e8", borderRadius: "7px", padding: "10px 12px", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <div>
+                    <div style={{ fontSize: "12px", fontWeight: "600" }}>{m.name}</div>
+                    {(m.sets || m.reps) && <div style={{ fontSize: "10px", color: "#aaa", marginTop: "2px" }}>{m.sets}{m.sets && m.reps ? " · " : ""}{m.reps}</div>}
+                    {m.notes && <div style={{ fontSize: "10px", color: "#aaa", marginTop: "1px", fontStyle: "italic" }}>{m.notes}</div>}
+                  </div>
+                  <button onClick={() => {
+                    const key = `${current.day}_${sessionDate}`;
+                    const updated = { ...customMovements, [key]: (customMovements[key] || []).filter(x => x.id !== m.id) };
+                    setCustomMovements(updated);
+                    try { localStorage.setItem("custom_movements_v1", JSON.stringify(updated)); } catch {}
+                  }} style={{ background: "none", border: "none", color: "#e0e0e0", cursor: "pointer", fontSize: "16px" }}>×</button>
+                </div>
+              ))}
+            </div>
+          )}
+
           <div style={{ margin: "12px 16px 80px", padding: "10px 12px", background: "#f0f0ee", borderRadius: "7px", color: "#777", fontSize: "11px", lineHeight: "1.55" }}>
             Tap <strong>Warm-Up</strong> before lifting. Tap <strong>Log</strong> on any exercise to record sets — the rest timer starts automatically. Tap <strong>Stretch</strong> when you're done to cool down. Tap ▼ for form cues.
           </div>
@@ -942,8 +1168,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
         />
       )}
 
-      {tab === "goals" && <GoalTracker />}
-      {tab === "monthly" && <MonthlyGoals />}
+      {tab === "tracking" && <TrackingTab />}
       {tab === "activity" && <ActivityLog />}
       {tab === "cycle" && <CycleTracking />}
       {tab === "health" && <HealthIntegration />}
