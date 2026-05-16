@@ -18,6 +18,10 @@ import { getWarmupForDay } from "./warmups";
 import AlternativeExercises from "./components/AlternativeExercises";
 import { getClientByToken } from "./lib/supabase";
 import NewProgressTab from "./components/ProgressTab";
+import GoalTracker from "./components/GoalTracker";
+import MonthlyGoals from "./components/MonthlyGoals";
+import InjuryAwareness from "./components/InjuryAwareness";
+import ActivityLog from "./components/ActivityLog";
 
 const F = { fontFamily: "'Georgia','Times New Roman',serif" };
 function makeSessionKey(day, date) { return `${day}_${date}`; }
@@ -566,7 +570,9 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
   const tabs = [
     ["plan","Plan"], ["progress","Progress"], ["body","Body"],
     ["photos","Photos"], ["history","History"], ["muscles","Muscles"],
-    ["alternatives","Alternatives"], ["guide","Guide"],
+    ["alternatives","Alternatives"], ["goals","Goals"],
+    ["monthly","Monthly"], ["activity","Activity"], ["injury","Injury"],
+    ["guide","Guide"],
   ];
 
   // Monthly prompt modal
@@ -852,6 +858,11 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
           onInjuryChange={handleInjuryChange}
         />
       )}
+
+      {tab === "goals" && <GoalTracker />}
+      {tab === "monthly" && <MonthlyGoals />}
+      {tab === "activity" && <ActivityLog />}
+      {tab === "injury" && <InjuryAwareness />}
 
       {tab === "guide" && (
         <div style={{ padding: "16px 16px 40px" }}>
