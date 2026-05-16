@@ -25,6 +25,8 @@ import ActivityLog from "./components/ActivityLog";
 import CycleTracking from "./components/CycleTracking";
 import HealthIntegration from "./components/HealthIntegration";
 import NutritionTab from "./components/NutritionTab";
+import BodyTab from "./components/BodyTab";
+import ToolsTab from "./components/ToolsTab";
 
 const F = { fontFamily: "'Georgia','Times New Roman',serif" };
 function makeSessionKey(day, date) { return `${day}_${date}`; }
@@ -633,12 +635,8 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
 
   const tabs = [
     ["plan","Plan"], ["progress","Progress"], ["body","Body"],
-    ["photos","Photos"], ["muscles","Muscles"],
-    ["alternatives","Alternatives"], ["tracking","Tracking"],
-    ["activity","Activity"],
-    ["cycle","Cycle"], ["health","Health"],
-    ["nutrition","Nutrition"],
-    ["guide","Guide"],
+    ["nutrition","Nutrition"], ["cycle","Cycle"],
+    ["tools","Tools"], ["guide","Guide"],
   ];
 
   // Monthly prompt modal
@@ -1110,11 +1108,12 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
       )}
 
       {tab === "progress" && <NewProgressTab clientId={clientData?.id} bodyweight={clientData?.weight || 170} localLogs={logs} />}
-      {tab === "body" && <MeasurementsTracker measurements={measurements} onSave={handleMeasurementsChange} />}
-      {tab === "photos" && <PhotosTab />}
-      {tab === "muscles" && <MuscleScience />}
-      {tab === "alternatives" && (
-        <AlternativeExercises
+      {tab === "body" && <BodyTab />}
+      {tab === "nutrition" && <NutritionTab />}
+      {tab === "cycle" && <CycleTracking />}
+      {tab === "tools" && (
+        <ToolsTab
+          principles={principles}
           clientEquipment={clientEquipment}
           clientInjuries={clientInjuries}
           onEquipmentChange={handleEquipmentChange}
@@ -1122,39 +1121,15 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
         />
       )}
 
-      {tab === "tracking" && <TrackingTab />}
-      {tab === "activity" && <ActivityLog />}
-      {tab === "cycle" && <CycleTracking />}
-      {tab === "health" && <HealthIntegration />}
-      {tab === "nutrition" && <NutritionTab />}
-
       {tab === "guide" && (
-        <div style={{ padding: "16px 16px 60px" }}>
-          <div style={{ fontSize: "9px", letterSpacing: "0.2em", textTransform: "uppercase", color: "#999", marginBottom: "16px" }}>Training Guide</div>
-          {principles.map((section, si) => (
-            <div key={si} style={{ marginBottom: "20px" }}>
-              <div style={{ fontSize: "8px", fontWeight: "700", letterSpacing: "0.2em", textTransform: "uppercase", color: "#c47a0a", marginBottom: "8px", paddingBottom: "6px", borderBottom: "1px solid #ebebeb" }}>
-                {section.section}
-              </div>
-              {section.entries.map((p, i) => {
-                const key = `${si}-${i}`;
-                return (
-                  <div key={i} style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "6px", marginBottom: "6px", overflow: "hidden" }}>
-                    <button onClick={() => setExpandedPrinciple(expandedPrinciple === key ? null : key)} style={{ width: "100%", background: "transparent", border: "none", padding: "11px 14px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", ...F, textAlign: "left" }}>
-                      <span style={{ fontSize: "13px", fontWeight: "600", color: "#1a1a1a" }}>{p.title}</span>
-                      <span style={{ color: "#ccc", fontSize: "11px", flexShrink: 0, marginLeft: "8px" }}>{expandedPrinciple === key ? "▲" : "▼"}</span>
-                    </button>
-                    {expandedPrinciple === key && (
-                      <div style={{ padding: "0 14px 12px", fontSize: "12px", color: "#444", lineHeight: "1.8", borderTop: "1px solid #f5f5f3" }}>
-                        <div style={{ paddingTop: "10px" }}>{p.body}</div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          ))}
-        </div>
+        <ToolsTab
+          principles={principles}
+          clientEquipment={clientEquipment}
+          clientInjuries={clientInjuries}
+          onEquipmentChange={handleEquipmentChange}
+          onInjuryChange={handleInjuryChange}
+          defaultSection="guide"
+        />
       )}
 
       {/* Rest Timer — fixed to bottom */}
