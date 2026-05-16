@@ -22,6 +22,8 @@ import GoalTracker from "./components/GoalTracker";
 import MonthlyGoals from "./components/MonthlyGoals";
 import InjuryAwareness from "./components/InjuryAwareness";
 import ActivityLog from "./components/ActivityLog";
+import CycleTracking from "./components/CycleTracking";
+import HealthIntegration from "./components/HealthIntegration";
 
 const F = { fontFamily: "'Georgia','Times New Roman',serif" };
 function makeSessionKey(day, date) { return `${day}_${date}`; }
@@ -572,6 +574,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
     ["photos","Photos"], ["history","History"], ["muscles","Muscles"],
     ["alternatives","Alternatives"], ["goals","Goals"],
     ["monthly","Monthly"], ["activity","Activity"], ["injury","Injury"],
+    ["cycle","Cycle"], ["health","Health"],
     ["guide","Guide"],
   ];
 
@@ -863,6 +866,8 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
       {tab === "monthly" && <MonthlyGoals />}
       {tab === "activity" && <ActivityLog />}
       {tab === "injury" && <InjuryAwareness />}
+      {tab === "cycle" && <CycleTracking />}
+      {tab === "health" && <HealthIntegration />}
 
       {tab === "guide" && (
         <div style={{ padding: "16px 16px 40px" }}>

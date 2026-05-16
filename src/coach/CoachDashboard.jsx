@@ -9,6 +9,7 @@ import {
   inviteClient, getClientIntake
 } from "../lib/supabase";
 import { formatDate } from "../storage";
+import AICoachPanel from "../components/AICoachPanel";
 
 const F = { fontFamily: "'Georgia','Times New Roman',serif" };
 const DAYS = ["MON","TUE","WED","THU","FRI","SAT","SUN"];
@@ -489,7 +490,7 @@ function ClientDetail({ client, coachId, plans, onBack, onAssignPlan }) {
 
       {/* Sub-nav */}
       <div style={{ display: "flex", gap: "5px", marginBottom: "16px", overflowX: "auto" }}>
-        {[["overview","Overview"],["intake","Intake Form"],["notes","Coach Notes"],["messages","Messages"],["assign","Assign Plan"],["edit","Edit Client"]].map(([v, label]) => (
+        {[["overview","Overview"],["ai","AI Analysis"],["intake","Intake Form"],["notes","Coach Notes"],["messages","Messages"],["assign","Assign Plan"],["edit","Edit Client"]].map(([v, label]) => (
           <button key={v} onClick={() => setView(v)} style={{ flex: "0 0 auto", background: view === v ? "#111" : "#fff", color: view === v ? "#fff" : "#555", border: "1px solid #e0e0e0", borderRadius: "20px", padding: "6px 14px", fontSize: "11px", cursor: "pointer", ...F, whiteSpace: "nowrap" }}>
             {label}{v === "messages" && overview?.unreadFromClient > 0 ? ` (${overview.unreadFromClient})` : ""}
           </button>
@@ -642,6 +643,14 @@ function ClientDetail({ client, coachId, plans, onBack, onAssignPlan }) {
           </>
         );
       })()}
+
+      {/* AI Analysis */}
+      {view === "ai" && overview && (
+        <AICoachPanel client={client} overview={overview} />
+      )}
+      {view === "ai" && !overview && (
+        <div style={{ textAlign: "center", padding: "30px", color: "#bbb", ...F }}>Loading client data...</div>
+      )}
 
       {/* Coach Notes */}
       {view === "notes" && (
