@@ -502,18 +502,27 @@ function ClientDetail({ client, coachId, plans, onBack, onDelete, onAssignPlan }
     }
     setInviting(true);
     setInviteError("");
-    const { error } = await inviteClient(client.id, client.email, client.name);
-    setInviting(false);
-    if (error) {
-      if (error.message?.includes("already registered")) {
-        setInviteStatus("exists");
-        setInviteError("This email already has an account.");
+    try {
+      const res = await fetch("/api/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: client.email,
+          clientId: client.id,
+          clientName: client.name,
+          redirectTo: window.location.origin + "/",
+        }),
+      });
+      const result = await res.json();
+      if (result.error) {
+        setInviteError(result.error);
       } else {
-        setInviteError(error.message || "Failed to send invite.");
+        setInviteStatus("sent");
       }
-    } else {
-      setInviteStatus("sent");
+    } catch (err) {
+      setInviteError("Failed to send invite. Please try again.");
     }
+    setInviting(false);
   }
 
   const pollRef = useRef(null);
