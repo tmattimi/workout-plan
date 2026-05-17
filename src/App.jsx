@@ -611,17 +611,18 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
       try {
         const { logMeasurement } = await import("./lib/supabase");
         const latest = updated[updated.length - 1];
-        if (latest && latest.metrics) {
+        if (latest) {
           await logMeasurement(clientData.id, {
-            measured_at: latest.date,
-            weight_lbs: latest.metrics.weight || null,
-            waist_in: latest.metrics.waist || null,
-            chest_in: latest.metrics.chest || null,
-            hips_in: latest.metrics.hips || null,
-            right_thigh_in: latest.metrics.rightThigh || null,
-            left_thigh_in: latest.metrics.leftThigh || null,
-            right_arm_in: latest.metrics.rightArm || null,
-            left_arm_in: latest.metrics.leftArm || null,
+            measured_at: latest.measured_at || latest.date || new Date().toISOString().slice(0,10),
+            weight_lbs: latest.weight_lbs || null,
+            waist_in: latest.waist_in || null,
+            chest_in: latest.chest_in || null,
+            hips_in: latest.hips_in || null,
+            right_thigh_in: latest.right_thigh_in || null,
+            left_thigh_in: latest.left_thigh_in || null,
+            right_arm_in: latest.right_arm_in || null,
+            left_arm_in: latest.left_arm_in || null,
+            body_fat_pct: latest.body_fat_pct || null,
           });
         }
       } catch (err) {
@@ -634,6 +635,64 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
     setPhotos(updated);
     saveProgressPhotos(updated);
   }, []);
+
+  // Seed logs + PRs from Supabase when client loads — so overload engine has full history
+  // across all devices, not just the current device's localStorage
+  useEffect(() => {
+    if (!clientData?.id) return;
+    let cancelled = false;
+    async function seedFromSupabase() {
+      try {
+        const { getClientLogs, getClientPRs, getClientMeasurements } = await import("./lib/supabase");
+        const [logsResult, prResult, measResult] = await Promise.all([
+          getClientLogs(clientData.id, 1000),
+          getClientPRs(clientData.id),
+          getClientMeasurements(clientData.id),
+        ]);
+        if (cancelled) return;
+
+        // Convert Supabase log rows into the format the overload engine reads
+        // Key format: HIST_{date}__{ExerciseName} — the HIST_ prefix lets us
+        // distinguish these from current-session logs without overwriting them
+        if (logsResult?.data?.length > 0) {
+          const supabaseLogs = {};
+          logsResult.data.forEach(row => {
+            const exName = row.exercises?.name;
+            if (!exName || !row.session_date) return;
+            const key = `HIST_${row.session_date}__${exName}`;
+            if (!supabaseLogs[key]) supabaseLogs[key] = { sets: [] };
+            supabaseLogs[key].sets.push({
+              weight: row.weight_lbs ? String(row.weight_lbs) : "",
+              reps: row.reps ? String(row.reps) : "",
+              done: true,
+              type: "normal",
+            });
+          });
+          // Merge: localStorage (current session) takes priority
+          setLogs(prev => ({ ...supabaseLogs, ...prev }));
+        }
+
+        // Seed PRs from Supabase
+        if (prResult?.data?.length > 0) {
+          const supabasePRs = {};
+          prResult.data.forEach(pr => {
+            const name = pr.exercises?.name || pr.exercise_name;
+            if (name) supabasePRs[name] = { weight: pr.weight_lbs, reps: pr.reps, date: pr.achieved_at };
+          });
+          setPRs(prev => ({ ...supabasePRs, ...prev }));
+        }
+
+        // Seed measurements from Supabase into localStorage so BodyTab sees them
+        if (measResult?.data?.length > 0) {
+          saveMeasurements(measResult.data);
+          setMeasurements(measResult.data);
+        }
+
+      } catch(e) { console.warn("Supabase seed failed:", e); }
+    }
+    seedFromSupabase();
+    return () => { cancelled = true; };
+  }, [clientData?.id]);
 
   // Called whenever a set is marked done
   async function handleSetDone({ exercise, weight, reps, isPR, rest, setNumber, recalculate, cleared, bodyweight }) {
@@ -1211,8 +1270,8 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
         </>
       )}
 
-      {tab === "progress" && <NewProgressTab clientId={clientData?.id} bodyweight={clientData?.weight || 170} localLogs={logs} />}
-      {tab === "body" && <BodyTab />}
+      {tab === "progress" && <NewProgressTab clientId={clientData?.id} bodyweight={clientData?.weight || 170} localLogs={logs} measurements={measurements} />}
+      {tab === "body" && <BodyTab clientId={clientData?.id} />}
       {tab === "nutrition" && <NutritionTab />}
       {tab === "cycle" && <CycleTracking />}
       {tab === "tools" && (

@@ -47,23 +47,70 @@ function Sparkline({ values, color }) {
 }
 
 // ── Measurements section ──────────────────────────────────────────────────────
-function MeasurementsSection() {
-  const [measurements, setMeasurements] = useState(loadMeasurements);
+function MeasurementsSection({ clientId }) {
+  const [measurements, setMeasurements] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState({});
   const [selected, setSelected] = useState(null);
+  const [saving, setSaving] = useState(false);
 
-  useEffect(() => { saveMeasurements(measurements); }, [measurements]);
+  // Load from Supabase on mount, fall back to localStorage
+  useEffect(() => {
+    async function load() {
+      if (clientId) {
+        try {
+          const { getClientMeasurements } = await import("../lib/supabase");
+          const { data } = await getClientMeasurements(clientId);
+          if (data && data.length > 0) {
+            setMeasurements(data.map(m => ({ ...m, measured_at: m.measured_at })));
+            setLoading(false);
+            return;
+          }
+        } catch(e) { console.warn("Supabase measurements load failed:", e); }
+      }
+      // Fall back to localStorage
+      setMeasurements(loadMeasurements());
+      setLoading(false);
+    }
+    load();
+  }, [clientId]);
 
   const latest = measurements[measurements.length - 1];
   const prev = measurements[measurements.length - 2];
 
-  function handleSave() {
+  async function handleSave() {
     if (!Object.values(form).some(v => v)) return;
-    const entry = { ...form, measured_at: today() };
-    setMeasurements(p => [...p, entry]);
+    setSaving(true);
+    const entry = {
+      weight_lbs: form.weight_lbs ? parseFloat(form.weight_lbs) : null,
+      body_fat_pct: form.body_fat_pct ? parseFloat(form.body_fat_pct) : null,
+      waist_in: form.waist_in ? parseFloat(form.waist_in) : null,
+      hips_in: form.hips_in ? parseFloat(form.hips_in) : null,
+      chest_in: form.chest_in ? parseFloat(form.chest_in) : null,
+      right_arm_in: form.right_arm_in ? parseFloat(form.right_arm_in) : null,
+      left_arm_in: form.left_arm_in ? parseFloat(form.left_arm_in) : null,
+      right_thigh_in: form.right_thigh_in ? parseFloat(form.right_thigh_in) : null,
+      left_thigh_in: form.left_thigh_in ? parseFloat(form.left_thigh_in) : null,
+      measured_at: today(),
+    };
+
+    // Save to localStorage immediately
+    const updated = [...measurements, entry];
+    setMeasurements(updated);
+    saveMeasurements(updated);
+
+    // Save to Supabase if client is logged in
+    if (clientId) {
+      try {
+        const { logMeasurement } = await import("../lib/supabase");
+        await logMeasurement(clientId, entry);
+      } catch(e) { console.warn("Supabase measurement save failed:", e); }
+    }
+
     setForm({});
     setAdding(false);
+    setSaving(false);
   }
 
   function formatDate(d) {
@@ -92,13 +139,16 @@ function MeasurementsSection() {
               </div>
             ))}
           </div>
-          <button onClick={handleSave} style={{ background: "#1a1a1a", color: "#f7f6f3", border: "none", borderRadius: "6px", padding: "9px 18px", fontSize: "12px", cursor: "pointer", ...F }}>
-            Save measurements
+          <button onClick={handleSave} disabled={saving} style={{ background: saving ? "#888" : "#1a1a1a", color: "#f7f6f3", border: "none", borderRadius: "6px", padding: "9px 18px", fontSize: "12px", cursor: "pointer", ...F }}>
+            {saving ? "Saving..." : "Save measurements"}
           </button>
         </div>
       )}
 
-      {measurements.length === 0 && !adding && (
+      {loading && (
+        <div style={{ textAlign: "center", padding: "20px", color: "#bbb", fontSize: "12px" }}>Loading...</div>
+      )}
+      {!loading && measurements.length === 0 && !adding && (
         <div style={{ textAlign: "center", padding: "20px", color: "#bbb", fontSize: "12px", ...F }}>No measurements logged yet.</div>
       )}
 
@@ -467,7 +517,7 @@ function DailyHealthSection() {
 }
 
 // ── Main BodyTab ──────────────────────────────────────────────────────────────
-export default function BodyTab() {
+export default function BodyTab({ clientId }) {
   const [section, setSection] = useState("measurements");
 
   const SECTIONS = [
@@ -490,7 +540,7 @@ export default function BodyTab() {
         ))}
       </div>
 
-      {section === "measurements" && <MeasurementsSection />}
+      {section === "measurements" && <MeasurementsSection clientId={clientId} />}
       {section === "photos" && <PhotosSection />}
       {section === "scans" && <BodyScanSection />}
       {section === "daily" && <DailyHealthSection />}
