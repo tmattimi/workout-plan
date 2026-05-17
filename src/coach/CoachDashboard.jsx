@@ -116,12 +116,17 @@ function CreateClientModal({ onSave, onCancel, coachId }) {
     setSaving(true);
     setCreateError(null);
     const payload = {
-      ...form,
+      name: form.name.trim(),
       coach_id: coachId,
+      ...(form.email.trim() && { email: form.email.trim() }),
+      ...(form.phone.trim() && { phone: form.phone.trim() }),
+      ...(form.notes.trim() && { notes: form.notes.trim() }),
       goal: form.goal || "recomp",
       sex: form.sex || "female",
     };
+    console.log("Creating client with payload:", payload);
     const { data, error } = await createClient_db(payload);
+    console.log("Result:", { data, error });
     setSaving(false);
     if (data) {
       setCreated(data);
