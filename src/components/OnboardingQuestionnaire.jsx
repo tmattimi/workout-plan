@@ -200,6 +200,7 @@ export default function OnboardingQuestionnaire({ client, onComplete }) {
     current_weight_lbs: "",
     body_fat_pct: "",
     date_of_birth: "",
+    sex: "female",
     // Measurements
     waist_in: "",
     chest_in: "",
@@ -334,6 +335,7 @@ export default function OnboardingQuestionnaire({ client, onComplete }) {
         equipment: intakeData.equipment_available && intakeData.equipment_available.length ? intakeData.equipment_available : null,
         injury_flags: intakeData.injury_flags,
         date_of_birth: intakeData.date_of_birth,
+        sex: intakeData.sex || "female",
       }).eq("id", client.id);
 
       // 3. Save initial measurements if any were provided
@@ -549,6 +551,19 @@ export default function OnboardingQuestionnaire({ client, onComplete }) {
 
             <TextInput label="Date of birth" value={form.date_of_birth} onChange={v => update("date_of_birth", v)}
               type="date" hint="Helps personalize recovery and training recommendations." />
+
+            <div style={{ marginBottom: "12px" }}>
+              <div style={{ fontSize: "11px", color: "#666", marginBottom: "8px" }}>Biological sex</div>
+              <div style={{ display: "flex", gap: "8px" }}>
+                {[["female", "Female"], ["male", "Male"]].map(([val, label]) => (
+                  <button key={val} onClick={() => update("sex", val)}
+                    style={{ flex: 1, padding: "10px", borderRadius: "7px", border: `1px solid ${form.sex === val ? "#111" : "#e0e0e0"}`, background: form.sex === val ? "#111" : "#fff", color: form.sex === val ? "#fff" : "#555", fontSize: "13px", cursor: "pointer", ...F }}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <div style={{ fontSize: "10px", color: "#aaa", marginTop: "4px" }}>Used to personalize cycle tracking and hormonal recovery recommendations.</div>
+            </div>
           </div>
         </div>
       )}
