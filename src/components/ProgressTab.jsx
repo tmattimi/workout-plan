@@ -148,7 +148,7 @@ function StrengthTestFlow({ clientId, bodyweight, onComplete, onCancel }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {BENCHMARK_LIFTS.map(lift => (
           <button key={lift.id} onClick={() => startLift(lift.id)} style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: 10, padding: '13px 14px', textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, ...F }}>
-            <span style={{ fontSize: 24 }}>{lift.icon}</span>
+            <div style={{ width: 10, height: 10, borderRadius: '50%', background: MUSCLE_GROUPS[lift.primaryGroup]?.color || '#ddd', flexShrink: 0 }} />
             <div>
               <div style={{ fontSize: 14, fontWeight: 500 }}>{lift.name}</div>
               <div style={{ fontSize: 11, color: '#aaa', marginTop: 1 }}>Primary: {MUSCLE_GROUPS[lift.primaryGroup]?.label}</div>
@@ -165,7 +165,7 @@ function StrengthTestFlow({ clientId, bodyweight, onComplete, onCancel }) {
     <div style={{ padding: '16px 16px 40px' }}>
       <button onClick={() => setStep('select')} style={{ background: 'none', border: 'none', fontSize: 12, color: '#888', cursor: 'pointer', marginBottom: 12, padding: 0, ...F }}>← Choose different lift</button>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-        <span style={{ fontSize: 28 }}>{lift.icon}</span>
+        <div style={{ width: 12, height: 12, borderRadius: '50%', background: MUSCLE_GROUPS[lift.primaryGroup]?.color || '#ddd', flexShrink: 0, marginTop: 4 }} />
         <div>
           <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.15em', color: '#999' }}>Strength Test</div>
           <div style={{ fontSize: 20, fontWeight: 'normal', ...F }}>{lift.name}</div>
@@ -213,7 +213,7 @@ function StrengthTestFlow({ clientId, bodyweight, onComplete, onCancel }) {
     <div style={{ padding: '16px 16px 40px' }}>
       <button onClick={() => setStep('warmup')} style={{ background: 'none', border: 'none', fontSize: 12, color: '#888', cursor: 'pointer', marginBottom: 12, padding: 0, ...F }}>← Back to protocol</button>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-        <span style={{ fontSize: 28 }}>{lift.icon}</span>
+        <div style={{ width: 12, height: 12, borderRadius: '50%', background: MUSCLE_GROUPS[lift.primaryGroup]?.color || '#ddd', flexShrink: 0, marginTop: 4 }} />
         <div>
           <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.15em', color: '#999' }}>Log Your 1-Rep Max</div>
           <div style={{ fontSize: 20, fontWeight: 'normal', ...F }}>{lift.name}</div>
@@ -247,7 +247,7 @@ function StrengthTestFlow({ clientId, bodyweight, onComplete, onCancel }) {
   if (step === 'result' && lift && e1rm) return (
     <div style={{ padding: '16px 16px 40px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-        <span style={{ fontSize: 28 }}>{lift.icon}</span>
+        <div style={{ width: 12, height: 12, borderRadius: '50%', background: MUSCLE_GROUPS[lift.primaryGroup]?.color || '#ddd', flexShrink: 0, marginTop: 4 }} />
         <div>
           <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.15em', color: '#999' }}>Result</div>
           <div style={{ fontSize: 20, fontWeight: 'normal', ...F }}>{lift.name}</div>
