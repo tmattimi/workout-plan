@@ -8,7 +8,7 @@ import {
   getClientMeasurements, getHealthLogs, getClientLogs, getClientPRs, getActivities, getGoals
 } from '../lib/supabase';
 import {
-  calculateACWR, calculateProgressionStatus, calculateRecoveryScore, analyzeBodyComposition
+  calculateACWR, calculateProgressionStatus, calculateRecoveryScore, analyzeBodyComposition, analyzeCardioStrengthBalance
 } from '../lib/trainingAnalytics';
 
 const F = { fontFamily: "'Georgia','Times New Roman',serif" };
@@ -413,6 +413,7 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
   const [progressionStatus, setProgressionStatus] = useState([]);
   const [recoveryScore, setRecoveryScore] = useState(null);
   const [bodyComposition, setBodyComposition] = useState(null);
+  const [cardioStrengthBalance, setCardioStrengthBalance] = useState(null);
   const [goals, setGoals] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -420,14 +421,15 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
     if (!supabase || !clientId) return;
     setLoading(true);
     try {
-      const [logsRes, prRes, measRes, healthRes, goalsRes] = await Promise.all([
+      const [logsRes, prRes, measRes, healthRes, goalsRes, activitiesRes] = await Promise.all([
         supabase.from('workout_logs').select('*, exercises(name, primary_muscle)')
           .eq('client_id', clientId).eq('completed', true)
           .not('weight_lbs', 'is', null).order('session_date', { ascending: false }).limit(500),
         supabase.from('personal_records').select('*').eq('client_id', clientId).order('achieved_at', { ascending: false }),
         getClientMeasurements(clientId),
         getHealthLogs(clientId, 90),
-        getGoals(clientId),
+        getGoals(clientId).catch(() => ({ data: [] })),
+        getActivities(clientId, 200).catch(() => ({ data: [] })),
       ]);
 
       const allPRs = prRes.data || [];
@@ -476,6 +478,17 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
       } else {
         try { setGoals(JSON.parse(localStorage.getItem('goals_v1') || '[]')); } catch { setGoals([]); }
       }
+      // Also pull goal_weight from client record if available
+      try {
+        const { data: clientRecord } = await supabase.from('clients').select('goal_weight_lbs').eq('auth_user_id', (await supabase.auth.getUser()).data.user?.id).single();
+        if (clientRecord?.goal_weight_lbs) {
+          setGoals(prev => {
+            const hasWeightGoal = prev.some(g => g.type === 'bodyweight');
+            if (!hasWeightGoal) return [...prev, { id: 'intake_weight', type: 'bodyweight', name: 'Goal Weight', target_value: clientRecord.goal_weight_lbs, current_value: 0, unit: 'lbs', completed: false, source: 'intake' }];
+            return prev;
+          });
+        }
+      } catch {}
 
       // ── Analytics calculations ──
       const acwrResult = calculateACWR(combinedLogs);
@@ -483,6 +496,10 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
       setProgressionStatus(calculateProgressionStatus(combinedLogs));
       setRecoveryScore(calculateRecoveryScore(healthRes.data || [], acwrResult));
       setBodyComposition(analyzeBodyComposition(measRes.data || [], combinedLogs));
+      // Get client goal for cardio balance
+      const { data: clientRecord } = await supabase.from('clients').select('goal').eq('id', clientId).single().catch(() => ({ data: null }));
+      const clientGoal = clientRecord?.goal || 'recomp';
+      setCardioStrengthBalance(analyzeCardioStrengthBalance(combinedLogs, activitiesRes?.data || [], clientGoal));
     } catch (err) { console.error('Progress load error:', err); }
     setLoading(false);
   }, [clientId, bodyweight, localLogs]);
@@ -505,13 +522,22 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
     if (!latestTests[t.exercise_key] || t.achieved_at > latestTests[t.exercise_key].achieved_at) latestTests[t.exercise_key] = t;
   });
 
-  // Session frequency — sessions per week over last 8 weeks
+  // Session frequency — only count weeks that had at least one session logged
   const sessionDates = [...new Set(allLogs.map(l => l.session_date))].sort().reverse();
   const last8WeekSessions = sessionDates.filter(d => {
     const diff = (new Date() - new Date(d)) / (1000 * 60 * 60 * 24);
     return diff <= 56;
-  }).length;
-  const sessionsPerWeek = (last8WeekSessions / 8).toFixed(1);
+  });
+  // Count distinct weeks with sessions (not total elapsed weeks)
+  const activeWeeks = new Set(last8WeekSessions.map(d => {
+    const date = new Date(d);
+    const weekStart = new Date(date);
+    weekStart.setDate(date.getDate() - date.getDay());
+    return weekStart.toISOString().slice(0, 10);
+  }));
+  const sessionsPerWeek = activeWeeks.size > 0
+    ? (last8WeekSessions.length / activeWeeks.size).toFixed(1)
+    : '0.0';
 
   // Total volume trend — sets × weight, group by week
   const volumeByWeek = {};
@@ -580,8 +606,7 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
 
   // ── Goal lines for charts ─────────────────────────────────────────────────
   const activeGoals = goals.filter(g => !g.completed);
-  const goalWeightTarget = activeGoals.find(g => g.type === 'bodyweight')?.target_value
-    ?? (clientData?.goal_weight_lbs || null);
+  const goalWeightTarget = activeGoals.find(g => g.type === 'bodyweight')?.target_value || null;
   const goalBFTarget = activeGoals.find(g => g.type === 'body_fat')?.target_value || null;
   const goalWaistTarget = activeGoals.find(g =>
     g.type === 'measurement' && (g.metric_key === 'waist_in' || g.name?.toLowerCase().includes('waist'))
@@ -1276,6 +1301,90 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
                 </div>
                 <div style={{ fontSize: 11, color: '#666', lineHeight: 1.65, ...F }}>{bodyComposition.detail}</div>
               </div>
+            </div>
+          )}
+
+          {/* ── Cardio:Strength Balance ── */}
+          {cardioStrengthBalance ? (
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.18em', color: '#999', marginBottom: 4 }}>Cardio : Strength Balance</div>
+              <div style={{ fontSize: 11, color: '#aaa', marginBottom: 12, lineHeight: 1.6 }}>
+                Weekly cardio vs strength sessions benchmarked against your goal. Based on ACSM guidelines and Helms/Wilson research on concurrent training interference.
+              </div>
+              <div style={{ background: '#fff', borderLeft: `4px solid ${cardioStrengthBalance.overallStatus === 'ok' ? '#16a34a' : '#d97706'}`, border: '1px solid #e8e8e8', borderRadius: 10, padding: '16px', marginBottom: 10 }}>
+                {/* Summary stats */}
+                <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+                  <div style={{ flex: 1, background: '#f9f9f7', borderRadius: 8, padding: '11px 12px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 9, color: '#bbb', textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 4 }}>Strength / wk</div>
+                    <div style={{ fontSize: 24, fontWeight: 700, color: cardioStrengthBalance.strengthStatus === 'ok' ? '#16a34a' : '#d97706', ...F }}>{cardioStrengthBalance.avgStrength}</div>
+                    <div style={{ fontSize: 9, color: '#aaa' }}>target: {cardioStrengthBalance.targets.strengthMin}–{cardioStrengthBalance.targets.strengthMax}</div>
+                  </div>
+                  <div style={{ flex: 1, background: '#f9f9f7', borderRadius: 8, padding: '11px 12px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 9, color: '#bbb', textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 4 }}>Cardio / wk</div>
+                    <div style={{ fontSize: 24, fontWeight: 700, color: cardioStrengthBalance.cardioStatus === 'ok' ? '#16a34a' : cardioStrengthBalance.interferenceRisk ? '#b91c1c' : '#d97706', ...F }}>{cardioStrengthBalance.avgCardio}</div>
+                    <div style={{ fontSize: 9, color: '#aaa' }}>target: {cardioStrengthBalance.targets.cardioMin}–{cardioStrengthBalance.targets.cardioMax}</div>
+                  </div>
+                  <div style={{ flex: 1, background: '#f9f9f7', borderRadius: 8, padding: '11px 12px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 9, color: '#bbb', textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 4 }}>Goal</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: '#111', ...F, marginTop: 4 }}>{cardioStrengthBalance.goal.replace('_', ' ')}</div>
+                  </div>
+                </div>
+
+                {/* Interference warning */}
+                {cardioStrengthBalance.interferenceRisk && (
+                  <div style={{ background: 'rgba(185,28,28,0.06)', border: '1px solid rgba(185,28,28,0.2)', borderRadius: 8, padding: '10px 12px', marginBottom: 12 }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: '#b91c1c', marginBottom: 4 }}>Interference Effect Risk</div>
+                    <div style={{ fontSize: 11, color: '#666', lineHeight: 1.6 }}>Cardio volume exceeds the threshold associated with impaired strength and hypertrophy adaptations (Wilson et al., 2012).</div>
+                  </div>
+                )}
+
+                <div style={{ fontSize: 11, color: '#666', lineHeight: 1.65, ...F, marginBottom: 12 }}>{cardioStrengthBalance.recommendation}</div>
+
+                {/* Goal-specific notes */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div style={{ background: '#f9f9f7', borderRadius: 7, padding: '9px 12px' }}>
+                    <div style={{ fontSize: 9, color: '#bbb', textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 3 }}>Strength guidance</div>
+                    <div style={{ fontSize: 11, color: '#555', lineHeight: 1.5 }}>{cardioStrengthBalance.targets.strengthNote}</div>
+                  </div>
+                  <div style={{ background: '#f9f9f7', borderRadius: 7, padding: '9px 12px' }}>
+                    <div style={{ fontSize: 9, color: '#bbb', textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 3 }}>Cardio guidance</div>
+                    <div style={{ fontSize: 11, color: '#555', lineHeight: 1.5 }}>{cardioStrengthBalance.targets.cardioNote}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Weekly breakdown chart */}
+              {cardioStrengthBalance.weeklyData.length >= 3 && (
+                <div style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: 10, padding: '14px' }}>
+                  <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.14em', color: '#aaa', marginBottom: 10 }}>Weekly breakdown</div>
+                  <div style={{ display: 'flex', gap: 3, alignItems: 'flex-end', height: 60, marginBottom: 6 }}>
+                    {cardioStrengthBalance.weeklyData.map((w, i) => {
+                      const maxVal = Math.max(...cardioStrengthBalance.weeklyData.map(d => d.strength + d.cardio), 1);
+                      return (
+                        <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'center' }}>
+                          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 1 }}>
+                            <div style={{ width: '100%', height: Math.round((w.cardio / maxVal) * 44), background: '#2563a8', borderRadius: '2px 2px 0 0', minHeight: w.cardio > 0 ? 4 : 0 }} />
+                            <div style={{ width: '100%', height: Math.round((w.strength / maxVal) * 44), background: '#111', borderRadius: w.cardio > 0 ? 0 : '2px 2px 0 0', minHeight: w.strength > 0 ? 4 : 0 }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: 9, color: '#bbb' }}>{cardioStrengthBalance.weeklyData[0]?.label}</span>
+                    <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                      <span style={{ fontSize: 9, color: '#111', display: 'flex', alignItems: 'center', gap: 3 }}><span style={{ width: 8, height: 8, background: '#111', borderRadius: 2, display: 'inline-block' }} />Strength</span>
+                      <span style={{ fontSize: 9, color: '#2563a8', display: 'flex', alignItems: 'center', gap: 3 }}><span style={{ width: 8, height: 8, background: '#2563a8', borderRadius: 2, display: 'inline-block' }} />Cardio</span>
+                    </div>
+                    <span style={{ fontSize: 9, color: '#bbb' }}>{cardioStrengthBalance.weeklyData[cardioStrengthBalance.weeklyData.length-1]?.label}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : hasData && (
+            <div style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: 10, padding: '16px', marginBottom: 24 }}>
+              <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.18em', color: '#999', marginBottom: 6 }}>Cardio : Strength Balance</div>
+              <div style={{ fontSize: 12, color: '#bbb', lineHeight: 1.6 }}>Log cardio activities using the "Replace with activity" button on your workout days to see your balance here.</div>
             </div>
           )}
 

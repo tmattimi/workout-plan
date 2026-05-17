@@ -141,8 +141,23 @@ export function calculateProgressionStatus(allLogs) {
     const change = bestPrior !== null ? bestRecent - bestPrior : null;
     const changePct = bestPrior ? ((change / bestPrior) * 100).toFixed(1) : null;
 
-    let status, statusColor, statusLabel;
-    if (bestPrior === null) {
+    // Check for data gap >21 days between prior and recent logs
+    // Don't flag regression across a long break (illness, travel, planned deload)
+    const allDates = logs.map(l => l.date).sort();
+    let maxGap = 0;
+    for (let i = 1; i < allDates.length; i++) {
+      const gap = (new Date(allDates[i]) - new Date(allDates[i-1])) / (1000*60*60*24);
+      if (gap > maxGap) maxGap = gap;
+    }
+    const hasDataGap = maxGap > 21;
+
+    let status, statusColor, statusLabel, gapNote;
+    if (hasDataGap && change !== null && change < 0) {
+      status = 'gap';
+      statusColor = '#94a3b8';
+      statusLabel = 'Gap in data';
+      gapNote = `${Math.round(maxGap)}-day break detected — regression not evaluated across long gaps.`;
+    } else if (bestPrior === null) {
       status = 'new';
       statusColor = '#94a3b8';
       statusLabel = 'New';
@@ -151,8 +166,6 @@ export function calculateProgressionStatus(allLogs) {
       statusColor = '#16a34a';
       statusLabel = `+${change} lbs`;
     } else if (change === 0) {
-      // Stalled — check how long. If >4 weeks same weight, flag it.
-      const allSameOrLess = logs.filter(l => new Date(l.date) >= cutoff8w).every(l => l.weight <= bestRecent);
       status = 'stalled';
       statusColor = '#d97706';
       statusLabel = 'Stalled';
@@ -180,6 +193,7 @@ export function calculateProgressionStatus(allLogs) {
       status,
       statusColor,
       statusLabel,
+      gapNote: gapNote || null,
       trend,
       sessions: logs.length,
     });
@@ -412,5 +426,140 @@ export function analyzeBodyComposition(measurements, allLogs) {
     detail,
     strengthTrend: strengthTrend ? parseFloat(strengthTrend.toFixed(1)) : null,
     weeks: Math.round(daysDiff / 7),
+  };
+}
+
+// ── CARDIO:STRENGTH BALANCE ───────────────────────────────────────────────────
+// Research: ACSM Position Stand (2011), Hickson interference effect (1980),
+// Wilson et al. (2012) meta-analysis on concurrent training,
+// Helms/Aragon/Fitschen (2014) natural athlete programming.
+//
+// Goal-specific weekly targets:
+//   Fat loss:    3–5 cardio/week (Zone 2), 3–4 strength/week
+//   Muscle gain: 1–2 cardio max (low intensity), 4–5 strength/week
+//   Recomp:      2–3 cardio (Zone 2 only), 3–4 strength/week
+//   Strength:    1–2 cardio (recovery only), 4–5 strength/week
+//
+// Interference effect threshold: >3 moderate-high cardio sessions/week
+// significantly impairs strength and hypertrophy adaptations.
+
+const CARDIO_STRENGTH_TARGETS = {
+  fat_loss: {
+    cardioMin: 3, cardioMax: 5,
+    strengthMin: 3, strengthMax: 4,
+    cardioNote: 'Cardio accelerates fat loss. Aim for Zone 2 (conversational pace) to preserve muscle.',
+    strengthNote: '3–4 strength sessions/week maintains muscle mass during a cut.',
+    interferenceWarning: null,
+  },
+  muscle_gain: {
+    cardioMin: 0, cardioMax: 2,
+    strengthMin: 4, strengthMax: 5,
+    cardioNote: 'Keep cardio minimal and low-intensity. Above 3 sessions/week impairs muscle growth via the interference effect (Wilson et al., 2012).',
+    strengthNote: '4–5 strength sessions/week is optimal for hypertrophy.',
+    interferenceWarning: 3, // flag if cardio exceeds this
+  },
+  recomp: {
+    cardioMin: 2, cardioMax: 3,
+    strengthMin: 3, strengthMax: 4,
+    cardioNote: 'Keep cardio Zone 2 only. High-intensity cardio competes with strength adaptations during recomp.',
+    strengthNote: '3–4 strength sessions maintains and builds muscle while in a slight deficit.',
+    interferenceWarning: 3,
+  },
+  strength: {
+    cardioMin: 1, cardioMax: 2,
+    strengthMin: 4, strengthMax: 5,
+    cardioNote: 'Cardio serves recovery only during strength phases. Low-intensity, 20–30 min max.',
+    strengthNote: '4–5 strength sessions/week is standard for linear and intermediate strength programming.',
+    interferenceWarning: 2,
+  },
+};
+
+export function analyzeCardioStrengthBalance(allLogs, activities, clientGoal = 'recomp') {
+  const today = new Date();
+  const targets = CARDIO_STRENGTH_TARGETS[clientGoal] || CARDIO_STRENGTH_TARGETS.recomp;
+
+  // Count strength sessions per week (from workout_logs — each unique date = 1 session)
+  const strengthByWeek = {};
+  const strengthDates = [...new Set((allLogs || []).map(l => l.session_date))];
+  strengthDates.forEach(date => {
+    const d = new Date(date);
+    const weekStart = new Date(d);
+    weekStart.setDate(d.getDate() - d.getDay());
+    const key = weekStart.toISOString().slice(0, 10);
+    if (!strengthByWeek[key]) strengthByWeek[key] = 0;
+    strengthByWeek[key]++;
+  });
+
+  // Count cardio sessions per week (from additional_activities)
+  const cardioByWeek = {};
+  const cardioTypes = ['run', 'walk', 'bike', 'swim', 'rowing', 'elliptical', 'stairmaster', 'cardio', 'hiit', 'class', 'sport', 'yoga', 'other'];
+  (activities || []).forEach(a => {
+    const date = a.activity_date;
+    if (!date) return;
+    const d = new Date(date);
+    const weekStart = new Date(d);
+    weekStart.setDate(d.getDate() - d.getDay());
+    const key = weekStart.toISOString().slice(0, 10);
+    if (!cardioByWeek[key]) cardioByWeek[key] = 0;
+    cardioByWeek[key]++;
+  });
+
+  // Get last 8 weeks with at least some activity
+  const allWeeks = new Set([...Object.keys(strengthByWeek), ...Object.keys(cardioByWeek)]);
+  const recentWeeks = [...allWeeks].filter(w => {
+    const diff = (today - new Date(w)) / (1000*60*60*24);
+    return diff <= 56;
+  }).sort().slice(-8);
+
+  if (recentWeeks.length === 0) return null;
+
+  // Weekly breakdown
+  const weeklyData = recentWeeks.map(week => ({
+    week,
+    label: new Date(week).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    strength: strengthByWeek[week] || 0,
+    cardio: cardioByWeek[week] || 0,
+  }));
+
+  // Averages over tracked weeks only
+  const avgStrength = weeklyData.reduce((a, w) => a + w.strength, 0) / weeklyData.length;
+  const avgCardio = weeklyData.reduce((a, w) => a + w.cardio, 0) / weeklyData.length;
+  const ratio = avgStrength > 0 ? (avgCardio / avgStrength).toFixed(2) : null;
+
+  // Evaluate against goal
+  const strengthStatus = avgStrength < targets.strengthMin ? 'low'
+    : avgStrength > targets.strengthMax ? 'high' : 'ok';
+  const cardioStatus = avgCardio < targets.cardioMin ? 'low'
+    : avgCardio > targets.cardioMax ? 'high' : 'ok';
+
+  const interferenceRisk = targets.interferenceWarning && avgCardio > targets.interferenceWarning;
+
+  let overallStatus, recommendation;
+  if (interferenceRisk) {
+    overallStatus = 'warning';
+    recommendation = `Your cardio volume (${avgCardio.toFixed(1)}/week avg) exceeds the interference threshold for your goal. Research by Wilson et al. (2012) shows >3 moderate-high cardio sessions/week significantly impairs strength and hypertrophy. Consider replacing some cardio with low-intensity Zone 2 or reducing frequency.`;
+  } else if (strengthStatus === 'low') {
+    overallStatus = 'warning';
+    recommendation = `Your strength training frequency (${avgStrength.toFixed(1)}/week) is below the recommended ${targets.strengthMin}–${targets.strengthMax} sessions/week for your ${clientGoal.replace('_',' ')} goal. ACSM guidelines recommend a minimum of ${targets.strengthMin} resistance training sessions/week for your objective.`;
+  } else if (cardioStatus === 'low' && clientGoal === 'fat_loss') {
+    overallStatus = 'attention';
+    recommendation = `Your cardio frequency (${avgCardio.toFixed(1)}/week) is below the ${targets.cardioMin}–${targets.cardioMax} sessions/week recommended for fat loss. Additional Zone 2 cardio (conversational pace, 30–45 min) would accelerate your deficit without impacting recovery.`;
+  } else {
+    overallStatus = 'ok';
+    recommendation = `Your training balance is well-calibrated for your ${clientGoal.replace('_',' ')} goal. Strength: ${avgStrength.toFixed(1)}/week, Cardio: ${avgCardio.toFixed(1)}/week.`;
+  }
+
+  return {
+    avgStrength: parseFloat(avgStrength.toFixed(1)),
+    avgCardio: parseFloat(avgCardio.toFixed(1)),
+    ratio,
+    strengthStatus,
+    cardioStatus,
+    targets,
+    interferenceRisk,
+    overallStatus,
+    recommendation,
+    weeklyData,
+    goal: clientGoal,
   };
 }

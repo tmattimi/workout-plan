@@ -557,6 +557,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
   const [dailyHealth, setDailyHealth] = useState(() => { try { return JSON.parse(localStorage.getItem("daily_health_v1") || "{}"); } catch { return {}; } });
   const [showHealthLog, setShowHealthLog] = useState(false);
   const [showStretches, setShowStretches] = useState(false);
+  const [showSkipModal, setShowSkipModal] = useState(false);
 
   // State from storage
   const [logs, setLogs] = useState(loadWorkoutLogs);
@@ -908,6 +909,11 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
               {current.type !== "rest" && (
                 <button onClick={() => setShowWarmup(true)} style={{ background: "rgba(196,122,10,0.15)", color: "#c47a0a", border: "1px solid rgba(196,122,10,0.25)", borderRadius: "20px", padding: "4px 12px", fontSize: "11px", cursor: "pointer", ...F, fontWeight: "600" }}>
                   Warm-Up
+                </button>
+              )}
+              {current.type !== "rest" && (
+                <button onClick={() => setShowSkipModal(true)} style={{ background: "rgba(255,255,255,0.06)", color: "#9a9a9e", border: "1px solid rgba(255,255,255,0.12)", borderRadius: "20px", padding: "4px 12px", fontSize: "11px", cursor: "pointer", ...F }}>
+                  Skip / Replace
                 </button>
               )}
             </div>
@@ -1374,6 +1380,130 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
           onDismiss={() => setRestTimer(null)}
         />
       )}
+
+      {/* Skip / Replace modal */}
+      {showSkipModal && (() => {
+        const ACTIVITY_TYPES = [
+          { id: 'class', label: 'Fitness Class', examples: 'Spin, HIIT, Pilates, Barre, Yoga' },
+          { id: 'run', label: 'Run / Jog', examples: 'Outdoor or treadmill' },
+          { id: 'walk', label: 'Walk', examples: 'Outdoor, incline treadmill' },
+          { id: 'bike', label: 'Cycling', examples: 'Outdoor, stationary, Peloton' },
+          { id: 'swim', label: 'Swimming', examples: 'Laps, water aerobics' },
+          { id: 'rowing', label: 'Rowing', examples: 'Erg, on-water' },
+          { id: 'sport', label: 'Sport / Activity', examples: 'Tennis, hiking, dancing' },
+          { id: 'other', label: 'Other Cardio', examples: 'Elliptical, stairmaster, etc.' },
+        ];
+        const [skipMode, setSkipMode] = useState('skip'); // 'skip' | 'replace'
+        const [activityType, setActivityType] = useState('class');
+        const [activityDesc, setActivityDesc] = useState('');
+        const [duration, setDuration] = useState('');
+        const [skipNote, setSkipNote] = useState('');
+
+        async function handleSkip() {
+          // Log as a skipped day in health logs
+          const entry = {
+            session_skipped: true,
+            skip_reason: skipNote || null,
+            skip_date: sessionDate,
+          };
+          try {
+            localStorage.setItem(`skip_${sessionDate}`, JSON.stringify(entry));
+            if (clientData?.id) {
+              const { upsertHealthLog } = await import('./lib/supabase');
+              await upsertHealthLog(clientData.id, sessionDate, { notes: `Session skipped: ${skipNote || 'no reason given'}` });
+            }
+          } catch(e) {}
+          setShowSkipModal(false);
+        }
+
+        async function handleReplace() {
+          const activity = {
+            activity_date: sessionDate,
+            activity_type: activityType,
+            description: activityDesc || ACTIVITY_TYPES.find(a => a.id === activityType)?.label,
+            duration_minutes: duration ? parseInt(duration) : null,
+            notes: `Replaced ${current.focus} workout`,
+          };
+          try {
+            localStorage.setItem(`activity_log_${sessionDate}`, JSON.stringify(activity));
+            if (clientData?.id) {
+              const { logActivity } = await import('./lib/supabase');
+              await logActivity(clientData.id, activity);
+            }
+          } catch(e) {}
+          setShowSkipModal(false);
+        }
+
+        return (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'flex-end' }}
+            onClick={e => e.target === e.currentTarget && setShowSkipModal(false)}>
+            <div style={{ background: '#fff', borderRadius: '16px 16px 0 0', padding: '20px 16px 40px', width: '100%', maxWidth: 640, margin: '0 auto', boxSizing: 'border-box' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <div style={{ fontSize: '15px', fontWeight: '600', ...F }}>{current.focus}</div>
+                <button onClick={() => setShowSkipModal(false)} style={{ background: 'none', border: 'none', fontSize: '22px', cursor: 'pointer', color: '#bbb' }}>×</button>
+              </div>
+
+              {/* Mode toggle */}
+              <div style={{ display: 'flex', gap: '6px', marginBottom: '16px' }}>
+                {[['skip', 'Skip this session'], ['replace', 'Replace with activity']].map(([mode, label]) => (
+                  <button key={mode} onClick={() => setSkipMode(mode)}
+                    style={{ flex: 1, padding: '10px', borderRadius: '8px', border: `1px solid ${skipMode === mode ? '#111' : '#e0e0e0'}`, background: skipMode === mode ? '#111' : '#fff', color: skipMode === mode ? '#fff' : '#555', fontSize: '12px', cursor: 'pointer', ...F }}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {skipMode === 'skip' && (
+                <>
+                  <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>Reason (optional)</div>
+                  <input value={skipNote} onChange={e => setSkipNote(e.target.value)}
+                    placeholder="Rest day, sick, travel, life..."
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #e0e0e0', fontSize: '13px', marginBottom: '14px', boxSizing: 'border-box', ...F }} />
+                  <div style={{ fontSize: '11px', color: '#aaa', marginBottom: '14px', lineHeight: 1.5 }}>
+                    Skipped days won't count against your training metrics — your ACWR and sessions/week will only reflect days you actually trained.
+                  </div>
+                  <button onClick={handleSkip} style={{ width: '100%', background: '#111', color: '#f7f6f3', border: 'none', borderRadius: '8px', padding: '13px', fontSize: '13px', cursor: 'pointer', ...F }}>
+                    Log as Skipped
+                  </button>
+                </>
+              )}
+
+              {skipMode === 'replace' && (
+                <>
+                  <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>Activity type</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginBottom: '12px' }}>
+                    {ACTIVITY_TYPES.map(a => (
+                      <button key={a.id} onClick={() => setActivityType(a.id)}
+                        style={{ padding: '5px 10px', borderRadius: '20px', border: `1px solid ${activityType === a.id ? '#111' : '#e0e0e0'}`, background: activityType === a.id ? '#111' : '#fff', color: activityType === a.id ? '#fff' : '#555', fontSize: '11px', cursor: 'pointer', ...F }}>
+                        {a.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                    <div style={{ flex: 2 }}>
+                      <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Description</div>
+                      <input value={activityDesc} onChange={e => setActivityDesc(e.target.value)}
+                        placeholder={ACTIVITY_TYPES.find(a => a.id === activityType)?.examples}
+                        style={{ width: '100%', padding: '9px 12px', borderRadius: '7px', border: '1px solid #e0e0e0', fontSize: '12px', boxSizing: 'border-box', ...F }} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Duration (min)</div>
+                      <input type="number" value={duration} onChange={e => setDuration(e.target.value)} placeholder="45"
+                        style={{ width: '100%', padding: '9px 12px', borderRadius: '7px', border: '1px solid #e0e0e0', fontSize: '12px', boxSizing: 'border-box', ...F }} />
+                    </div>
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#aaa', marginBottom: '14px', lineHeight: 1.5 }}>
+                    This activity will be logged in your tracking and counted in your cardio:strength balance metrics.
+                  </div>
+                  <button onClick={handleReplace} style={{ width: '100%', background: '#111', color: '#f7f6f3', border: 'none', borderRadius: '8px', padding: '13px', fontSize: '13px', cursor: 'pointer', ...F }}>
+                    Log Activity
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* PR Celebration overlay */}
       {prCelebration && (
