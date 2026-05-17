@@ -64,15 +64,21 @@ function MiniChart({ data, color }) {
 }
 
 // ── Set Logger ─────────────────────────────────────────────────────────────────
+// set.type: "normal" | "dropset" | "warmup"
 function SetLogger({ exercise, sessionKey, logs, onLogsChange, accent = '#555', color = '#f5f5f3', onSetDone, prs }) {
   const exKey = `${sessionKey}__${exercise.name}`;
   const exLog = logs[exKey] || { sets: [], notes: "" };
 
   function updateLog(updated) { onLogsChange({ ...logs, [exKey]: updated }); }
 
-  function addSet() {
-    const prev = exLog.sets[exLog.sets.length - 1];
-    updateLog({ ...exLog, sets: [...exLog.sets, { weight: prev?.weight || "", reps: prev?.reps || "", done: false }] });
+  function addSet(type = "normal") {
+    const prev = exLog.sets.filter(s => s.type !== "dropset").slice(-1)[0];
+    const dropPrev = exLog.sets[exLog.sets.length - 1];
+    // Drop sets pre-fill slightly lighter than previous drop or parent set
+    const baseWeight = type === "dropset"
+      ? (dropPrev?.weight ? String(Math.max(0, parseFloat(dropPrev.weight) - 10)) : "")
+      : (prev?.weight || "");
+    updateLog({ ...exLog, sets: [...exLog.sets, { weight: baseWeight, reps: prev?.reps || "", done: false, type }] });
   }
 
   function updateSet(i, field, val) {
@@ -86,26 +92,22 @@ function SetLogger({ exercise, sessionKey, logs, onLogsChange, accent = '#555', 
     updateLog({ ...exLog, sets: newSets });
 
     if (newDone && set.reps && !exercise.bodyweight) {
-      // Set was just marked done — check if it's a PR (skip for bodyweight exercises)
-      if (set.weight) {
+      if (set.weight && set.type !== "warmup") {
         const w = parseFloat(set.weight);
         const r = parseInt(set.reps);
         const prevPR = prs[exercise.name];
         const isPR = !prevPR || w > prevPR.weight || (w === prevPR.weight && r > prevPR.reps);
-        onSetDone && onSetDone({ exercise: exercise.name, weight: w, reps: r, isPR, rest: exercise.rest, setNumber: i + 1 });
+        onSetDone && onSetDone({ exercise: exercise.name, weight: w, reps: r, isPR, rest: set.type === "dropset" ? "0 sec" : exercise.rest, setNumber: i + 1 });
       }
     } else if (newDone && exercise.bodyweight && set.reps) {
-      // Bodyweight exercise — trigger rest timer only, no PR tracking
       onSetDone && onSetDone({ exercise: exercise.name, weight: 0, reps: parseInt(set.reps), isPR: false, rest: exercise.rest, setNumber: i + 1, bodyweight: true });
     } else if (!newDone) {
-      // Set was unchecked — recalculate PR from remaining done sets
-      const remainingDone = newSets.filter(s => s.done && s.weight && s.reps);
+      const remainingDone = newSets.filter(s => s.done && s.weight && s.reps && s.type !== "warmup");
       if (remainingDone.length > 0) {
         const bestWeight = Math.max(...remainingDone.map(s => parseFloat(s.weight)));
         const bestReps = Math.max(...remainingDone.filter(s => parseFloat(s.weight) === bestWeight).map(s => parseInt(s.reps)));
         onSetDone && onSetDone({ exercise: exercise.name, weight: bestWeight, reps: bestReps, isPR: true, rest: exercise.rest, setNumber: i + 1, recalculate: true });
       } else {
-        // No more done sets — notify to clear PR for this session
         onSetDone && onSetDone({ exercise: exercise.name, weight: 0, reps: 0, isPR: false, rest: exercise.rest, setNumber: i + 1, cleared: true });
       }
     }
@@ -116,44 +118,131 @@ function SetLogger({ exercise, sessionKey, logs, onLogsChange, accent = '#555', 
   }
 
   const doneSets = exLog.sets.filter(s => s.done).length;
+  const workingSets = exLog.sets.filter(s => s.type !== "warmup");
+
+  // ── Progressive overload target — pulled from previous session logs ──────────
+  const overloadTarget = (() => {
+    if (exercise.bodyweight || exercise.category === "Recovery") return null;
+    const repRange = exercise.reps || "8-12";
+    const rangeParts = repRange.split(/[–\-]/);
+    const rangeMax = parseInt(rangeParts[1]) || parseInt(rangeParts[0]) || 12;
+    const rangeMin = parseInt(rangeParts[0]) || 8;
+    const targetSets = parseInt(exercise.sets || 3);
+
+    // Find most recent previous session for this exercise
+    const prevEntries = Object.entries(logs)
+      .filter(([k]) => k.includes(`__${exercise.name}`) && k !== exKey)
+      .map(([k, v]) => {
+        const done = (v.sets || []).filter(s => s.done && s.weight && s.reps && s.type !== "warmup");
+        if (!done.length) return null;
+        const datePart = k.split("__")[0].split("_").slice(1).join("-");
+        const maxW = Math.max(...done.map(s => parseFloat(s.weight)));
+        const avgR = Math.round(done.reduce((a, s) => a + parseInt(s.reps), 0) / done.length);
+        return { date: datePart, maxW, avgR, sets: done.length };
+      })
+      .filter(Boolean)
+      .sort((a, b) => b.date.localeCompare(a.date));
+
+    if (!prevEntries.length) return null;
+    const prev = prevEntries[0];
+    const increment = prev.maxW >= 100 ? 5 : 2.5;
+
+    if (prev.avgR >= rangeMax && prev.sets >= targetSets) {
+      return { text: `↑ ${prev.maxW + increment} lbs × ${rangeMin}–${rangeMin + 2}`, type: "increase", prev: `Last: ${prev.maxW} lbs × ${prev.avgR} avg reps` };
+    }
+    if (prev.avgR < rangeMin - 1) {
+      return { text: `↓ ${Math.max(prev.maxW - increment, increment)} lbs × ${rangeMin}–${rangeMax}`, type: "drop", prev: `Last: ${prev.maxW} lbs × ${prev.avgR} avg reps` };
+    }
+    if (prev.sets < targetSets) {
+      return { text: `${prev.maxW} lbs × ${targetSets} sets`, type: "hold", prev: `Last: ${prev.sets}/${targetSets} sets completed` };
+    }
+    return { text: `${prev.maxW} lbs × ${Math.min(prev.avgR + 1, rangeMax)} reps`, type: "reps", prev: `Last: ${prev.maxW} lbs × ${prev.avgR} avg reps` };
+  })();
+
+  const targetColors = { increase: "#2d7a1e", drop: "#a02020", hold: "#c47a0a", reps: "#1d6fa8" };
 
   return (
     <div style={{ marginTop: "10px", background: "#f9f9f7", borderRadius: "8px", overflow: "hidden", border: "1px solid #e8e8e8" }}>
-      <div style={{ padding: "8px 12px", background: "#f5f5f3", borderBottom: "1px solid #e8e8e8", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{ fontSize: "11px", fontWeight: "600", color: "#555" }}>
-          Log Sets {exLog.sets.length > 0 ? `· ${doneSets}/${exLog.sets.length} done` : ""}
-        </span>
-        <button onClick={addSet} style={{ background: "#1a1a1a", color: "#fff", border: "none", borderRadius: "20px", padding: "4px 12px", fontSize: "11px", cursor: "pointer", ...F }}>
-          + Set
-        </button>
+      {/* Header: target + controls */}
+      <div style={{ padding: "8px 12px", background: "#f5f5f3", borderBottom: "1px solid #e8e8e8" }}>
+        {overloadTarget && (
+          <div style={{ marginBottom: "6px", display: "flex", alignItems: "center", gap: "8px" }}>
+            <div style={{ fontSize: "10px", fontWeight: "700", color: targetColors[overloadTarget.type] || "#555" }}>
+              Target: {overloadTarget.text}
+            </div>
+            <div style={{ fontSize: "9px", color: "#bbb" }}>{overloadTarget.prev}</div>
+          </div>
+        )}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ fontSize: "11px", fontWeight: "600", color: "#555" }}>
+            {exLog.sets.length > 0 ? `${doneSets}/${exLog.sets.length} done` : "Log sets"}
+            {exLog.sets.some(s => s.type === "dropset") && <span style={{ color: "#7a3aa0", marginLeft: "6px", fontSize: "10px" }}>drop set</span>}
+          </span>
+          <div style={{ display: "flex", gap: "4px" }}>
+            <button onClick={() => addSet("warmup")} style={{ background: "#f0f0f0", color: "#888", border: "none", borderRadius: "20px", padding: "3px 9px", fontSize: "10px", cursor: "pointer" }}>
+              W
+            </button>
+            <button onClick={() => addSet("normal")} style={{ background: "#1a1a1a", color: "#fff", border: "none", borderRadius: "20px", padding: "4px 12px", fontSize: "11px", cursor: "pointer", ...F }}>
+              + Set
+            </button>
+          </div>
+        </div>
       </div>
 
+      {/* Column headers */}
       {exLog.sets.length > 0 && (
-        <div style={{ display: "grid", gridTemplateColumns: exercise.bodyweight ? "24px 1fr 34px 24px" : "24px 1fr 1fr 34px 24px", gap: "4px", padding: "5px 12px 2px" }}>
-          {(exercise.bodyweight ? ["", "Reps", "✓", ""] : ["", "Weight", "Reps", "✓", ""]).map((h, i) => (
+        <div style={{ display: "grid", gridTemplateColumns: exercise.bodyweight ? "20px 20px 1fr 34px 20px" : "20px 20px 1fr 1fr 34px 20px", gap: "4px", padding: "5px 12px 2px" }}>
+          {(exercise.bodyweight
+            ? ["", "", "Reps", "✓", ""]
+            : ["", "", "Weight", "Reps", "✓", ""]
+          ).map((h, i) => (
             <span key={i} style={{ fontSize: "9px", color: "#bbb", textTransform: "uppercase", letterSpacing: "0.1em", textAlign: "center" }}>{h}</span>
           ))}
         </div>
       )}
 
-      {exLog.sets.map((set, i) => (
-        <div key={i} style={{ display: "grid", gridTemplateColumns: exercise.bodyweight ? "24px 1fr 34px 24px" : "24px 1fr 1fr 34px 24px", gap: "4px", padding: "3px 12px", background: set.done ? "#e8f5e9" : "transparent", alignItems: "center", borderBottom: "1px solid #f0f0f0" }}>
-          <span style={{ fontSize: "11px", color: "#aaa", textAlign: "center" }}>{i + 1}</span>
-          {!exercise.bodyweight && (
-            <input type="number" inputMode="decimal" placeholder="lbs" value={set.weight}
-              onChange={e => updateSet(i, "weight", e.target.value)}
-              style={{ width: "100%", padding: "6px", borderRadius: "5px", border: "1px solid #ddd", fontSize: "13px", textAlign: "center", background: set.done ? "rgba(45,122,30,0.08)" : "#fff", color: "#1a1a1a", ...F }} />
-          )}
-          <input type="number" inputMode="numeric" placeholder={exercise.bodyweight ? "reps / sec" : "reps"} value={set.reps}
-            onChange={e => updateSet(i, "reps", e.target.value)}
-            style={{ width: "100%", padding: "6px", borderRadius: "5px", border: "1px solid #ddd", fontSize: "13px", textAlign: "center", background: set.done ? "rgba(45,122,30,0.08)" : "#fff", color: "#1a1a1a", ...F }} />
-          <button onClick={() => toggleDone(i)} style={{ width: "30px", height: "30px", borderRadius: "50%", border: `2px solid ${set.done ? "#2d7a1e" : "#ddd"}`, background: set.done ? "#2d7a1e" : "transparent", color: set.done ? "#fff" : "#ccc", fontSize: "13px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✓</button>
-          <button onClick={() => removeSet(i)} style={{ background: "none", border: "none", color: "#ccc", fontSize: "16px", cursor: "pointer" }}>×</button>
-        </div>
-      ))}
+      {/* Set rows */}
+      {exLog.sets.map((set, i) => {
+        const isWarmup = set.type === "warmup";
+        const isDrop = set.type === "dropset";
+        const rowBg = set.done ? "#e8f5e9" : isWarmup ? "#fafaf0" : isDrop ? "#f8f5fc" : "transparent";
+        const labelColor = isWarmup ? "#bbb" : isDrop ? "#7a3aa0" : "#aaa";
+        const labelText = isWarmup ? "W" : isDrop ? "↓" : String(workingSets.indexOf(set) + 1);
+
+        return (
+          <div key={i} style={{
+            display: "grid",
+            gridTemplateColumns: exercise.bodyweight ? "20px 20px 1fr 34px 20px" : "20px 20px 1fr 1fr 34px 20px",
+            gap: "4px", padding: "3px 12px",
+            background: rowBg, alignItems: "center", borderBottom: "1px solid #f0f0f0",
+          }}>
+            {/* Set type label */}
+            <span style={{ fontSize: "10px", color: labelColor, textAlign: "center", fontWeight: isDrop ? "700" : "400" }}>{labelText}</span>
+
+            {/* Drop set button — appears after each normal done set */}
+            <button
+              onClick={() => addSet("dropset")}
+              title="Add drop set"
+              style={{ width: "16px", height: "16px", borderRadius: "50%", background: isDrop ? "#7a3aa0" : "#f0f0f0", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "9px", color: isDrop ? "#fff" : "#bbb", padding: 0 }}>
+              ↓
+            </button>
+
+            {!exercise.bodyweight && (
+              <input type="number" inputMode="decimal" placeholder={isWarmup ? "warm" : "lbs"} value={set.weight}
+                onChange={e => updateSet(i, "weight", e.target.value)}
+                style={{ width: "100%", padding: "6px", borderRadius: "5px", border: "1px solid " + (isWarmup ? "#e8e8c0" : isDrop ? "#e0d0f0" : "#ddd"), fontSize: "13px", textAlign: "center", background: set.done ? "rgba(45,122,30,0.08)" : "#fff", color: "#1a1a1a", ...F, opacity: isWarmup ? 0.7 : 1 }} />
+            )}
+            <input type="number" inputMode="numeric" placeholder={exercise.bodyweight ? "reps" : isWarmup ? "reps" : "reps"} value={set.reps}
+              onChange={e => updateSet(i, "reps", e.target.value)}
+              style={{ width: "100%", padding: "6px", borderRadius: "5px", border: "1px solid " + (isWarmup ? "#e8e8c0" : isDrop ? "#e0d0f0" : "#ddd"), fontSize: "13px", textAlign: "center", background: set.done ? "rgba(45,122,30,0.08)" : "#fff", color: "#1a1a1a", ...F, opacity: isWarmup ? 0.7 : 1 }} />
+            <button onClick={() => toggleDone(i)} style={{ width: "30px", height: "30px", borderRadius: "50%", border: `2px solid ${set.done ? "#2d7a1e" : isWarmup ? "#ddd" : "#ddd"}`, background: set.done ? "#2d7a1e" : "transparent", color: set.done ? "#fff" : "#ccc", fontSize: "13px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✓</button>
+            <button onClick={() => removeSet(i)} style={{ background: "none", border: "none", color: "#ccc", fontSize: "16px", cursor: "pointer" }}>×</button>
+          </div>
+        );
+      })}
 
       {exLog.sets.length === 0 && (
-        <div style={{ padding: "12px", textAlign: "center", color: "#bbb", fontSize: "11px" }}>Tap "+ Set" to start logging</div>
+        <div style={{ padding: "12px", textAlign: "center", color: "#bbb", fontSize: "11px" }}>Tap "+ Set" to start logging · "W" for a warm-up set</div>
       )}
 
       <div style={{ padding: "8px 12px" }}>
@@ -767,13 +856,24 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
 
           {/* Exercises */}
           <div>
-            {current.exercises.map((ex, i) => {
+            {(() => {
+              // Group exercises — identify superset pairs
+              const renderedGroups = new Set();
+              return current.exercises.map((ex, i) => {
+                const pairIdx = ex.superset_group
+                  ? current.exercises.findIndex((e, j) => j !== i && e.superset_group === ex.superset_group)
+                  : -1;
+                const isFirstOfPair = pairIdx > i;
+                const isSecondOfPair = pairIdx !== -1 && pairIdx < i;
+                const pairEx = pairIdx !== -1 ? current.exercises[pairIdx] : null;
+
               const isOpen = expandedEx === i;
               const logOpen = showLogger[ex.name];
               const cs = categoryStyle(ex.category);
               const exKey = `${sessionKey}__${ex.name}`;
               const exLog = logs[exKey];
               const doneSets = exLog?.sets?.filter(s => s.done).length || 0;
+              const supersetLabel = ex.superset_group ? `SS-${ex.superset_group}` : null;
               const totalLogged = exLog?.sets?.length || 0;
               const isStarted = totalLogged > 0;
               const hasPR = !!prs[ex.name];
@@ -862,7 +962,8 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
                   )}
                 </div>
               );
-            })}
+            });
+            })()}
           </div>
 
           {/* Core Finisher */}
@@ -888,7 +989,10 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: "13px", fontWeight: "600", marginBottom: "4px" }}>{ex.name}</div>
-                        <div style={{ display: "flex", gap: "5px", flexWrap: "wrap" }}>
+                        <div style={{ display: "flex", gap: "5px", flexWrap: "wrap", alignItems: "center" }}>
+                          {ex.superset_group && (
+                            <span style={{ fontSize: "9px", background: "#f3eafa", color: "#7a3aa0", padding: "2px 7px", borderRadius: "20px", fontWeight: "700", letterSpacing: "0.06em" }}>Superset</span>
+                          )}
                           <span style={{ fontSize: "10px", background: "#f0f0f0", color: "#333", padding: "2px 8px", borderRadius: "20px", fontWeight: "600" }}>{ex.sets} × {ex.reps}</span>
                           {ex.rest !== "—" && <span style={{ fontSize: "9px", color: "#999", padding: "2px 7px", background: "#f0f0f0", borderRadius: "20px" }}>{ex.rest} rest</span>}
                           {totalLogged > 0 && <span style={{ fontSize: "9px", padding: "2px 7px", borderRadius: "20px", background: doneSets > 0 ? "#e8f5e9" : "#f0f0f0", color: doneSets > 0 ? "#2d7a1e" : "#999" }}>{doneSets}/{totalLogged} done</span>}
