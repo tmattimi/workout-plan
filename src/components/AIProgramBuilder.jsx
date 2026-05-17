@@ -1,192 +1,524 @@
-import { useState } from "react";
-import { getSafeExercises } from "../data/exercises";
+import { useState, useEffect } from "react";
+import {
+  getAllExercises, createPlan, createPlanDay, addExerciseToPlanDay, assignPlanToClient
+} from "../lib/supabase";
 
 const F = { fontFamily: "'Georgia','Times New Roman',serif" };
 
-// ── Format client profile for Claude ─────────────────────────────────────────
-function buildPrompt(client, overview, equipment, injuries, prefs) {
+// ── Map workout style to day structure ────────────────────────────────────────
+const PROGRAM_STRUCTURES = {
+  "Push Pull Legs": {
+    3: [
+      { day: "MON", label: "Push", type: "push", muscles: ["Chest", "Shoulders", "Triceps"] },
+      { day: "WED", label: "Pull", type: "pull", muscles: ["Back", "Biceps", "Rear Delts"] },
+      { day: "FRI", label: "Legs", type: "legs", muscles: ["Quads", "Hamstrings", "Glutes", "Calves"] },
+    ],
+    4: [
+      { day: "MON", label: "Push", type: "push", muscles: ["Chest", "Shoulders", "Triceps"] },
+      { day: "TUE", label: "Pull", type: "pull", muscles: ["Back", "Biceps", "Rear Delts"] },
+      { day: "THU", label: "Legs", type: "legs", muscles: ["Quads", "Hamstrings", "Glutes"] },
+      { day: "FRI", label: "Push / Pull", type: "push_pull", muscles: ["Shoulders", "Back", "Arms"] },
+    ],
+    5: [
+      { day: "MON", label: "Push", type: "push", muscles: ["Chest", "Shoulders", "Triceps"] },
+      { day: "TUE", label: "Pull", type: "pull", muscles: ["Back", "Biceps", "Rear Delts"] },
+      { day: "WED", label: "Legs", type: "legs", muscles: ["Quads", "Hamstrings", "Glutes"] },
+      { day: "THU", label: "Push", type: "push", muscles: ["Chest", "Shoulders", "Triceps"] },
+      { day: "FRI", label: "Pull + Legs", type: "pull_legs", muscles: ["Back", "Hamstrings", "Glutes"] },
+    ],
+    6: [
+      { day: "MON", label: "Push", type: "push", muscles: ["Chest", "Shoulders", "Triceps"] },
+      { day: "TUE", label: "Pull", type: "pull", muscles: ["Back", "Biceps", "Rear Delts"] },
+      { day: "WED", label: "Legs", type: "legs", muscles: ["Quads", "Hamstrings", "Glutes"] },
+      { day: "THU", label: "Push", type: "push", muscles: ["Chest", "Shoulders", "Triceps"] },
+      { day: "FRI", label: "Pull", type: "pull", muscles: ["Back", "Biceps", "Rear Delts"] },
+      { day: "SAT", label: "Legs", type: "legs", muscles: ["Glutes", "Hamstrings", "Quads"] },
+    ],
+  },
+  "Upper Lower": {
+    4: [
+      { day: "MON", label: "Upper", type: "upper", muscles: ["Chest", "Back", "Shoulders", "Arms"] },
+      { day: "TUE", label: "Lower", type: "lower", muscles: ["Quads", "Hamstrings", "Glutes"] },
+      { day: "THU", label: "Upper", type: "upper", muscles: ["Chest", "Back", "Shoulders", "Arms"] },
+      { day: "FRI", label: "Lower", type: "lower", muscles: ["Glutes", "Hamstrings", "Quads"] },
+    ],
+    3: [
+      { day: "MON", label: "Upper", type: "upper", muscles: ["Chest", "Back", "Shoulders", "Arms"] },
+      { day: "WED", label: "Lower", type: "lower", muscles: ["Quads", "Hamstrings", "Glutes"] },
+      { day: "FRI", label: "Upper", type: "upper", muscles: ["Chest", "Back", "Shoulders", "Arms"] },
+    ],
+  },
+  "Full Body": {
+    3: [
+      { day: "MON", label: "Full Body A", type: "full_body", muscles: ["Compound Movements"] },
+      { day: "WED", label: "Full Body B", type: "full_body", muscles: ["Compound Movements"] },
+      { day: "FRI", label: "Full Body C", type: "full_body", muscles: ["Compound Movements"] },
+    ],
+  },
+  "Glute Focus": {
+    4: [
+      { day: "MON", label: "Glutes + Hamstrings", type: "posterior", muscles: ["Glutes", "Hamstrings"] },
+      { day: "TUE", label: "Upper Body", type: "upper", muscles: ["Back", "Shoulders", "Arms"] },
+      { day: "THU", label: "Glutes + Quads", type: "legs", muscles: ["Glutes", "Quads"] },
+      { day: "FRI", label: "Upper + Core", type: "upper", muscles: ["Chest", "Back", "Core"] },
+    ],
+    5: [
+      { day: "MON", label: "Glutes + Hamstrings", type: "posterior", muscles: ["Glutes", "Hamstrings"] },
+      { day: "TUE", label: "Upper Pull", type: "pull", muscles: ["Back", "Biceps", "Rear Delts"] },
+      { day: "WED", label: "Quads + Calves", type: "quads", muscles: ["Quads", "Calves"] },
+      { day: "THU", label: "Upper Push", type: "push", muscles: ["Chest", "Shoulders", "Triceps"] },
+      { day: "SAT", label: "Glutes + Full Body", type: "full_glute", muscles: ["Glutes", "Full Body"] },
+    ],
+    6: [
+      { day: "MON", label: "Glutes + Hamstrings", type: "posterior", muscles: ["Glutes", "Hamstrings"] },
+      { day: "TUE", label: "Upper Pull", type: "pull", muscles: ["Back", "Biceps"] },
+      { day: "WED", label: "Quads + Core", type: "quads", muscles: ["Quads", "Core"] },
+      { day: "THU", label: "Upper Push", type: "push", muscles: ["Chest", "Shoulders", "Triceps"] },
+      { day: "FRI", label: "Glutes + Hamstrings", type: "posterior", muscles: ["Glutes", "Hamstrings"] },
+      { day: "SAT", label: "Full Body + Cardio", type: "full_body", muscles: ["Full Body"] },
+    ],
+  },
+};
+
+// ── Build the full AI prompt from all available client data ───────────────────
+function buildFullPrompt(client, intake, overview, exerciseList) {
   const { recentLogs, measurements, prs, checkins } = overview || {};
+  const latest = measurements?.[measurements.length - 1];
 
-  let prompt = `You are an expert personal trainer creating a weekly workout program for ${client.name || "a client"}.
+  let prompt = `You are an expert personal trainer and exercise scientist creating a complete, individualized weekly workout program.
 
-CLIENT PROFILE:
-- Goals: ${prefs.goals || "General fitness, muscle building, fat loss"}
-- Training days per week: ${prefs.daysPerWeek || 6}
-- Program style: ${prefs.style || "Push Pull Legs"}
-- Available equipment: ${equipment?.join(", ") || "full gym"}
-- Injury flags: ${injuries?.length ? injuries.join(", ") : "none"}
-- Fitness level: ${prefs.level || "intermediate"}
+══════════════════════════════════════════
+CLIENT PROFILE
+══════════════════════════════════════════
+Name: ${client.name}
+Sex: ${client.sex || "female"}
+Goal: ${client.goal?.replace(/_/g, " ") || intake?.primary_goal?.replace(/_/g, " ") || "general fitness"}
+Target weight: ${client.goal_weight_lbs || intake?.target_weight_lbs || "not specified"} lbs
+Goal timeline: ${intake?.goal_timeline?.replace(/_/g, " ") || "not specified"}
 `;
 
-  if (prs && prs.length > 0) {
-    prompt += `\nCURRENT STRENGTH LEVELS (Personal Records):\n`;
-    prs.slice(0, 10).forEach(pr => {
-      prompt += `  ${pr.exercise_name}: ${pr.weight_lbs} lbs × ${pr.reps}\n`;
+  if (intake?.focus_areas?.length) {
+    prompt += `Priority focus areas: ${intake.focus_areas.join(", ")}\n`;
+  }
+  if (intake?.goal_notes) {
+    prompt += `Client's own words about their goals: "${intake.goal_notes}"\n`;
+  }
+
+  prompt += `\n══════════════════════════════════════════
+STATS & BODY COMPOSITION
+══════════════════════════════════════════
+`;
+  if (client.current_weight_lbs || intake?.current_weight_lbs) {
+    prompt += `Current weight: ${client.current_weight_lbs || intake?.current_weight_lbs} lbs\n`;
+  }
+  if (intake?.height_ft) {
+    prompt += `Height: ${intake.height_ft}' ${Math.round((intake.height_in || 0) % 12)}"\n`;
+  }
+  if (latest?.body_fat_pct || intake?.body_fat_pct) {
+    prompt += `Body fat %: ${latest?.body_fat_pct || intake?.body_fat_pct}%\n`;
+  }
+  if (latest?.waist_in) prompt += `Waist: ${latest.waist_in}"\n`;
+  if (latest?.hips_in) prompt += `Hips: ${latest.hips_in}"\n`;
+  if (client.date_of_birth) {
+    const age = Math.floor((new Date() - new Date(client.date_of_birth)) / (365.25 * 24 * 60 * 60 * 1000));
+    prompt += `Age: ${age}\n`;
+  }
+
+  prompt += `\n══════════════════════════════════════════
+TRAINING BACKGROUND
+══════════════════════════════════════════
+Fitness level: ${intake?.fitness_level || "intermediate"}
+Training days available per week: ${intake?.training_days_per_week || client.weekly_frequency || 4}
+Preferred training days: ${intake?.preferred_days?.join(", ") || "flexible"}
+Session length preference: ${intake?.session_length || "60"} minutes
+`;
+
+  const equipment = client.equipment || intake?.equipment_available || ["barbell", "dumbbell", "cable", "machine"];
+  prompt += `Available equipment: ${Array.isArray(equipment) ? equipment.join(", ") : equipment}\n`;
+
+  const injuries = client.injury_flags || intake?.injury_flags || [];
+  if (injuries.length) {
+    prompt += `\nINJURY FLAGS — STRICT CONTRAINDICATIONS:\n`;
+    injuries.forEach(inj => prompt += `  - ${inj}: avoid all exercises loading this area\n`);
+  }
+
+  if (intake?.additional_notes || client.notes) {
+    prompt += `\nAdditional notes from client: "${intake?.additional_notes || client.notes}"\n`;
+  }
+
+  if (prs?.length > 0) {
+    prompt += `\n══════════════════════════════════════════
+CURRENT STRENGTH (Personal Records)
+══════════════════════════════════════════
+`;
+    prs.slice(0, 12).forEach(pr => {
+      prompt += `  ${pr.exercise_name}: ${pr.weight_lbs} lbs × ${pr.reps} reps\n`;
     });
   }
 
-  if (measurements && measurements.length > 0) {
-    const latest = measurements[measurements.length - 1];
-    prompt += `\nBODY COMPOSITION:\n`;
-    if (latest.weight_lbs) prompt += `  Weight: ${latest.weight_lbs} lbs\n`;
-  }
-
-  if (checkins && checkins.length > 0) {
-    const recent = checkins.slice(-3);
+  if (checkins?.length > 0) {
+    const recent = checkins.slice(-4);
     const avgEnergy = (recent.reduce((s, c) => s + (c.energy_level || 5), 0) / recent.length).toFixed(1);
-    prompt += `\nRECENT CHECK-INS (avg energy ${avgEnergy}/10 over last 3 sessions)\n`;
+    const avgRecovery = (recent.reduce((s, c) => s + (c.recovery_score || 5), 0) / recent.length).toFixed(1);
+    prompt += `\nRecent check-in averages: energy ${avgEnergy}/10, recovery ${avgRecovery}/10\n`;
   }
 
-  if (recentLogs && recentLogs.length > 0) {
-    prompt += `\nRECENT TRAINING (last ${recentLogs.length} sets logged)\n`;
+  if (recentLogs?.length > 0) {
+    const sessionDates = [...new Set(recentLogs.map(l => l.session_date))].slice(0, 8);
+    prompt += `\nRecent training: ${sessionDates.length} sessions logged\n`;
   }
 
-  const safeExercises = getSafeExercises(equipment || [], injuries || []);
-  prompt += `\nAPPROVED EXERCISES (${safeExercises.length} available based on equipment and injuries):\n`;
-  prompt += safeExercises.slice(0, 30).map(e => `  ${e.name} [${e.primaryMuscle}]`).join("\n");
+  // Exercise library
+  prompt += `\n══════════════════════════════════════════
+APPROVED EXERCISE LIBRARY
+══════════════════════════════════════════
+Use ONLY exercises from this list. The name must match exactly.
+
+`;
+  exerciseList.forEach(ex => {
+    prompt += `${ex.name} [${ex.primary_muscle || ex.category}]\n`;
+  });
 
   prompt += `
+══════════════════════════════════════════
+PROGRAMMING SCIENCE REQUIREMENTS
+══════════════════════════════════════════
+Apply these evidence-based principles:
 
-TASK: Generate a complete weekly program in the following exact JSON format. Return ONLY the JSON, no explanation:
+1. EXERCISE ORDER: Compound bilateral first → compound unilateral → isolation → core. Never put core before compound lifts.
+2. VOLUME: 10–20 sets per muscle group per week. Beginners: lower end. Advanced: higher end.
+3. REP RANGES: Strength (1–5 reps, 80–95% 1RM), Hypertrophy (6–15 reps, 65–80% 1RM), Endurance (15–30 reps).
+4. PROGRESSIVE OVERLOAD: Note the training goal for each exercise (strength/hypertrophy/endurance).
+5. REST PERIODS: Compound: 2–3 min. Isolation: 60–90 sec. Supersets: 45–60 sec.
+6. INJURY ACCOMMODATION: If any injury flag exists, substitute every contraindicated exercise — no exceptions.
+7. GOAL ALIGNMENT: If goal is fat loss, include cardio finishers. If muscle gain, minimize cardio. If glute focus, 40%+ of lower body exercises should be glute-dominant.
+8. FEMALE-SPECIFIC (if female): Higher frequency for glutes and upper body is more effective. Hip thrusts, RDLs, and cable kickbacks are priority exercises.
+9. WARM-UP: Every session needs a 2-exercise warm-up set sequence.
 
+TASK: Generate the complete weekly program as JSON only. No explanation, no markdown, no code blocks.
+
+Return this exact structure:
 {
-  "programName": "string",
+  "programName": "descriptive name for this client",
+  "phase": "Phase 1 — Foundation",
+  "durationWeeks": 8,
+  "coachNotes": "3-4 sentences explaining the key programming decisions and why they suit this specific client",
   "weeklySchedule": [
     {
       "day": "MON",
       "label": "Push",
       "type": "push",
-      "focus": "Push — Chest Focus",
+      "focus": "Chest + Shoulders + Triceps",
       "muscles": ["Chest", "Shoulders", "Triceps"],
+      "warmup": [
+        { "name": "exercise name", "sets": 2, "reps": "10–12", "note": "activation focus" }
+      ],
       "exercises": [
         {
-          "name": "exercise name exactly as listed above",
+          "name": "exercise name exactly as in library",
           "sets": 4,
-          "reps": "6–10",
+          "reps": "8–10",
           "rest": "2–3 min",
           "category": "Compound Bilateral",
           "order": 1,
-          "rationale": "one sentence why this exercise for this client"
+          "goal": "hypertrophy",
+          "rationale": "1 sentence why this exercise for this client specifically"
         }
       ],
-      "cardio": {
-        "name": "Incline Treadmill",
-        "protocol": "4.0 to 4.5 mph at 8 to 12% incline for 20 minutes",
-        "zone": "Zone 3 (65–75% max HR)",
-        "feel": "Breathing noticeably elevated, short sentences only."
-      }
+      "cardio": null
+    },
+    {
+      "day": "SUN",
+      "label": "Rest",
+      "type": "rest",
+      "focus": "Active Recovery",
+      "muscles": [],
+      "warmup": [],
+      "exercises": [],
+      "cardio": null
     }
-  ],
-  "coachNotes": "2-3 sentences about the key programming decisions for this client"
+  ]
 }
 
-Rules:
-- Only use exercises from the approved list above
-- Place heavier compound movements first, isolation last, core never before isolation
-- 4–6 exercises per session for intermediate clients, 5–7 for advanced
-- Include 1 rest day minimum
-- Cardio after lifting, Zone 3, 20 minutes
-- Match exercise selection to available equipment and injury restrictions strictly
+Include all 7 days of the week. Rest days should have type "rest" and empty exercises array.
+Cardio: only include if goal is fat_loss or recomp. Format: { "name": "Incline Treadmill", "protocol": "4.0 mph at 10% incline, 20 min", "zone": "Zone 2" }
 `;
 
   return prompt;
 }
 
-// ── Program display ───────────────────────────────────────────────────────────
-function ProgramDisplay({ program, onSave }) {
-  const [expanded, setExpanded] = useState(null);
-
-  if (!program?.weeklySchedule) return null;
+// ── Inline exercise editor ────────────────────────────────────────────────────
+function ExerciseRow({ ex, exerciseList, onChange, onRemove, onMoveUp, onMoveDown, isFirst, isLast }) {
+  const [editing, setEditing] = useState(false);
+  const [search, setSearch] = useState("");
+  const filtered = search.length > 1
+    ? exerciseList.filter(e => e.name.toLowerCase().includes(search.toLowerCase())).slice(0, 6)
+    : [];
 
   return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-        <div>
-          <div style={{ fontSize: "9px", letterSpacing: "0.18em", textTransform: "uppercase", color: "#999" }}>Generated Program</div>
-          <div style={{ fontSize: "16px", ...F }}>{program.programName}</div>
+    <div style={{ padding: "10px 14px", borderBottom: "1px solid #f5f5f5", background: editing ? "#fafaf8" : "#fff" }}>
+      <div style={{ display: "flex", gap: "8px", alignItems: "flex-start" }}>
+        <div style={{ width: 22, height: 22, borderRadius: "50%", background: "#e8e8e8", color: "#888", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700, flexShrink: 0, marginTop: 1 }}>
+          {ex.order}
         </div>
-        <button onClick={onSave} style={{ background: "#1a1a1a", color: "#f7f6f3", border: "none", borderRadius: "20px", padding: "7px 16px", fontSize: "11px", cursor: "pointer", ...F }}>
-          Assign to Client
-        </button>
-      </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 3 }}>{ex.name}</div>
+          <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: ex.rationale ? 3 : 0 }}>
+            <span style={{ fontSize: 10, background: "#f0f0f0", padding: "2px 8px", borderRadius: 20, fontWeight: 600 }}>{ex.sets} × {ex.reps}</span>
+            {ex.rest && <span style={{ fontSize: 9, color: "#aaa", padding: "2px 7px", background: "#f5f5f3", borderRadius: 20 }}>{ex.rest}</span>}
+            {ex.goal && <span style={{ fontSize: 9, color: "#2563a8", padding: "2px 7px", background: "rgba(37,99,168,0.08)", borderRadius: 20 }}>{ex.goal}</span>}
+          </div>
+          {ex.rationale && <div style={{ fontSize: 10, color: "#aaa", lineHeight: 1.5, fontStyle: "italic" }}>{ex.rationale}</div>}
 
-      {program.coachNotes && (
-        <div style={{ background: "#f9f9f7", borderRadius: "7px", padding: "12px 14px", marginBottom: "14px", fontSize: "12px", color: "#555", lineHeight: "1.65", ...F, fontStyle: "italic" }}>
-          {program.coachNotes}
-        </div>
-      )}
-
-      {program.weeklySchedule.map((day, di) => (
-        <div key={di} style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "8px", marginBottom: "7px", overflow: "hidden" }}>
-          <button onClick={() => setExpanded(expanded === di ? null : di)}
-            style={{ width: "100%", background: "none", border: "none", padding: "12px 14px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", textAlign: "left" }}>
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ fontSize: "11px", fontWeight: "800", letterSpacing: "0.12em", color: "#aaa" }}>{day.day}</span>
-                <span style={{ fontSize: "13px", fontWeight: "600" }}>{day.label}</span>
-                {day.type === "rest" && <span style={{ fontSize: "10px", color: "#bbb" }}>Rest</span>}
+          {editing && (
+            <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
+              {/* Exercise search */}
+              <div style={{ position: "relative" }}>
+                <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search to replace exercise..."
+                  style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid #e0e0e0", fontSize: 11, boxSizing: "border-box", ...F }} />
+                {filtered.length > 0 && (
+                  <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", border: "1px solid #e0e0e0", borderRadius: 6, zIndex: 10, boxShadow: "0 4px 12px rgba(0,0,0,0.1)", maxHeight: 180, overflowY: "auto" }}>
+                    {filtered.map(e => (
+                      <button key={e.id} onClick={() => { onChange({ ...ex, name: e.name }); setSearch(""); }}
+                        style={{ width: "100%", padding: "8px 12px", background: "none", border: "none", borderBottom: "1px solid #f5f5f5", textAlign: "left", cursor: "pointer", fontSize: 12, ...F }}>
+                        {e.name}
+                        <span style={{ fontSize: 10, color: "#bbb", marginLeft: 6 }}>{e.primary_muscle}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
-              {day.muscles?.length > 0 && <div style={{ fontSize: "10px", color: "#aaa", marginTop: "2px" }}>{day.muscles.join(", ")}</div>}
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              {day.exercises && <span style={{ fontSize: "10px", color: "#bbb" }}>{day.exercises.length} exercises</span>}
-              <span style={{ color: "#ccc", fontSize: "11px" }}>{expanded === di ? "▲" : "▼"}</span>
-            </div>
-          </button>
-
-          {expanded === di && day.exercises && (
-            <div style={{ borderTop: "1px solid #f0f0f0" }}>
-              {day.exercises.map((ex, ei) => (
-                <div key={ei} style={{ padding: "10px 14px", borderBottom: "1px solid #f5f5f5", display: "flex", gap: "10px", alignItems: "flex-start" }}>
-                  <div style={{ width: "22px", height: "22px", borderRadius: "50%", background: "#e8e8e8", color: "#888", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px", fontWeight: "700", flexShrink: 0 }}>
-                    {ex.order || ei + 1}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: "12px", fontWeight: "600", marginBottom: "3px" }}>{ex.name}</div>
-                    <div style={{ display: "flex", gap: "5px", flexWrap: "wrap", marginBottom: ex.rationale ? "4px" : 0 }}>
-                      <span style={{ fontSize: "10px", background: "#f0f0f0", color: "#555", padding: "2px 8px", borderRadius: "20px" }}>{ex.sets} × {ex.reps}</span>
-                      {ex.rest && <span style={{ fontSize: "9px", color: "#aaa", padding: "2px 7px", background: "#f5f5f3", borderRadius: "20px" }}>{ex.rest}</span>}
-                    </div>
-                    {ex.rationale && <div style={{ fontSize: "10px", color: "#aaa", lineHeight: "1.5", fontStyle: "italic" }}>{ex.rationale}</div>}
-                  </div>
+              {/* Sets/reps/rest inline */}
+              <div style={{ display: "flex", gap: 6 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 9, color: "#aaa", marginBottom: 2 }}>Sets</div>
+                  <input type="number" value={ex.sets} onChange={e => onChange({ ...ex, sets: parseInt(e.target.value) || ex.sets })}
+                    style={{ width: "100%", padding: "5px 8px", borderRadius: 5, border: "1px solid #e0e0e0", fontSize: 12, ...F }} />
                 </div>
-              ))}
-              {day.cardio && (
-                <div style={{ padding: "10px 14px", background: "#f9f9f7", display: "flex", gap: "10px" }}>
-                  <div style={{ width: "22px", height: "22px", borderRadius: "50%", background: "#e8e8e8", color: "#888", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "8px", fontWeight: "800", flexShrink: 0 }}>Z3</div>
-                  <div>
-                    <div style={{ fontSize: "12px", fontWeight: "600" }}>{day.cardio.name}</div>
-                    <div style={{ fontSize: "10px", color: "#888" }}>{day.cardio.protocol}</div>
-                  </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 9, color: "#aaa", marginBottom: 2 }}>Reps</div>
+                  <input value={ex.reps} onChange={e => onChange({ ...ex, reps: e.target.value })}
+                    style={{ width: "100%", padding: "5px 8px", borderRadius: 5, border: "1px solid #e0e0e0", fontSize: 12, ...F }} />
                 </div>
-              )}
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 9, color: "#aaa", marginBottom: 2 }}>Rest</div>
+                  <input value={ex.rest || ""} onChange={e => onChange({ ...ex, rest: e.target.value })}
+                    style={{ width: "100%", padding: "5px 8px", borderRadius: 5, border: "1px solid #e0e0e0", fontSize: 12, ...F }} />
+                </div>
+              </div>
+              {/* Rationale */}
+              <textarea value={ex.rationale || ""} onChange={e => onChange({ ...ex, rationale: e.target.value })}
+                placeholder="Rationale for this exercise..." rows={2}
+                style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid #e0e0e0", fontSize: 11, resize: "none", boxSizing: "border-box", ...F }} />
             </div>
           )}
         </div>
-      ))}
+        <div style={{ display: "flex", flexDirection: "column", gap: 2, flexShrink: 0 }}>
+          <button onClick={() => setEditing(p => !p)}
+            style={{ background: editing ? "#111" : "none", color: editing ? "#fff" : "#aaa", border: "1px solid #e0e0e0", borderRadius: 4, padding: "3px 7px", fontSize: 10, cursor: "pointer", ...F }}>
+            {editing ? "Done" : "Edit"}
+          </button>
+          <div style={{ display: "flex", gap: 2 }}>
+            <button onClick={onMoveUp} disabled={isFirst}
+              style={{ flex: 1, background: "none", border: "1px solid #e8e8e8", borderRadius: 4, padding: "2px 0", fontSize: 10, cursor: isFirst ? "default" : "pointer", color: isFirst ? "#e0e0e0" : "#888" }}>↑</button>
+            <button onClick={onMoveDown} disabled={isLast}
+              style={{ flex: 1, background: "none", border: "1px solid #e8e8e8", borderRadius: 4, padding: "2px 0", fontSize: 10, cursor: isLast ? "default" : "pointer", color: isLast ? "#e0e0e0" : "#888" }}>↓</button>
+          </div>
+          <button onClick={onRemove}
+            style={{ background: "none", border: "1px solid #f0d0d0", borderRadius: 4, padding: "3px 7px", fontSize: 10, cursor: "pointer", color: "#e0a0a0" }}>×</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Day card editor ───────────────────────────────────────────────────────────
+function DayCard({ day, exerciseList, onChange }) {
+  const [open, setOpen] = useState(false);
+  const [addSearch, setAddSearch] = useState("");
+  const addFiltered = addSearch.length > 1
+    ? exerciseList.filter(e => e.name.toLowerCase().includes(addSearch.toLowerCase())).slice(0, 8)
+    : [];
+
+  function updateExercise(i, updated) {
+    const exercises = [...(day.exercises || [])];
+    exercises[i] = updated;
+    onChange({ ...day, exercises });
+  }
+
+  function removeExercise(i) {
+    const exercises = day.exercises.filter((_, idx) => idx !== i).map((ex, idx) => ({ ...ex, order: idx + 1 }));
+    onChange({ ...day, exercises });
+  }
+
+  function moveExercise(i, dir) {
+    const exercises = [...(day.exercises || [])];
+    const j = i + dir;
+    if (j < 0 || j >= exercises.length) return;
+    [exercises[i], exercises[j]] = [exercises[j], exercises[i]];
+    onChange({ ...day, exercises: exercises.map((ex, idx) => ({ ...ex, order: idx + 1 })) });
+  }
+
+  function addExercise(ex) {
+    const exercises = [...(day.exercises || []), {
+      name: ex.name,
+      sets: 3,
+      reps: "10–12",
+      rest: "60–90 sec",
+      category: ex.category || "Isolation",
+      order: (day.exercises?.length || 0) + 1,
+      goal: "hypertrophy",
+      rationale: "",
+    }];
+    onChange({ ...day, exercises });
+    setAddSearch("");
+  }
+
+  const isRest = day.type === "rest";
+  const exCount = day.exercises?.length || 0;
+
+  return (
+    <div style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: 9, marginBottom: 8, overflow: "hidden" }}>
+      {/* Day header */}
+      <button onClick={() => !isRest && setOpen(p => !p)}
+        style={{ width: "100%", background: isRest ? "#f9f9f7" : "none", border: "none", padding: "12px 14px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: isRest ? "default" : "pointer", textAlign: "left" }}>
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.12em", color: isRest ? "#ccc" : "#aaa" }}>{day.day}</span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: isRest ? "#bbb" : "#111" }}>{day.label}</span>
+          </div>
+          {day.muscles?.length > 0 && !isRest && (
+            <div style={{ fontSize: 10, color: "#aaa", marginTop: 2 }}>{day.muscles.join(", ")}</div>
+          )}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {!isRest && <span style={{ fontSize: 10, color: "#bbb" }}>{exCount} exercises</span>}
+          {!isRest && <span style={{ color: "#ccc", fontSize: 11 }}>{open ? "▲" : "▼"}</span>}
+        </div>
+      </button>
+
+      {/* Exercises */}
+      {open && !isRest && (
+        <div style={{ borderTop: "1px solid #f0f0f0" }}>
+          {/* Warm-up */}
+          {day.warmup?.length > 0 && (
+            <div style={{ padding: "8px 14px", background: "#fffbf0", borderBottom: "1px solid #f5f5f5" }}>
+              <div style={{ fontSize: 9, color: "#c47a0a", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Warm-Up</div>
+              {day.warmup.map((w, i) => (
+                <div key={i} style={{ fontSize: 11, color: "#666", marginBottom: 2 }}>
+                  {w.name} — {w.sets} × {w.reps}
+                  {w.note && <span style={{ color: "#aaa" }}> · {w.note}</span>}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Main exercises */}
+          {(day.exercises || []).map((ex, i) => (
+            <ExerciseRow
+              key={i}
+              ex={ex}
+              exerciseList={exerciseList}
+              onChange={updated => updateExercise(i, updated)}
+              onRemove={() => removeExercise(i)}
+              onMoveUp={() => moveExercise(i, -1)}
+              onMoveDown={() => moveExercise(i, 1)}
+              isFirst={i === 0}
+              isLast={i === (day.exercises?.length || 1) - 1}
+            />
+          ))}
+
+          {/* Cardio */}
+          {day.cardio && (
+            <div style={{ padding: "10px 14px", background: "#f0f4ff", borderTop: "1px solid #e8eeff", display: "flex", gap: 10 }}>
+              <div style={{ width: 22, height: 22, borderRadius: "50%", background: "#2563a8", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 8, fontWeight: 800, flexShrink: 0 }}>Z2</div>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: "#2563a8" }}>{day.cardio.name}</div>
+                <div style={{ fontSize: 10, color: "#888" }}>{day.cardio.protocol}</div>
+              </div>
+            </div>
+          )}
+
+          {/* Add exercise */}
+          <div style={{ padding: "10px 14px", borderTop: "1px solid #f5f5f5", position: "relative" }}>
+            <input value={addSearch} onChange={e => setAddSearch(e.target.value)} placeholder="+ Add exercise..."
+              style={{ width: "100%", padding: "7px 10px", borderRadius: 6, border: "1px dashed #ddd", fontSize: 11, boxSizing: "border-box", ...F, background: "#fafaf8", color: "#888" }} />
+            {addFiltered.length > 0 && (
+              <div style={{ position: "absolute", bottom: "100%", left: 14, right: 14, background: "#fff", border: "1px solid #e0e0e0", borderRadius: 6, zIndex: 20, boxShadow: "0 -4px 12px rgba(0,0,0,0.1)", maxHeight: 200, overflowY: "auto" }}>
+                {addFiltered.map(e => (
+                  <button key={e.id} onClick={() => addExercise(e)}
+                    style={{ width: "100%", padding: "8px 12px", background: "none", border: "none", borderBottom: "1px solid #f5f5f5", textAlign: "left", cursor: "pointer", fontSize: 12, ...F }}>
+                    {e.name}
+                    <span style={{ fontSize: 10, color: "#bbb", marginLeft: 6 }}>{e.primary_muscle}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
-export default function AIProgramBuilder({ client, overview, equipment, injuries }) {
-  const [prefs, setPrefs] = useState({
-    goals: "Build muscle, reduce body fat",
-    daysPerWeek: 6,
-    style: "Push Pull Legs",
-    level: "intermediate",
-  });
-  const [loading, setLoading] = useState(false);
+export default function AIProgramBuilder({ client, intake, overview }) {
+  const [exercises, setExercises] = useState([]);
   const [program, setProgram] = useState(null);
-  const [error, setError] = useState(null);
+  const [editedProgram, setEditedProgram] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState(null);
+  const [saveError, setSaveError] = useState(null);
+  const [showCoachNotes, setShowCoachNotes] = useState(true);
+
+  // Load exercise library
+  useEffect(() => {
+    getAllExercises().then(({ data }) => {
+      if (data) setExercises(data);
+    });
+  }, []);
+
+  // Pre-fill from intake
+  const daysPerWeek = intake?.training_days_per_week || client?.weekly_frequency || 4;
+  const focusAreas = intake?.focus_areas || [];
+  const hasGluteFocus = focusAreas.includes("glutes") || focusAreas.includes("glute");
+  const defaultStyle = hasGluteFocus ? "Glute Focus" : daysPerWeek >= 5 ? "Push Pull Legs" : "Upper Lower";
 
   async function generateProgram() {
+    if (!exercises.length) {
+      setError("Exercise library not loaded. Please wait and try again.");
+      return;
+    }
     setLoading(true);
     setError(null);
     setProgram(null);
+    setEditedProgram(null);
 
-    const userPrompt = buildPrompt(client, overview, equipment, injuries, prefs);
+    // Filter exercises by equipment and injuries
+    const equipment = client?.equipment || intake?.equipment_available || ["dumbbell", "cable", "machine"];
+    const injuries = client?.injury_flags || intake?.injury_flags || [];
+
+    // Simple injury filter — exclude exercises mentioning injured body parts
+    const injuryKeywords = injuries.flatMap(inj => {
+      const map = {
+        shoulder: ["shoulder", "overhead press", "lateral raise", "fly", "upright row"],
+        knee: ["squat", "leg press", "lunge", "step up", "leg extension"],
+        lower_back: ["deadlift", "good morning", "back extension", "seated row"],
+        hip: ["hip thrust", "lunge", "split squat"],
+        elbow: ["curl", "pushdown", "extension", "dip"],
+        ankle: ["calf", "jump", "plyometric"],
+      };
+      return map[inj.toLowerCase()] || [];
+    });
+
+    const safeExercises = exercises.filter(ex => {
+      const name = ex.name.toLowerCase();
+      return !injuryKeywords.some(kw => name.includes(kw));
+    });
+
+    const prompt = buildFullPrompt(client, intake, overview, safeExercises);
 
     try {
       const resp = await fetch("https://api.anthropic.com/v1/messages", {
@@ -195,107 +527,233 @@ export default function AIProgramBuilder({ client, overview, equipment, injuries
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
           max_tokens: 1000,
-          system: "You are an expert personal trainer. Return only valid JSON. No markdown, no explanation, no code blocks.",
-          messages: [{ role: "user", content: userPrompt }],
+          system: "You are an expert personal trainer and exercise scientist. Return only valid JSON with no markdown, no explanation, no code blocks. Your response must start with { and end with }.",
+          messages: [{ role: "user", content: prompt }],
         }),
       });
 
       const data = await resp.json();
       if (data.error) throw new Error(data.error.message);
 
-      const raw = data.content?.[0]?.text || "{}";
+      const raw = (data.content?.[0]?.text || "{}").replace(/```json|```/g, "").trim();
       let parsed;
-      try { parsed = JSON.parse(raw.replace(/```json|```/g, "").trim()); }
-      catch { throw new Error("Could not parse the generated program. Try again."); }
+      try { parsed = JSON.parse(raw); }
+      catch { throw new Error("Could not parse the generated program. Please try again."); }
+
+      if (!parsed.weeklySchedule?.length) throw new Error("Program generation incomplete. Please try again.");
 
       setProgram(parsed);
+      setEditedProgram(JSON.parse(JSON.stringify(parsed))); // deep clone for editing
     } catch (err) {
-      setError(err.message || "Program generation failed. Check your connection and try again.");
+      setError(err.message || "Generation failed. Check your connection and try again.");
     }
 
     setLoading(false);
   }
 
-  function handleSave() {
-    // In future: push to Supabase as client's active program
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+  function updateDay(dayIndex, updatedDay) {
+    if (!editedProgram) return;
+    const schedule = [...editedProgram.weeklySchedule];
+    schedule[dayIndex] = updatedDay;
+    setEditedProgram({ ...editedProgram, weeklySchedule: schedule });
   }
 
+  async function saveAndAssign() {
+    if (!editedProgram || !client?.id) return;
+    setSaving(true);
+    setSaveError(null);
+
+    try {
+      // 1. Create the plan record
+      const { data: plan, error: planErr } = await createPlan({
+        name: editedProgram.programName,
+        description: editedProgram.coachNotes,
+        coach_id: null, // will be set server-side via RLS
+        phase: editedProgram.phase || "Phase 1",
+        duration_weeks: editedProgram.durationWeeks || 8,
+        ai_generated: true,
+      });
+      if (planErr) throw new Error(`Plan creation failed: ${planErr.message}`);
+
+      // 2. Create exercise name → ID lookup
+      const exByName = {};
+      exercises.forEach(ex => { exByName[ex.name.toLowerCase()] = ex; });
+
+      // 3. Create plan days and exercises
+      const trainingDays = editedProgram.weeklySchedule.filter(d => d.type !== "rest");
+      for (let di = 0; di < trainingDays.length; di++) {
+        const day = trainingDays[di];
+
+        const { data: planDay, error: dayErr } = await createPlanDay({
+          plan_id: plan.id,
+          day_label: day.day,
+          day: day.day,
+          focus: day.focus || `${day.label} — ${day.muscles?.join(", ")}`,
+          type: day.type,
+          muscles: day.muscles || [],
+          sort_order: di + 1,
+        });
+        if (dayErr) throw new Error(`Day creation failed: ${dayErr.message}`);
+
+        // Add exercises to this day
+        for (let ei = 0; ei < (day.exercises || []).length; ei++) {
+          const ex = day.exercises[ei];
+          const exerciseRecord = exByName[ex.name.toLowerCase()];
+
+          if (exerciseRecord) {
+            await addExerciseToPlanDay(planDay.id, exerciseRecord.id, {
+              sets: ex.sets,
+              reps: ex.reps,
+              rest: ex.rest,
+              sort_order: ei + 1,
+              notes: ex.rationale || null,
+            });
+          }
+        }
+      }
+
+      // 4. Assign to client
+      const { error: assignErr } = await assignPlanToClient(client.id, plan.id);
+      if (assignErr) throw new Error(`Assignment failed: ${assignErr.message}`);
+
+      setSaved(true);
+    } catch (err) {
+      setSaveError(err.message || "Save failed. Please try again.");
+    }
+
+    setSaving(false);
+  }
+
+  // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <div>
-      <div style={{ fontSize: "9px", letterSpacing: "0.2em", textTransform: "uppercase", color: "#999", marginBottom: "12px" }}>
-        AI Program Builder — {client?.name}
+      <div style={{ fontSize: "9px", letterSpacing: "0.2em", textTransform: "uppercase", color: "#999", marginBottom: "4px" }}>
+        AI Program Builder
       </div>
+      <div style={{ fontSize: "18px", ...F, marginBottom: "16px" }}>{client?.name}</div>
 
-      {/* Preferences */}
-      <div style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "8px", padding: "14px", marginBottom: "14px" }}>
-        <div style={{ fontSize: "9px", letterSpacing: "0.15em", textTransform: "uppercase", color: "#aaa", marginBottom: "10px" }}>Program preferences</div>
-
-        <div style={{ marginBottom: "10px" }}>
-          <div style={{ fontSize: "10px", color: "#777", marginBottom: "3px" }}>Primary goals</div>
-          <input value={prefs.goals} onChange={e => setPrefs(p => ({ ...p, goals: e.target.value }))}
-            style={{ width: "100%", padding: "7px 10px", border: "1px solid #e0e0e0", borderRadius: "5px", fontSize: "12px", boxSizing: "border-box", ...F }} />
+      {/* Client summary from intake */}
+      {(intake || client) && (
+        <div style={{ background: "#f9f9f7", border: "1px solid #e8e8e8", borderRadius: 8, padding: "12px 14px", marginBottom: "14px" }}>
+          <div style={{ fontSize: 9, color: "#bbb", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Program inputs</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {[
+              ["Goal", (client?.goal || intake?.primary_goal)?.replace(/_/g, " ")],
+              ["Days/week", intake?.training_days_per_week || client?.weekly_frequency],
+              ["Level", intake?.fitness_level],
+              ["Focus", intake?.focus_areas?.slice(0, 2).join(", ")],
+              ["Equipment", (client?.equipment || intake?.equipment_available)?.length + " items"],
+              ["Injuries", (client?.injury_flags?.length || intake?.injury_flags?.length) ? (client?.injury_flags || intake?.injury_flags).join(", ") : "none"],
+              ["Sex", client?.sex],
+            ].filter(([, v]) => v).map(([label, val]) => (
+              <div key={label} style={{ background: "#fff", borderRadius: 20, padding: "3px 10px", border: "1px solid #e0e0e0" }}>
+                <span style={{ fontSize: 9, color: "#bbb" }}>{label}: </span>
+                <span style={{ fontSize: 10, color: "#333", fontWeight: 600 }}>{val}</span>
+              </div>
+            ))}
+          </div>
+          {(intake?.goal_notes || client?.notes) && (
+            <div style={{ fontSize: 11, color: "#555", marginTop: 8, fontStyle: "italic", lineHeight: 1.5, ...F }}>
+              "{intake?.goal_notes || client?.notes}"
+            </div>
+          )}
         </div>
+      )}
 
-        <div style={{ display: "flex", gap: "8px", marginBottom: "10px" }}>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: "10px", color: "#777", marginBottom: "3px" }}>Training days/week</div>
-            <select value={prefs.daysPerWeek} onChange={e => setPrefs(p => ({ ...p, daysPerWeek: parseInt(e.target.value) }))}
-              style={{ width: "100%", padding: "7px 10px", border: "1px solid #e0e0e0", borderRadius: "5px", fontSize: "12px", boxSizing: "border-box" }}>
-              {[3,4,5,6].map(n => <option key={n} value={n}>{n} days</option>)}
-            </select>
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: "10px", color: "#777", marginBottom: "3px" }}>Program style</div>
-            <select value={prefs.style} onChange={e => setPrefs(p => ({ ...p, style: e.target.value }))}
-              style={{ width: "100%", padding: "7px 10px", border: "1px solid #e0e0e0", borderRadius: "5px", fontSize: "12px", boxSizing: "border-box" }}>
-              {["Push Pull Legs", "Upper Lower", "Full Body", "Bro Split"].map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: "10px", color: "#777", marginBottom: "3px" }}>Fitness level</div>
-            <select value={prefs.level} onChange={e => setPrefs(p => ({ ...p, level: e.target.value }))}
-              style={{ width: "100%", padding: "7px 10px", border: "1px solid #e0e0e0", borderRadius: "5px", fontSize: "12px", boxSizing: "border-box" }}>
-              {["beginner", "intermediate", "advanced"].map(l => <option key={l} value={l}>{l.charAt(0).toUpperCase() + l.slice(1)}</option>)}
-            </select>
-          </div>
-        </div>
-
-        {injuries?.length > 0 && (
-          <div style={{ background: "#fef3e4", border: "1px solid #f0c060", borderRadius: "6px", padding: "8px 10px", fontSize: "10px", color: "#7a5010", marginBottom: "10px" }}>
-            Injury flags active: <strong>{injuries.join(", ")}</strong>. Contraindicated exercises will be excluded automatically.
-          </div>
-        )}
-
-        <button onClick={generateProgram} disabled={loading} style={{
-          width: "100%", background: loading ? "#ccc" : "#1a1a1a", color: "#f7f6f3",
-          border: "none", borderRadius: "7px", padding: "12px", fontSize: "13px",
-          cursor: loading ? "wait" : "pointer", ...F, letterSpacing: "0.04em",
-        }}>
-          {loading ? "Generating program..." : "Generate Program"}
-        </button>
-
-        {loading && (
-          <div style={{ textAlign: "center", padding: "12px 0 4px", fontSize: "11px", color: "#bbb" }}>
-            Reading {client?.name}'s data and building their program. Takes about 15 seconds.
-          </div>
-        )}
-      </div>
+      {/* Generate button */}
+      {!program && (
+        <>
+          <button onClick={generateProgram} disabled={loading || !exercises.length}
+            style={{ width: "100%", background: loading ? "#888" : "#1a1a1a", color: "#f7f6f3", border: "none", borderRadius: 8, padding: "14px", fontSize: 14, cursor: loading ? "wait" : "pointer", ...F, letterSpacing: "0.04em", marginBottom: 10 }}>
+            {loading ? "Building program..." : "Generate Program with AI"}
+          </button>
+          {loading && (
+            <div style={{ textAlign: "center", padding: "8px 0", fontSize: 11, color: "#aaa", lineHeight: 1.6 }}>
+              Reading {client?.name?.split(" ")[0]}'s intake data and building a science-backed program.
+              <br />This takes about 15–20 seconds.
+            </div>
+          )}
+        </>
+      )}
 
       {error && (
-        <div style={{ background: "#fff0f0", border: "1px solid #f0b0b0", borderRadius: "7px", padding: "12px 14px", marginBottom: "14px", fontSize: "12px", color: "#a02020" }}>
+        <div style={{ background: "#fff0f0", border: "1px solid #f0b0b0", borderRadius: 7, padding: "12px 14px", marginBottom: 14, fontSize: 12, color: "#a02020" }}>
           {error}
         </div>
       )}
 
-      {saved && (
-        <div style={{ background: "#e8f5e9", border: "1px solid #a5d6a7", borderRadius: "7px", padding: "10px 14px", marginBottom: "10px", fontSize: "12px", color: "#2d7a1e" }}>
-          Program saved. Supabase integration will push this to the client's plan in the next update.
+      {/* Editable program */}
+      {editedProgram && (
+        <div>
+          {/* Program header */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+            <div>
+              <div style={{ fontSize: 17, ...F, marginBottom: 2 }}>{editedProgram.programName}</div>
+              <div style={{ fontSize: 10, color: "#aaa" }}>{editedProgram.phase} · {editedProgram.durationWeeks} weeks</div>
+            </div>
+            <button onClick={generateProgram} disabled={loading}
+              style={{ background: "none", border: "1px solid #e0e0e0", borderRadius: 20, padding: "5px 12px", fontSize: 10, cursor: "pointer", color: "#888", ...F }}>
+              Regenerate
+            </button>
+          </div>
+
+          {/* Coach notes */}
+          {editedProgram.coachNotes && (
+            <div style={{ background: "#f9f9f7", border: "1px solid #e8e8e8", borderRadius: 8, padding: "12px 14px", marginBottom: 14 }}>
+              <button onClick={() => setShowCoachNotes(p => !p)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", justifyContent: "space-between", width: "100%", alignItems: "center" }}>
+                <div style={{ fontSize: 9, color: "#bbb", textTransform: "uppercase", letterSpacing: "0.1em" }}>AI Programming Notes</div>
+                <span style={{ fontSize: 10, color: "#ccc" }}>{showCoachNotes ? "▲" : "▼"}</span>
+              </button>
+              {showCoachNotes && (
+                <div style={{ fontSize: 12, color: "#555", lineHeight: 1.65, ...F, fontStyle: "italic", marginTop: 8 }}>
+                  {editedProgram.coachNotes}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Day cards — all 7 days */}
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 9, color: "#bbb", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>
+              Weekly Schedule — tap any day to review and edit
+            </div>
+            {editedProgram.weeklySchedule.map((day, di) => (
+              <DayCard
+                key={di}
+                day={day}
+                exerciseList={exercises}
+                onChange={updated => updateDay(di, updated)}
+              />
+            ))}
+          </div>
+
+          {/* Save & assign */}
+          {saved ? (
+            <div style={{ background: "#e8f5e9", border: "1px solid #a5d6a7", borderRadius: 8, padding: "14px", textAlign: "center" }}>
+              <div style={{ fontSize: 14, ...F, color: "#2d7a1e", marginBottom: 4 }}>Program saved and assigned</div>
+              <div style={{ fontSize: 11, color: "#555" }}>
+                {client?.name}'s dashboard has been updated. They'll see this program the next time they open the app.
+              </div>
+            </div>
+          ) : (
+            <>
+              {saveError && (
+                <div style={{ background: "#fff0f0", border: "1px solid #f0b0b0", borderRadius: 7, padding: "10px 14px", marginBottom: 10, fontSize: 11, color: "#a02020" }}>
+                  {saveError}
+                </div>
+              )}
+              <button onClick={saveAndAssign} disabled={saving}
+                style={{ width: "100%", background: saving ? "#888" : "#1a1a1a", color: "#f7f6f3", border: "none", borderRadius: 8, padding: "14px", fontSize: 14, cursor: saving ? "wait" : "pointer", ...F }}>
+                {saving ? "Saving..." : `Save & Assign to ${client?.name?.split(" ")[0]}`}
+              </button>
+              <div style={{ fontSize: 10, color: "#bbb", textAlign: "center", marginTop: 6, lineHeight: 1.5 }}>
+                This will create the plan in your database and assign it to the client.
+                You can reassign or update it any time from the coach dashboard.
+              </div>
+            </>
+          )}
         </div>
       )}
-
-      {program && <ProgramDisplay program={program} onSave={handleSave} />}
     </div>
   );
 }

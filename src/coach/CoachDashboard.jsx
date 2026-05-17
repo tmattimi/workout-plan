@@ -788,9 +788,8 @@ function ClientDetail({ client, coachId, plans, onBack, onAssignPlan }) {
       {view === "program" && (
         <AIProgramBuilder
           client={client}
+          intake={intake}
           overview={overview}
-          equipment={client.equipment || ["barbell","dumbbell","cable","machine","bench","pull_up_bar","band"]}
-          injuries={client.injuries || []}
         />
       )}
 
