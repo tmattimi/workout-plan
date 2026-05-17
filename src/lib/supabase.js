@@ -104,6 +104,14 @@ export async function createClient_db(clientData) {
   return { data, error };
 }
 
+export async function deleteClient_db(clientId) {
+  const { error } = await supabase
+    .from('clients')
+    .delete()
+    .eq('id', clientId);
+  return { error };
+}
+
 export async function updateClient_db(clientId, updates) {
   const { data, error } = await supabase
     .from('clients')

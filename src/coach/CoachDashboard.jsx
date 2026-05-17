@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import {
   signInCoach, signOutCoach, getCoachSession, onAuthChange,
-  getMyClients, createClient_db, updateClient_db,
+  getMyClients, createClient_db, updateClient_db, deleteClient_db,
   getMyPlans, createPlan, updatePlan, createPlanDay,
   addExerciseToPlanDay, removePlanExercise, reorderPlanExercises,
   assignPlanToClient, getAllExercises, getClientOverview,
@@ -471,6 +471,8 @@ function ClientDetail({ client, coachId, plans, onBack, onAssignPlan }) {
   }
   const [editSaving, setEditSaving] = useState(false);
   const [editSaved, setEditSaved] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   async function handleSaveEdit() {
     setEditSaving(true);
@@ -479,8 +481,15 @@ function ClientDetail({ client, coachId, plans, onBack, onAssignPlan }) {
     setEditSaving(false);
     setEditSaved(true);
     setTimeout(() => setEditSaved(false), 2000);
-    // Update local client data
     Object.assign(client, editForm);
+  }
+
+  async function handleDeleteClient() {
+    if (!confirmDelete) { setConfirmDelete(true); return; }
+    setDeleting(true);
+    const { error } = await deleteClient_db(client.id);
+    setDeleting(false);
+    if (!error) onBack(); // go back to client list
   }
 
   async function handleSendInvite() {
@@ -566,8 +575,8 @@ function ClientDetail({ client, coachId, plans, onBack, onAssignPlan }) {
           {client.goal?.replace("_"," ")} · {client.sex}
         </div>
         <div style={{ display: "flex", gap: "6px", marginTop: "4px" }}>
-          <button onClick={handleSendInvite} disabled={inviting || !!inviteStatus} style={{ flex: 1, background: inviteStatus === "sent" ? "#2d7a1e" : "#333", color: "#fff", border: "none", borderRadius: "5px", padding: "8px 10px", fontSize: "11px", cursor: "pointer", ...F }}>
-            {inviting ? "Sending..." : inviteStatus === "sent" ? "✓ Invite Sent" : inviteStatus === "exists" ? "Already invited" : "📧 Send Invite"}
+          <button onClick={handleSendInvite} disabled={inviting} style={{ flex: 1, background: inviteStatus === "sent" ? "#2d7a1e" : "#333", color: "#fff", border: "none", borderRadius: "5px", padding: "8px 10px", fontSize: "11px", cursor: "pointer", ...F }}>
+            {inviting ? "Sending..." : inviteStatus === "sent" ? "✓ Invite Sent" : inviteStatus === "exists" ? "Resend Invite" : "Send Invite"}
           </button>
           <button onClick={() => navigator.clipboard.writeText(clientUrl)} style={{ background: "#222", color: "#aaa", border: "1px solid #333", borderRadius: "5px", padding: "8px 10px", fontSize: "10px", cursor: "pointer", ...F, whiteSpace: "nowrap" }}>
             Copy link
@@ -1079,9 +1088,34 @@ function ClientDetail({ client, coachId, plans, onBack, onAssignPlan }) {
             <textarea value={editForm.notes} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))}
               rows={3} style={{ width: "100%", padding: "9px 11px", borderRadius: "6px", border: "1px solid #e0e0e0", fontSize: "12px", resize: "none", ...F }} />
           </div>
-          <button onClick={handleSaveEdit} disabled={editSaving} style={{ width: "100%", background: editSaved ? "#2d7a1e" : "#111", color: "#fff", border: "none", borderRadius: "8px", padding: "13px", fontSize: "14px", cursor: "pointer", ...F }}>
+          <button onClick={handleSaveEdit} disabled={editSaving} style={{ width: "100%", background: editSaved ? "#2d7a1e" : "#111", color: "#fff", border: "none", borderRadius: "8px", padding: "13px", fontSize: "14px", cursor: "pointer", ...F, marginBottom: "10px" }}>
             {editSaving ? "Saving..." : editSaved ? "✓ Saved" : "Save Changes"}
           </button>
+
+          <div style={{ borderTop: "1px solid #f0f0f0", paddingTop: "12px", marginTop: "4px" }}>
+            {!confirmDelete ? (
+              <button onClick={handleDeleteClient}
+                style={{ width: "100%", background: "none", border: "1px solid #f0d0d0", borderRadius: "8px", padding: "11px", fontSize: "12px", cursor: "pointer", color: "#c0a0a0", ...F }}>
+                Delete Client
+              </button>
+            ) : (
+              <div style={{ background: "#fff0f0", border: "1px solid #f0b0b0", borderRadius: "8px", padding: "12px" }}>
+                <div style={{ fontSize: "12px", color: "#a02020", marginBottom: "10px", lineHeight: 1.5 }}>
+                  This will permanently delete {client.name} and all their data — logs, measurements, PRs, and messages. This cannot be undone.
+                </div>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <button onClick={() => setConfirmDelete(false)}
+                    style={{ flex: 1, background: "#f5f5f3", border: "1px solid #e0e0e0", borderRadius: "6px", padding: "9px", fontSize: "12px", cursor: "pointer", color: "#555" }}>
+                    Cancel
+                  </button>
+                  <button onClick={handleDeleteClient} disabled={deleting}
+                    style={{ flex: 1, background: "#a02020", border: "none", borderRadius: "6px", padding: "9px", fontSize: "12px", cursor: "pointer", color: "#fff", ...F }}>
+                    {deleting ? "Deleting..." : "Yes, delete"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
