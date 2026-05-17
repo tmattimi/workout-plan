@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import {
-  MUSCLE_GROUPS, BENCHMARK_LIFTS, BALANCE_BENCHMARKS,
-  epley1RM, calculateMuscleScores, evaluateBalance, getExerciseWeights
+  MUSCLE_GROUPS, BENCHMARK_LIFTS, RELATIVE_STRENGTH_STANDARDS,
+  epley1RM, calculateMuscleScores, evaluateStrengthRatios, evaluateRelativeStrength, getExerciseWeights
 } from '../lib/muscleWeights';
 
 const F = { fontFamily: "'Georgia','Times New Roman',serif" };
@@ -435,7 +435,8 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
   const [prs, setPRs] = useState([]);
   const [strengthTests, setStrengthTests] = useState([]);
   const [muscleScores, setMuscleScores] = useState({});
-  const [balanceResults, setBalanceResults] = useState([]);
+  const [strengthRatios, setStrengthRatios] = useState([]);
+  const [relativeStrength, setRelativeStrength] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const loadData = useCallback(async () => {
@@ -488,7 +489,8 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
       // Calculate muscle scores
       const scores = calculateMuscleScores(combinedLogs, bodyweight);
       setMuscleScores(scores);
-      setBalanceResults(evaluateBalance(scores));
+      setStrengthRatios(evaluateStrengthRatios(scores));
+      setRelativeStrength(evaluateRelativeStrength(tests, bodyweight));
 
       // Derive PRs from logs (source of truth — fixes the stale PR bug)
       // Group by exercise, find best e1RM
@@ -636,26 +638,67 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
             </button>
           </div>
 
-          {/* ── Strength Balance Ratios ── */}
-          {balanceResults.length > 0 && (
+          {/* ── Relative Strength ── */}
+          {relativeStrength.filter(r => r.ratio !== null).length > 0 && (
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.18em', color: '#999', marginBottom: 4 }}>Relative Strength</div>
+              <div style={{ fontSize: 11, color: '#aaa', marginBottom: 12, lineHeight: 1.6 }}>
+                Your 1RM benchmarks relative to bodyweight — the standard coaches use to gauge absolute strength level regardless of size.
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {relativeStrength.filter(r => r.ratio !== null).map(r => {
+                  const pct = Math.min(100, (r.ratio / 2.5) * 100);
+                  const levels = RELATIVE_STRENGTH_STANDARDS.find(s => s.id === r.id)?.levels || [];
+                  return (
+                    <div key={r.id} style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: 10, padding: '13px 14px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                        <span style={{ fontSize: 12, fontWeight: 500 }}>{r.lift}</span>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: r.levelColor, background: r.levelColor + '18', padding: '2px 10px', borderRadius: 20 }}>
+                          {r.level}
+                        </span>
+                      </div>
+                      {/* Bar */}
+                      <div style={{ position: 'relative', height: 8, background: '#f0f0f0', borderRadius: 4, marginBottom: 6, overflow: 'hidden' }}>
+                        <div style={{ position: 'absolute', left: 0, width: `${pct}%`, height: '100%', background: r.levelColor, borderRadius: 4, transition: 'width 0.6s ease' }} />
+                      </div>
+                      {/* Level labels */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                        {levels.map(l => (
+                          <span key={l.label} style={{ fontSize: 8, color: r.level === l.label ? l.color : '#ccc', fontWeight: r.level === l.label ? 700 : 400, letterSpacing: '.04em' }}>
+                            {l.label}
+                          </span>
+                        ))}
+                      </div>
+                      <div style={{ fontSize: 11, color: '#999' }}>
+                        {r.weight} lbs · {r.ratio.toFixed(2)}× bodyweight
+                        {r.nextLevel && <span style={{ color: '#aaa' }}> · next: {r.nextLevel.min}×</span>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* ── Strength Ratios ── */}
+          {strengthRatios.filter(r => r.ratio !== null).length > 0 && (
             <div style={{ marginBottom: 24 }}>
               <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.18em', color: '#999', marginBottom: 4 }}>Strength Balance</div>
               <div style={{ fontSize: 11, color: '#aaa', marginBottom: 12, lineHeight: 1.6 }}>
-                Healthy strength ratios between muscle groups — how push, pull, and legs balance each other. Based on your training history.
+                Evidence-based ratios used by strength coaches to identify muscle imbalances that affect injury risk and programming.
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {balanceResults.map(result => (
-                  <div key={result.id} style={{ background: '#fff', border: `1px solid ${result.status === 'ok' ? '#e8e8e8' : 'rgba(217,119,6,0.25)'}`, borderRadius: 10, padding: '13px 14px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                {strengthRatios.filter(r => r.ratio !== null).map(result => (
+                  <div key={result.id} style={{ background: '#fff', border: `1px solid ${result.status === 'balanced' ? '#e8e8e8' : 'rgba(217,119,6,0.25)'}`, borderRadius: 10, padding: '13px 14px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                       <span style={{ fontSize: 12, fontWeight: 500 }}>{result.label}</span>
-                      {result.ratio !== null && (
-                        <span style={{ fontSize: 12, fontWeight: 700, color: result.status === 'ok' ? '#16a34a' : '#b45309', background: result.status === 'ok' ? 'rgba(22,163,74,0.08)' : 'rgba(180,83,9,0.08)', padding: '2px 8px', borderRadius: 20 }}>
-                          {result.ratio.toFixed(2)}
-                        </span>
-                      )}
+                      <span style={{ fontSize: 12, fontWeight: 700, color: result.status === 'balanced' ? '#16a34a' : '#b45309', background: result.status === 'balanced' ? 'rgba(22,163,74,0.08)' : 'rgba(180,83,9,0.08)', padding: '2px 8px', borderRadius: 20 }}>
+                        {result.ratio.toFixed(2)}
+                      </span>
                     </div>
-                    <BalanceIndicator ratio={result.ratio} min={result.healthyMin} max={result.healthyMax}/>
-                    <div style={{ marginTop: 8, fontSize: 11, color: result.status === 'ok' ? '#16a34a' : '#92400e', lineHeight: 1.6 }}>
+                    <div style={{ fontSize: 10, color: '#bbb', marginBottom: 10, lineHeight: 1.5 }}>{result.context}</div>
+                    <BalanceIndicator ratio={result.ratio} min={result.healthyMin} max={result.healthyMax} />
+                    <div style={{ marginTop: 8, fontSize: 11, color: result.status === 'balanced' ? '#16a34a' : '#92400e', lineHeight: 1.6 }}>
                       {result.message}
                     </div>
                   </div>

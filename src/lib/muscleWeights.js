@@ -16,42 +16,109 @@ export const MUSCLE_GROUPS = {
   calves:      { label: 'Calves',       color: '#c2410c', light: '#ffedd5' },
 };
 
-// Dominance ratios — evidence-based healthy ranges
-// ratio = groupA_score / groupB_score
-export const BALANCE_BENCHMARKS = [
+// ── PUSH:PULL RATIO ─────────────────────────────────────────────────────────
+// Horizontal push (chest/triceps) vs horizontal pull (back/biceps).
+// The most clinically validated ratio in S&C for shoulder health.
+// Source: Kolber et al., NSCA, physical therapy literature.
+export const PUSH_PULL_BENCHMARK = {
+  id: 'push_pull',
+  label: 'Horizontal Push : Pull',
+  groupA: 'back',
+  groupB: 'chest',
+  healthyMin: 1.0,
+  healthyMax: 1.5,
+  context: 'How your pulling strength compares to pushing strength. A ratio below 1.0 means you push more than you pull — the most common cause of shoulder impingement and rotator cuff issues.',
+  lowWarning: 'Push dominant. This is the most common imbalance and a leading contributor to shoulder impingement and rotator cuff strain. Prioritize rows, face pulls, and pull-ups in your programming.',
+  highWarning: 'Slightly pull dominant — generally favorable for shoulder health. Ensure pressing volume stays adequate to maintain chest and tricep development.',
+  balanced: 'Healthy push/pull balance. Your horizontal pulling strength is appropriately greater than your pushing strength, which protects the shoulder joint.',
+};
+
+// ── POSTERIOR:ANTERIOR CHAIN RATIO ──────────────────────────────────────────
+// Hip hinge pattern (deadlift, RDL) vs squat pattern (squat, leg press).
+// Used by strength coaches to identify athletes who are quad-dominant —
+// the most common programming gap, especially in female athletes.
+// Source: NSCA, Contreras, McGill.
+export const POSTERIOR_ANTERIOR_BENCHMARK = {
+  id: 'post_ant',
+  label: 'Posterior : Anterior Chain',
+  groupA: 'hamstrings',
+  groupB: 'quads',
+  healthyMin: 0.60,
+  healthyMax: 1.10,
+  context: 'Compares your hip hinge strength (deadlifts, RDLs, hamstring curls) to your squat/pressing strength (squats, leg press). Most people are quad-dominant without realizing it.',
+  lowWarning: 'Anterior chain dominant. Your quad and pressing strength significantly outpaces your posterior chain. This increases lower back load and knee injury risk. Prioritize deadlifts, RDLs, and hip thrusts.',
+  highWarning: 'Posterior chain dominant — uncommon. Ensure you are getting adequate squat and leg press volume to balance lower body development.',
+  balanced: 'Good posterior/anterior chain balance. Your hip hinge strength is keeping pace with your squat pattern, which protects the lower back and knees.',
+};
+
+// ── RELATIVE STRENGTH BENCHMARKS ────────────────────────────────────────────
+// Lift-to-bodyweight ratios. The most universally used metric in strength
+// coaching for categorizing absolute strength levels.
+// Sources: Rippetoe, NSCA strength standards, Stronger by Science.
+// These are female-specific benchmarks.
+export const RELATIVE_STRENGTH_STANDARDS = [
   {
-    id: 'ham_quad',
-    label: 'Hamstring : Quad',
-    groupA: 'hamstrings',
-    groupB: 'quads',
-    healthyMin: 0.50,
-    healthyMax: 0.80,
-    lowWarning: 'Quad dominant — higher ACL and patellar tendon injury risk. Add RDLs and leg curls.',
-    highWarning: 'Hamstring dominant — consider adding more quad-focused work.',
-    balanced: 'Good posterior/anterior balance.',
+    id: 'squat_bw',
+    lift: 'Back Squat',
+    exerciseKey: 'back squat',
+    context: 'Squat relative to bodyweight',
+    levels: [
+      { label: 'Beginner',     min: 0,    max: 0.75, color: '#94a3b8' },
+      { label: 'Novice',       min: 0.75, max: 1.0,  color: '#60a5fa' },
+      { label: 'Intermediate', min: 1.0,  max: 1.25, color: '#34d399' },
+      { label: 'Advanced',     min: 1.25, max: 1.5,  color: '#f59e0b' },
+      { label: 'Elite',        min: 1.5,  max: 999,  color: '#f97316' },
+    ],
   },
   {
-    id: 'pull_push',
-    label: 'Pull : Push',
-    groupA: 'back',
-    groupB: 'chest',
-    healthyMin: 1.0,
-    healthyMax: 1.5,
-    lowWarning: 'Push dominant — common cause of shoulder impingement. Add more rows and pull-ups.',
-    highWarning: 'Slightly pull dominant — monitor for balanced pressing volume.',
-    balanced: 'Good push/pull balance.',
+    id: 'deadlift_bw',
+    lift: 'Deadlift',
+    exerciseKey: 'conventional deadlift',
+    context: 'Deadlift relative to bodyweight',
+    levels: [
+      { label: 'Beginner',     min: 0,    max: 0.9,  color: '#94a3b8' },
+      { label: 'Novice',       min: 0.9,  max: 1.1,  color: '#60a5fa' },
+      { label: 'Intermediate', min: 1.1,  max: 1.5,  color: '#34d399' },
+      { label: 'Advanced',     min: 1.5,  max: 1.75, color: '#f59e0b' },
+      { label: 'Elite',        min: 1.75, max: 999,  color: '#f97316' },
+    ],
   },
   {
-    id: 'glute_quad',
-    label: 'Glute : Quad',
-    groupA: 'glutes',
-    groupB: 'quads',
-    healthyMin: 0.60,
-    healthyMax: 1.20,
-    lowWarning: 'Quad dominant relative to glutes — add hip thrusts and Romanian deadlifts.',
-    highWarning: 'Glute dominant — generally positive but ensure adequate quad volume.',
-    balanced: 'Good glute activation relative to quad dominance.',
+    id: 'bench_bw',
+    lift: 'Bench Press',
+    exerciseKey: 'barbell bench press',
+    context: 'Bench press relative to bodyweight',
+    levels: [
+      { label: 'Beginner',     min: 0,    max: 0.5,  color: '#94a3b8' },
+      { label: 'Novice',       min: 0.5,  max: 0.65, color: '#60a5fa' },
+      { label: 'Intermediate', min: 0.65, max: 0.85, color: '#34d399' },
+      { label: 'Advanced',     min: 0.85, max: 1.0,  color: '#f59e0b' },
+      { label: 'Elite',        min: 1.0,  max: 999,  color: '#f97316' },
+    ],
   },
+  {
+    id: 'hip_thrust_bw',
+    lift: 'Hip Thrust',
+    exerciseKey: 'barbell hip thrust',
+    context: 'Hip thrust relative to bodyweight',
+    levels: [
+      { label: 'Beginner',     min: 0,    max: 0.75, color: '#94a3b8' },
+      { label: 'Novice',       min: 0.75, max: 1.0,  color: '#60a5fa' },
+      { label: 'Intermediate', min: 1.0,  max: 1.5,  color: '#34d399' },
+      { label: 'Advanced',     min: 1.5,  max: 2.0,  color: '#f59e0b' },
+      { label: 'Elite',        min: 2.0,  max: 999,  color: '#f97316' },
+    ],
+  },
+];
+
+// ── BILATERAL DEFICIT PAIRS ───────────────────────────────────────────────────
+// Unilateral exercises where we can flag >15% side-to-side asymmetry.
+// >15% is the clinical threshold used in return-to-sport assessment.
+export const BILATERAL_PAIRS = [
+  { left: 'single-leg press left', right: 'single-leg press right', label: 'Single Leg Press' },
+  { left: 'bulgarian split squat left', right: 'bulgarian split squat right', label: 'Split Squat' },
+  { left: 'single-leg hamstring curl left', right: 'single-leg hamstring curl right', label: 'Leg Curl' },
+  { left: 'single-arm dumbbell row left', right: 'single-arm dumbbell row right', label: 'DB Row' },
 ];
 
 // Exercise coefficients — primary muscle group contributions
@@ -253,9 +320,11 @@ export function calculateMuscleScores(logs, bodyweightLbs = 170) {
   return scores;
 }
 
-// Evaluate balance ratios
-export function evaluateBalance(muscleScores) {
-  return BALANCE_BENCHMARKS.map(bench => {
+// Evaluate push:pull and posterior:anterior ratios from muscle scores
+export function evaluateStrengthRatios(muscleScores) {
+  const results = [];
+
+  for (const bench of [PUSH_PULL_BENCHMARK, POSTERIOR_ANTERIOR_BENCHMARK]) {
     const a = muscleScores[bench.groupA]?.score || 0;
     const b = muscleScores[bench.groupB]?.score || 0;
     const ratio = b > 0 ? a / b : null;
@@ -265,7 +334,43 @@ export function evaluateBalance(muscleScores) {
       if (ratio < bench.healthyMin) { status = 'low'; message = bench.lowWarning; }
       else if (ratio > bench.healthyMax) { status = 'high'; message = bench.highWarning; }
     }
-    return { ...bench, ratio, status, message };
+    results.push({ ...bench, ratio, status, message });
+  }
+
+  return results;
+}
+
+// Evaluate relative strength for benchmark lifts
+// strengthTests: array of { exercise_key, weight_lbs } from personal_records
+// bodyweightLbs: client bodyweight
+export function evaluateRelativeStrength(strengthTests, bodyweightLbs) {
+  if (!bodyweightLbs || bodyweightLbs <= 0) return [];
+
+  // Build a map of latest test per exercise key
+  const testMap = {};
+  (strengthTests || []).forEach(t => {
+    if (!testMap[t.exercise_key] || t.achieved_at > testMap[t.exercise_key].achieved_at) {
+      testMap[t.exercise_key] = t;
+    }
+  });
+
+  return RELATIVE_STRENGTH_STANDARDS.map(std => {
+    const test = testMap[std.exerciseKey];
+    if (!test) return { ...std, ratio: null, level: null, levelColor: null };
+
+    const ratio = test.weight_lbs / bodyweightLbs;
+    const level = std.levels.find(l => ratio >= l.min && ratio < l.max)
+      || std.levels[std.levels.length - 1];
+
+    return {
+      ...std,
+      ratio,
+      weight: test.weight_lbs,
+      testedAt: test.achieved_at,
+      level: level.label,
+      levelColor: level.color,
+      nextLevel: std.levels.find(l => l.min > ratio) || null,
+    };
   });
 }
 
