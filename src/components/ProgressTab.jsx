@@ -562,126 +562,114 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
   return (
     <div style={{ padding: '14px 16px 60px' }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
-        <div>
-          <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.18em', color: '#999', marginBottom: 3 }}>Training Intelligence</div>
-          <div style={{ fontSize: 20, fontWeight: 'normal', ...F }}>Progress</div>
-        </div>
-        <button
-          onClick={() => setView('test')}
-          style={{ background: '#111', color: '#fff', border: 'none', borderRadius: 20, padding: '8px 14px', fontSize: 11, cursor: 'pointer', ...F, whiteSpace: 'nowrap' }}
-        >
-          Strength Test
-        </button>
+      <div style={{ marginBottom: 18 }}>
+        <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.18em', color: '#999', marginBottom: 3 }}>Progress</div>
+        <div style={{ fontSize: 20, fontWeight: 'normal', ...F }}>Strength Tracking</div>
       </div>
 
       {!hasData && (
         <div style={{ textAlign: 'center', padding: '40px 20px', color: '#aaa', fontSize: 13, lineHeight: 1.7 }}>
           <div style={{ fontSize: 11, letterSpacing: "0.15em", textTransform: "uppercase", color: "#bbb", marginBottom: 12 }}>No data yet</div>
-          Log your first session to see your strength breakdown and muscle analysis here.
+          Log your first session to see your strength breakdown here.
         </div>
       )}
 
       {hasData && (
         <>
-          {/* ── Benchmark 1RM Tests ── */}
-          <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.18em', color: '#999', marginBottom: 10 }}>1-Rep Max Benchmarks</div>
-            <div style={{ fontSize: 11, color: '#aaa', marginBottom: 10, lineHeight: 1.6 }}>
-              Your true 1RM for each benchmark lift. Retest every 8–12 weeks to track strength gains.
+          {/* ── Benchmark 1RM + Training Records combined ── */}
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.18em', color: '#999', marginBottom: 4 }}>Benchmark Lifts</div>
+            <div style={{ fontSize: 11, color: '#aaa', marginBottom: 12, lineHeight: 1.6 }}>
+              1RM is your tested max for 1 rep. Training best is the heaviest set logged in workouts.
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {BENCHMARK_LIFTS.map(lift => {
                 const test = latestTests[lift.exerciseKey];
                 const mg = MUSCLE_GROUPS[lift.primaryGroup];
+                // Find best training set for this lift from logged workouts
+                const trainingBest = prs.find(pr =>
+                  pr.name.toLowerCase().includes(lift.exerciseKey.replace(/_/g,' ')) ||
+                  lift.exerciseKey.replace(/_/g,' ').includes(pr.name.toLowerCase()) ||
+                  pr.name.toLowerCase() === lift.name.toLowerCase()
+                );
                 return (
-                  <div key={lift.id} style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: 9, padding: '11px 12px', borderTop: `3px solid ${mg?.color || '#ddd'}` }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: mg?.color || '#ddd', flexShrink: 0 }} />
-                      <span style={{ fontSize: 11, fontWeight: 500, color: '#1a1a1a' }}>{lift.name}</span>
+                  <div key={lift.id} style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: 10, overflow: 'hidden', borderLeft: `3px solid ${mg?.color || '#ddd'}` }}>
+                    <div style={{ padding: '12px 14px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
+                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: mg?.color || '#ddd', flexShrink: 0 }} />
+                        <span style={{ fontSize: 13, fontWeight: 600, color: '#111' }}>{lift.name}</span>
+                        <span style={{ fontSize: 10, color: '#bbb', marginLeft: 'auto' }}>{mg?.label}</span>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                        {/* 1RM column */}
+                        <div style={{ background: test ? '#111' : '#f9f9f7', borderRadius: 8, padding: '10px 12px' }}>
+                          <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.12em', color: test ? '#888' : '#bbb', marginBottom: 4 }}>1-Rep Max</div>
+                          {test ? (
+                            <>
+                              <div style={{ fontSize: 22, fontWeight: 700, color: '#fff', letterSpacing: '-0.5px' }}>{test.weight_lbs}</div>
+                              <div style={{ fontSize: 10, color: '#888', marginTop: 1 }}>lbs · {formatShort(test.achieved_at)}</div>
+                            </>
+                          ) : (
+                            <div style={{ fontSize: 11, color: '#bbb', marginTop: 4, lineHeight: 1.5 }}>Not tested yet</div>
+                          )}
+                        </div>
+                        {/* Training best column */}
+                        <div style={{ background: trainingBest ? mg?.color + '12' || '#f5f5f3' : '#f9f9f7', borderRadius: 8, padding: '10px 12px' }}>
+                          <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.12em', color: '#bbb', marginBottom: 4 }}>Training Best</div>
+                          {trainingBest ? (
+                            <>
+                              <div style={{ fontSize: 22, fontWeight: 700, color: mg?.color || '#111', letterSpacing: '-0.5px' }}>{trainingBest.weight}</div>
+                              <div style={{ fontSize: 10, color: '#999', marginTop: 1 }}>lbs × {trainingBest.reps} reps</div>
+                            </>
+                          ) : (
+                            <div style={{ fontSize: 11, color: '#bbb', marginTop: 4, lineHeight: 1.5 }}>No sets logged</div>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    {test ? (
-                      <>
-                        <div style={{ fontSize: 20, fontWeight: 700, color: mg?.color || '#111' }}>{test.weight_lbs} <span style={{ fontSize: 11, color: '#aaa', fontWeight: 400 }}>lbs</span></div>
-                        <div style={{ fontSize: 10, color: '#aaa', marginTop: 1 }}>{formatShort(test.achieved_at)}</div>
-                      </>
-                    ) : (
-                      <button onClick={() => setView('test')} style={{ fontSize: 11, color: '#2563a8', background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginTop: 4, ...F }}>
-                        Test now →
-                      </button>
-                    )}
                   </div>
                 );
               })}
             </div>
-            <button onClick={() => setView('test')} style={{ marginTop: 10, width: '100%', background: '#111', color: '#fff', border: 'none', borderRadius: 8, padding: '11px', fontSize: 12, cursor: 'pointer', ...F }}>
+            <button onClick={() => setView('test')} style={{ marginTop: 10, width: '100%', background: '#111', color: '#fff', border: 'none', borderRadius: 8, padding: '12px', fontSize: 12, cursor: 'pointer', ...F, letterSpacing: '.05em' }}>
               + Run a Strength Test
             </button>
           </div>
 
-          {/* ── Muscle strength scores ── */}
-          <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.18em', color: '#999', marginBottom: 10 }}>Strength by Muscle Group</div>
-            <div style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: 10, overflow: 'hidden' }}>
-              {Object.entries(MUSCLE_GROUPS).map(([group, mg], i) => {
-                const score = muscleScores[group];
-                if (!score || score.score === 0) return null;
-                return (
-                  <button
-                    key={group}
-                    onClick={() => { setSelectedGroup(group); setView('group'); }}
-                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px', background: 'transparent', border: 'none', borderBottom: '1px solid #f5f5f5', cursor: 'pointer', textAlign: 'left' }}
-                  >
-                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: mg.color, flexShrink: 0 }}/>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                        <span style={{ fontSize: 12, fontWeight: 500 }}>{mg.label}</span>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: mg.color }}>{Math.round(score.score)} lbs</span>
-                      </div>
-                      <ScoreBar value={score.score} max={maxScore} color={mg.color}/>
-                    </div>
-                    <span style={{ fontSize: 14, color: '#ddd', flexShrink: 0 }}>›</span>
-                  </button>
-                );
-              })}
-            </div>
-            <div style={{ fontSize: 10, color: '#aaa', marginTop: 6, lineHeight: 1.6 }}>
-              Scores are weighted averages of estimated 1RM across all contributing exercises, based on each exercise's muscle activation profile. Higher = stronger. Tap any group to drill down.
-            </div>
-          </div>
-
-          {/* ── Balance analysis ── */}
-          <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.18em', color: '#999', marginBottom: 10 }}>Strength Balance Analysis</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {balanceResults.map(result => (
-                <div key={result.id} style={{ background: '#fff', border: `1px solid ${result.status === 'ok' ? '#e8e8e8' : '#fcd34d'}`, borderRadius: 10, padding: '13px 14px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                    <span style={{ fontSize: 12, fontWeight: 500 }}>{result.label}</span>
-                    {result.ratio !== null && (
-                      <span style={{ fontSize: 11, fontWeight: 700, color: result.status === 'ok' ? '#16a34a' : '#d97706' }}>
-                        {result.ratio.toFixed(2)}
-                      </span>
-                    )}
-                  </div>
-                  <BalanceIndicator ratio={result.ratio} min={result.healthyMin} max={result.healthyMax}/>
-                  <div style={{ marginTop: 8, fontSize: 11, color: result.status === 'ok' ? '#16a34a' : '#92400e', lineHeight: 1.6 }}>
-                    {result.message}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* ── Top PRs from logged workouts ── */}
-          {topPRs.length > 0 && (
-            <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.18em', color: '#999', marginBottom: 4 }}>Training Records</div>
-              <div style={{ fontSize: 11, color: '#aaa', marginBottom: 10, lineHeight: 1.6 }}>
-                Best sets logged in your workouts. These are multi-rep maxes from training — different from your 1RM benchmarks above.
+          {/* ── Strength Balance Ratios ── */}
+          {balanceResults.length > 0 && (
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.18em', color: '#999', marginBottom: 4 }}>Strength Balance</div>
+              <div style={{ fontSize: 11, color: '#aaa', marginBottom: 12, lineHeight: 1.6 }}>
+                Healthy strength ratios between muscle groups — how push, pull, and legs balance each other. Based on your training history.
               </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {balanceResults.map(result => (
+                  <div key={result.id} style={{ background: '#fff', border: `1px solid ${result.status === 'ok' ? '#e8e8e8' : 'rgba(217,119,6,0.25)'}`, borderRadius: 10, padding: '13px 14px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                      <span style={{ fontSize: 12, fontWeight: 500 }}>{result.label}</span>
+                      {result.ratio !== null && (
+                        <span style={{ fontSize: 12, fontWeight: 700, color: result.status === 'ok' ? '#16a34a' : '#b45309', background: result.status === 'ok' ? 'rgba(22,163,74,0.08)' : 'rgba(180,83,9,0.08)', padding: '2px 8px', borderRadius: 20 }}>
+                          {result.ratio.toFixed(2)}
+                        </span>
+                      )}
+                    </div>
+                    <BalanceIndicator ratio={result.ratio} min={result.healthyMin} max={result.healthyMax}/>
+                    <div style={{ marginTop: 8, fontSize: 11, color: result.status === 'ok' ? '#16a34a' : '#92400e', lineHeight: 1.6 }}>
+                      {result.message}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── All training records beyond benchmarks ── */}
+          {topPRs.filter(pr => !BENCHMARK_LIFTS.some(l => l.name.toLowerCase() === pr.name.toLowerCase())).length > 0 && (
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.18em', color: '#999', marginBottom: 10 }}>Other Training Records</div>
               <div style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: 10, overflow: 'hidden' }}>
-                {topPRs.map((pr, i) => (
+                {topPRs.filter(pr => !BENCHMARK_LIFTS.some(l => l.name.toLowerCase() === pr.name.toLowerCase())).map((pr, i) => (
                   <div key={i} style={{ padding: '11px 14px', borderBottom: '1px solid #f5f5f5', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
                       <div style={{ fontSize: 12, fontWeight: 500, textTransform: 'capitalize' }}>{pr.name}</div>
