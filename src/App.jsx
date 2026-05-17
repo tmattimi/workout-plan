@@ -784,7 +784,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
   const tabs = [
     ["plan","Plan"], ["progress","Progress"], ["body","Body"],
     ["nutrition","Nutrition"], ["cycle","Cycle"],
-    ["tools","Tools"], ["guide","Guide"],
+    ["tools","Tools"],
   ];
 
   // Monthly prompt modal
@@ -1285,17 +1285,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
         />
       )}
 
-      {tab === "guide" && (
-        <ToolsTab
-          principles={principles}
-          clientEquipment={clientEquipment}
-          clientInjuries={clientInjuries}
-          onEquipmentChange={handleEquipmentChange}
-          onInjuryChange={handleInjuryChange}
-          defaultSection="guide"
-          clientId={clientData?.id}
-        />
-      )}
+
 
       {/* Rest Timer — fixed to bottom */}
       {restTimer && (

@@ -216,24 +216,87 @@ function GoalsSection({ clientId }) {
 }
 
 // ── Guide section ─────────────────────────────────────────────────────────────
-function GuideSection({ principles }) {
-  const [expandedPrinciple, setExpandedPrinciple] = useState(null);
+function GuideSection({ principles, openEntryId }) {
+  const [expandedPrinciple, setExpandedPrinciple] = useState(openEntryId || null);
+  const [search, setSearch] = useState("");
+
+  // Auto-expand if a specific entry was requested (deep link from form cue)
+  useState(() => {
+    if (openEntryId) setExpandedPrinciple(openEntryId);
+  }, [openEntryId]);
 
   if (!principles || principles.length === 0) {
-    return <div style={{ color: "#bbb", fontSize: "12px", textAlign: "center", padding: "20px" }}>Guide content loading...</div>;
+    return <div style={{ color: "#bbb", fontSize: "12px", textAlign: "center", padding: "20px" }}>Loading...</div>;
   }
+
+  const q = search.toLowerCase().trim();
+
+  // Flatten all entries for search
+  const allEntries = principles.flatMap((section, si) =>
+    section.entries.map((p, i) => ({ ...p, section: section.section, si, i, key: p.id || `${si}-${i}` }))
+  );
+
+  const filtered = q
+    ? allEntries.filter(p =>
+        p.title.toLowerCase().includes(q) ||
+        p.body.toLowerCase().includes(q) ||
+        (p.tags || []).some(t => t.toLowerCase().includes(q))
+      )
+    : null;
 
   return (
     <div>
-      {principles.map((section, si) => (
+      {/* Search */}
+      <input
+        value={search}
+        onChange={e => setSearch(e.target.value)}
+        placeholder="Search — e.g. core brace, eccentric, glutes..."
+        style={{ width: "100%", padding: "9px 12px", border: "1px solid #e0e0e0", borderRadius: "7px", fontSize: "12px", boxSizing: "border-box", marginBottom: "14px", ...F }}
+      />
+
+      {/* Search results */}
+      {filtered && (
+        <>
+          {filtered.length === 0 && (
+            <div style={{ textAlign: "center", padding: "16px", color: "#bbb", fontSize: "12px" }}>Nothing found for "{search}"</div>
+          )}
+          {filtered.map(p => (
+            <div key={p.key} style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "6px", marginBottom: "5px", overflow: "hidden" }}>
+              <button onClick={() => setExpandedPrinciple(expandedPrinciple === p.key ? null : p.key)}
+                style={{ width: "100%", background: "transparent", border: "none", padding: "10px 13px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", cursor: "pointer", textAlign: "left" }}>
+                <div>
+                  <div style={{ fontSize: "12px", fontWeight: "600", color: "#1a1a1a" }}>{p.title}</div>
+                  <div style={{ fontSize: "9px", color: "#bbb", marginTop: "1px", textTransform: "uppercase", letterSpacing: "0.08em" }}>{p.section}</div>
+                </div>
+                <span style={{ color: "#ccc", fontSize: "11px", flexShrink: 0, marginLeft: "8px", marginTop: "2px" }}>{expandedPrinciple === p.key ? "▲" : "▼"}</span>
+              </button>
+              {expandedPrinciple === p.key && (
+                <div style={{ padding: "0 13px 11px", fontSize: "11px", color: "#555", lineHeight: "1.75", borderTop: "1px solid #f5f5f3" }}>
+                  <div style={{ paddingTop: "9px" }}>{p.body}</div>
+                  {p.tags?.length > 0 && (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "10px" }}>
+                      {p.tags.map(t => (
+                        <span key={t} style={{ fontSize: "9px", background: "#f5f5f3", color: "#aaa", padding: "2px 7px", borderRadius: "20px" }}>{t}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </>
+      )}
+
+      {/* Browseable sections when not searching */}
+      {!filtered && principles.map((section, si) => (
         <div key={si} style={{ marginBottom: "18px" }}>
-          <div style={{ fontSize: "8px", fontWeight: "700", letterSpacing: "0.2em", textTransform: "uppercase", color: "#c47a0a", marginBottom: "7px", paddingBottom: "5px", borderBottom: "1px solid #ebebeb" }}>
+          <div style={{ fontSize: "8px", fontWeight: "700", letterSpacing: "0.2em", textTransform: "uppercase", color: "#888", marginBottom: "7px", paddingBottom: "5px", borderBottom: "1px solid #ebebeb" }}>
             {section.section}
           </div>
           {section.entries.map((p, i) => {
-            const key = `${si}-${i}`;
+            const key = p.id || `${si}-${i}`;
             return (
-              <div key={i} style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "6px", marginBottom: "5px", overflow: "hidden" }}>
+              <div key={key} style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "6px", marginBottom: "5px", overflow: "hidden" }}>
                 <button onClick={() => setExpandedPrinciple(expandedPrinciple === key ? null : key)}
                   style={{ width: "100%", background: "transparent", border: "none", padding: "10px 13px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", textAlign: "left" }}>
                   <span style={{ fontSize: "12px", fontWeight: "600", color: "#1a1a1a" }}>{p.title}</span>
@@ -242,6 +305,13 @@ function GuideSection({ principles }) {
                 {expandedPrinciple === key && (
                   <div style={{ padding: "0 13px 11px", fontSize: "11px", color: "#555", lineHeight: "1.75", borderTop: "1px solid #f5f5f3" }}>
                     <div style={{ paddingTop: "9px" }}>{p.body}</div>
+                    {p.tags?.length > 0 && (
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "10px" }}>
+                        {p.tags.map(t => (
+                          <span key={t} style={{ fontSize: "9px", background: "#f5f5f3", color: "#aaa", padding: "2px 7px", borderRadius: "20px" }}>{t}</span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

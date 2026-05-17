@@ -219,53 +219,192 @@ export const schedule = [
 
 export const principles = [
   {
-    section: "Training Principles",
+    section: "Technique",
     entries: [
-      { title: "Progressive Overload", body: "The only mechanism that drives strength and muscle growth over time. Add one rep or 2.5 to 5 lbs per exercise per session — whichever comes first. When you hit the top of the rep range across all sets with clean form, increase the load next session. Log every session. Without data there is no overload, and without overload there is no adaptation. NASM refers to this as the principle of progressive overload within the OPT model." },
-      { title: "Eccentric Phase", body: "The lowering portion of every rep — also called the negative — is where the majority of the hypertrophic stimulus occurs. Eccentric loading causes more muscle fiber recruitment and greater micro-damage, which drives the repair and growth response. Every exercise in this program prescribes a 2 to 3 second descent. Control the weight down. Do not drop it." },
-      { title: "Rest Periods", body: "2 to 3 minutes between compound sets. 90 seconds to 2 minutes between isolation sets. Longer rest periods allow the phosphocreatine energy system to partially replenish, which means better performance on the next set, which means more total volume over the session. Volume is the primary driver of hypertrophy. Time your rest — guessing always undershoots it." },
-      { title: "Compound vs. Isolation Exercises", body: "Compound movements recruit multiple muscle groups and joints simultaneously — presses, rows, squats, hinges. They go first in every session when the neuromuscular system is fresh and can handle the heaviest loads. Isolation exercises target a single muscle — curls, fly variations, lateral raises. They follow compounds to accumulate volume in specific areas. NASM classifies these as multi-joint and single-joint movements within the resistance training component of the OPT model." },
-      { title: "Training Frequency", body: "Every muscle group in this program is trained twice per week. This is supported by research as the optimal frequency for hypertrophy for most individuals — enough stimulus per week to drive adaptation, with enough recovery between sessions to allow it. The Push Pull Legs structure achieves this naturally: each muscle pattern appears once in the first three days and repeats in the second three." },
-    ]
+      {
+        id: "core_brace",
+        title: "Core Bracing",
+        body: "Before every compound set, breathe into the belly so the abdomen expands — not the chest. Then brace the abs hard in all directions, like you are about to take a hit. Hold that brace through the entire rep. This creates intra-abdominal pressure that stabilizes the spine and protects the discs. Releasing the brace mid-rep under heavy load is one of the most common causes of lower back injury.",
+        tags: ["core", "spine", "breathing", "compound", "safety"],
+      },
+      {
+        id: "scapular_retraction",
+        title: "Scapular Retraction and Depression",
+        body: "Pulling the shoulder blades together (retraction) and down toward the back pockets (depression) before a pressing or pulling movement stabilizes the shoulder joint and protects the rotator cuff. On bench press, rows, and pull-ups this position should be set before the first rep and held throughout the set. If the shoulder blades lose position mid-rep, the shoulder joint takes stress it was not designed to handle.",
+        tags: ["shoulder", "pressing", "pulling", "setup"],
+      },
+      {
+        id: "hip_hinge",
+        title: "Hip Hinge",
+        body: "A hip hinge means pushing the hips backward rather than bending the knees downward. The spine stays neutral — not rounding, not hyperextending. It is the foundation of deadlifts, Romanian deadlifts, and good mornings. A simple test: stand near a wall and push your hips back to touch it without letting your chest fall forward or your knees bend significantly. That is a hip hinge.",
+        tags: ["deadlift", "RDL", "lower body", "spine"],
+      },
+      {
+        id: "eccentric",
+        title: "Eccentric Phase",
+        body: "The lowering portion of any rep — the descent on a squat, the drop on a curl, the return on a lat pulldown. This is where most of the hypertrophic stimulus comes from. Eccentric loading creates more micro-damage in the muscle fiber, which triggers the repair and growth response. Every exercise in this program has a prescribed eccentric tempo of 2 to 3 seconds. Dropping the weight quickly instead of controlling it cuts that stimulus in half.",
+        tags: ["tempo", "form", "hypertrophy", "reps"],
+      },
+      {
+        id: "posterior_pelvic_tilt",
+        title: "Posterior Pelvic Tilt",
+        body: "Tilting the pelvis so the tailbone curls toward the floor and the lower back flattens slightly. At the top of a hip thrust or at the top of a hanging knee raise, achieving a posterior pelvic tilt ensures the glutes or abs — not the hip flexors or lower back — are completing the movement. Without it, the wrong muscles finish the rep.",
+        tags: ["glutes", "core", "hip thrust", "hanging knee raise", "pelvis"],
+      },
+      {
+        id: "neutral_spine",
+        title: "Neutral Spine",
+        body: "The natural position of the spine with its three gentle curves intact — a slight inward curve at the lower back (lumbar lordosis), a slight outward curve at the upper back (thoracic kyphosis), and a slight inward curve at the neck. Not flat. Not arched. Neutral. This is the safest position for the spine under load because it distributes force evenly across the vertebrae and discs.",
+        tags: ["spine", "lower back", "safety", "posture"],
+      },
+      {
+        id: "supination_pronation",
+        title: "Supination and Pronation",
+        body: "Supination means rotating the forearm so the palm faces upward. Pronation means rotating it so the palm faces downward. In curling movements, supinating at the top of the curl — so the pinky is higher than the thumb — maximizes bicep contraction. Neutral grip, where the thumb points up throughout, shifts more of the work to the brachialis, the muscle directly underneath the bicep.",
+        tags: ["bicep", "curl", "grip", "forearm"],
+      },
+      {
+        id: "foot_drive",
+        title: "Foot Drive and Heel Pressure",
+        body: "Pressing through the heels rather than the toes during lower body exercises — squats, leg press, hip thrusts — keeps the load on the glutes and hamstrings rather than shifting it to the quads and knees. If the heels lift or you can wiggle your toes freely under load, the foot drive is off. On hip thrusts specifically, heel pressure is what differentiates a glute-dominant rep from a quad-dominant one.",
+        tags: ["lower body", "squat", "hip thrust", "glutes", "knees"],
+      },
+      {
+        id: "elbow_tuck",
+        title: "Elbow Position on Press",
+        body: "During pressing movements, elbows should track at 45 to 60 degrees from the torso — not flared out to 90 degrees (which stresses the shoulder joint) and not tucked completely to the body (which shifts load entirely to the triceps). The 45 to 60 degree angle keeps the shoulder in a mechanically strong position and distributes the work appropriately between the chest, front delt, and tricep.",
+        tags: ["bench press", "pressing", "shoulder", "chest"],
+      },
+      {
+        id: "lat_engagement",
+        title: "Lat Engagement",
+        body: "Activating the lats before a pull creates a stable, powerful shoulder girdle. Think about pulling your shoulder blades into your back pockets, or trying to bend the bar you are hanging from. On pull-ups and lat pulldowns, the lats initiate the pull — not the arms. Starting the pull with the arms instead of the lats is the most common reason people fail to develop lat thickness despite years of pulling.",
+        tags: ["lats", "pull-up", "lat pulldown", "back", "pulling"],
+      },
+    ],
   },
   {
-    section: "Program Structure",
+    section: "Key Terms",
     entries: [
-      { title: "Why Push Pull Legs", body: "Push Pull Legs splits training by movement pattern rather than arbitrary muscle groupings. Push sessions — chest, shoulders, triceps — involve muscles that push or extend. Pull sessions — back, biceps, rear delts — involve muscles that pull or flex. Legs — quads, glutes, hamstrings, calves — get their own dedicated sessions. Running this twice per week gives every muscle group two quality sessions at sufficient volume without overlap or overuse." },
-      { title: "Exercise Order Within Sessions", body: "Heaviest compound movements go first — always. The central nervous system performs best at the start of a session before fatigue accumulates. Placing heavy bilateral compounds at the top of the session means more weight moved, better form, and greater strength development. Unilateral exercises follow bilateral. Isolation exercises come last. Core and abs finish every session — fatigued stabilizers during heavy compound movements increase injury risk." },
-      { title: "Core Progression — Stages 1, 2, and 3", body: "Core training follows a three-stage progression aligned with NASM's stabilization-strength-power model. Stage 1 is deep stabilization — exercises like Dead Bug and Plank that train the transverse abdominis and diaphragm to resist spinal movement. Stage 2 is anti-movement — Pallof Press and Side Plank train the core to resist rotation and lateral flexion, which is what it actually does during every compound lift. Stage 3 is loaded and dynamic — Hanging Knee Raise and Ab Wheel Rollout add external load and full range of motion. Each stage must be solid before progressing." },
-      { title: "Addressing Left-Right Imbalances", body: "Bilateral exercises — where both sides move together — can mask strength and size differences because the dominant side compensates for the weaker. Unilateral exercises remove that compensation. This program includes single-arm and single-leg variations throughout to identify and close those gaps. Always start with the weaker side. Match exactly with the stronger side. Never add load until both sides are equal for two consecutive sessions." },
-      { title: "Cardio — Placement and Zone", body: "Cardio is placed after resistance training — never before. Performing cardio first depletes glycogen and accumulates fatigue that directly reduces performance on compound movements. Post-lift cardio takes advantage of elevated heart rate and metabolic demand already present. Zone 3 training — 65 to 75 percent of maximum heart rate — targets aerobic capacity and fat oxidation without the recovery cost of higher-intensity work. Breathing is noticeably elevated at Zone 3 but sustainable for 20 minutes." },
-    ]
+      {
+        id: "progressive_overload",
+        title: "Progressive Overload",
+        body: "The principle that the body only adapts when it is asked to do more than it has done before. In practice: add one rep or 2.5 to 5 lbs to an exercise each session. When you can complete all prescribed sets at the top of the rep range with clean form, add weight next session. Without progressive overload, training is maintenance at best.",
+        tags: ["fundamentals", "strength", "adaptation"],
+      },
+      {
+        id: "hypertrophy",
+        title: "Hypertrophy",
+        body: "The increase in size of individual muscle fibers caused by resistance training and adequate protein. Hypertrophy is maximized by training in the 6 to 12 rep range with enough volume (total sets per muscle per week), appropriate rest between sets, and consistent progressive overload over time.",
+        tags: ["muscle growth", "fundamentals", "reps"],
+      },
+      {
+        id: "compound_vs_isolation",
+        title: "Compound vs. Isolation",
+        body: "Compound exercises involve multiple joints and muscle groups working together — bench press, squat, row, hip thrust. Isolation exercises target one muscle with one joint — curl, lateral raise, leg extension. Compound movements go first in every session because they require the most neuromuscular effort. Isolation exercises follow to add volume to specific muscles without taxing the whole system.",
+        tags: ["exercise selection", "order", "fundamentals"],
+      },
+      {
+        id: "bilateral_unilateral",
+        title: "Bilateral and Unilateral",
+        body: "Bilateral exercises use both limbs at once — barbell press, leg press, lat pulldown. Unilateral exercises use one limb at a time — single-arm row, Bulgarian split squat, single-leg curl. Bilateral movements allow heavier loads. Unilateral movements expose left-right imbalances that bilateral exercises hide because the stronger side compensates for the weaker.",
+        tags: ["imbalance", "exercise selection", "strength"],
+      },
+      {
+        id: "1rm",
+        title: "1RM (One-Rep Max)",
+        body: "The maximum weight you can lift for exactly one full rep with proper form. Training loads are often set as a percentage of 1RM. Strength work happens at 85 to 97 percent of 1RM. Muscle-building work at 67 to 85 percent. Endurance-focused work at 50 to 65 percent. You do not need to test your 1RM directly — the app estimates it from your working sets.",
+        tags: ["strength", "loading", "percentages"],
+      },
+      {
+        id: "rpe",
+        title: "RPE (Rate of Perceived Exertion)",
+        body: "A 1 to 10 scale for how hard a set feels relative to your maximum. RPE 7 means you have 3 reps left before failure. RPE 8 means 2 reps left. RPE 9 means 1 rep left. RPE 10 is absolute failure. Most working sets in this program target RPE 7 to 9 — genuinely challenging, but never grinding to failure on every set.",
+        tags: ["effort", "intensity", "sets"],
+      },
+      {
+        id: "doms",
+        title: "DOMS (Delayed Onset Muscle Soreness)",
+        body: "The soreness that appears 24 to 72 hours after training. It is caused by micro-damage in the muscle fiber from eccentric loading — the same damage that triggers the repair and growth response. DOMS is normal, especially after a new exercise or rep range. It is not an indicator of injury. Training through mild DOMS is appropriate. Sharp, joint-level pain is not DOMS.",
+        tags: ["soreness", "recovery", "safety"],
+      },
+      {
+        id: "drop_set",
+        title: "Drop Set",
+        body: "Immediately after completing a working set, reduce the weight by 10 to 20 percent and continue for additional reps with no rest. Drop sets extend the time a muscle is under tension past the point of fatigue at the working weight. They are used sparingly — typically on the last set of an isolation exercise — because the recovery cost is higher than standard sets.",
+        tags: ["advanced", "technique", "sets", "fatigue"],
+      },
+      {
+        id: "superset",
+        title: "Superset",
+        body: "Two exercises performed back to back with no rest between them, followed by a rest period. When paired exercises target opposing muscle groups — like biceps and triceps, or chest and back — one muscle rests while the other works. This keeps the session efficient without sacrificing performance. Supersets in this program are paired deliberately based on muscle recovery patterns.",
+        tags: ["efficiency", "sets", "program design"],
+      },
+      {
+        id: "warmup_set",
+        title: "Warm-Up Set",
+        body: "A set performed before working sets using a lighter load — typically 40 to 60 percent of the working weight. The purpose is to rehearse the movement pattern, increase blood flow to the muscle, and prime the neuromuscular connection before the heavier loads. Warm-up sets are not counted toward your working volume. They are especially important on heavy compound lifts at the start of a session.",
+        tags: ["sets", "preparation", "injury prevention"],
+      },
+      {
+        id: "zone3",
+        title: "Zone 3 Cardio",
+        body: "65 to 75 percent of maximum heart rate. At this intensity, breathing is elevated and sustained conversation is difficult but short sentences are possible. Zone 3 targets aerobic capacity and fat oxidation. It is harder than a casual walk and easier than high-intensity intervals. The 20-minute post-lift cardio in this program targets Zone 3 specifically because it builds aerobic capacity without the recovery cost of harder efforts.",
+        tags: ["cardio", "heart rate", "aerobic"],
+      },
+      {
+        id: "rest_periods",
+        title: "Rest Periods",
+        body: "The time between sets matters. 2 to 3 minutes between compound sets allows the phosphocreatine energy system to partially replenish, which means better performance on the next set and more total volume across the session. 90 seconds to 2 minutes between isolation sets is sufficient. Guessing rest almost always results in shorter rests than intended — use a timer.",
+        tags: ["sets", "recovery", "performance"],
+      },
+    ],
   },
   {
-    section: "Recovery",
+    section: "Muscle Groups",
     entries: [
-      { title: "Core Bracing", body: "Before every compound set: breathe into the belly so the abdomen expands, not the chest. Then brace the abs like you are about to take a hit — hard in all directions. Hold that brace for the entire rep. This creates intra-abdominal pressure, which stabilizes the spine, protects the intervertebral discs, and allows more force to transfer to the working muscle. Releasing the brace mid-rep on heavy loads is where injuries happen." },
-      { title: "Sleep and Recovery", body: "Muscle repair and growth hormone release occur primarily during deep sleep. 7 to 9 hours per night is the evidence-based target for active individuals. Sleep deprivation reduces testosterone, increases cortisol, impairs neuromuscular performance, and slows fat loss — all working against what training is trying to accomplish. Recovery is not separate from training. It is half of it." },
-      { title: "Active Recovery", body: "On rest days, light movement — walking, mobility work, foam rolling — promotes blood flow and nutrient delivery to recovering muscles without adding training stress. This is why Sunday includes a structured light session rather than complete rest. Complete inactivity on rest days can actually slow recovery relative to light movement." },
-      { title: "Delayed Onset Muscle Soreness (DOMS)", body: "DOMS is the soreness felt 24 to 72 hours after training — caused by the micro-damage of eccentric loading that triggers the repair and growth response. It is normal, expected, and does not indicate injury. DOMS is most pronounced when a new exercise, rep range, or load is introduced. It diminishes as the body adapts. Training through mild DOMS is appropriate. Sharp or joint-level pain is not DOMS — it is a signal to stop and assess." },
-    ]
-  },
-  {
-    section: "Nutrition Basics",
-    entries: [
-      { title: "Protein and Muscle Protein Synthesis", body: "Muscle protein synthesis — the process of building new muscle tissue — requires dietary protein as the substrate. 1.6 to 2.2 grams of protein per kilogram of bodyweight per day is the evidence-based range for maximizing muscle growth in resistance-trained individuals. Spreading intake across 4 or more meals throughout the day optimizes synthesis rates better than consuming the same total in one or two large meals." },
-      { title: "Caloric Targets and Body Composition", body: "Body recomposition — gaining muscle while losing fat simultaneously — requires a relatively small caloric deficit, adequate protein, and consistent resistance training. Aggressive caloric deficits accelerate fat loss but also accelerate muscle loss. Moderate deficits of 300 to 500 calories below maintenance, combined with high protein and progressive training, support muscle retention while losing fat. Training days and rest days can be cycled at different caloric levels to manage this." },
-      { title: "Hydration", body: "Even mild dehydration — 2 percent of bodyweight — measurably reduces strength, power output, and cognitive performance. For a 170-pound individual, that is roughly 3.4 pounds or about 1.5 liters of water loss before performance is noticeably impaired. Training, sweating, and Zone 3 cardio all accelerate fluid loss. Water before, during, and after sessions is not optional." },
-    ]
-  },
-  {
-    section: "Glossary",
-    entries: [
-      { title: "1RM (One-Rep Max)", body: "The maximum weight you can lift for exactly one full repetition with proper form. Used as a baseline to set training loads. In this app, working weights are calculated as percentages of your estimated 1RM to give you target ranges for each goal — strength, muscle growth, or endurance." },
-      { title: "Hypertrophy", body: "Skeletal muscle growth — the increase in size of individual muscle fibers in response to progressive resistance training and adequate nutrition. Hypertrophy is maximized in the 6 to 12 rep range at 67 to 85 percent of 1RM, with sufficient volume (sets) and appropriate rest." },
-      { title: "Periodization", body: "The systematic variation of training variables — volume, intensity, frequency, exercise selection — over time to prevent plateaus, manage fatigue, and drive continued adaptation. NASM's OPT model is a periodization framework: it progresses from stabilization to strength to power phases across a training cycle." },
-      { title: "RPE (Rate of Perceived Exertion)", body: "A subjective scale from 1 to 10 used to measure how hard a set feels. RPE 7 means 3 reps left in the tank. RPE 8 means 2 reps left. RPE 9 means 1 rep left. RPE 10 is absolute failure. Most working sets in this program target RPE 7 to 9 — challenging but not to failure." },
-      { title: "FITT Principle", body: "A framework from NASM for designing training programs: Frequency (how often), Intensity (how hard), Time (how long), and Type (what kind of training). Every program decision — how many days per week, what heart rate zone for cardio, session duration, and training split — can be traced back to these four variables." },
-      { title: "Supination and Pronation", body: "Supination is the rotation of the forearm so the palm faces upward. Pronation is the rotation so the palm faces downward. Relevant in curling movements: supinating during a curl maximizes bicep peak contraction. Neutral grip — thumb pointing up — targets the brachialis, the muscle underneath the bicep." },
-      { title: "Bilateral vs. Unilateral", body: "Bilateral exercises involve both limbs simultaneously — barbell squat, dumbbell bench press, leg press. Unilateral exercises involve one limb at a time — single-arm row, Bulgarian split squat, single-leg curl. Bilateral exercises allow heavier loading. Unilateral exercises reveal and correct left-right strength asymmetries that bilateral exercises can mask." },
-      { title: "Zone 3 Cardio", body: "Zone 3 is 65 to 75 percent of maximum heart rate. At this intensity, breathing is elevated — full comfortable conversation is not possible, but short sentences are. Zone 3 targets aerobic capacity and fat oxidation. It is harder than easy walking but easier than high-intensity intervals. 20 minutes post-lift at Zone 3 is the cardio target in this program." },
-    ]
+      {
+        id: "lats",
+        title: "Lats (Latissimus Dorsi)",
+        body: "The large fan-shaped muscle that runs from the upper arm down to the lower back. It is responsible for pulling the arm toward the body — the primary mover in pull-ups, lat pulldowns, and rows. Well-developed lats create the V-taper silhouette. The lats are also critical stabilizers during pressing and squatting movements.",
+        tags: ["back", "pulling", "anatomy"],
+      },
+      {
+        id: "glutes",
+        title: "Glutes (Gluteus Maximus, Medius, Minimus)",
+        body: "The largest and most powerful muscle group in the body. The gluteus maximus drives hip extension — the finishing movement in squats, hip thrusts, and deadlifts. The gluteus medius stabilizes the pelvis laterally, which is why weak glutes cause knee collapse on squats and lunges. Hip thrusts, Bulgarian split squats, and RDLs are the primary glute builders in this program.",
+        tags: ["lower body", "anatomy", "hip extension"],
+      },
+      {
+        id: "hamstrings",
+        title: "Hamstrings",
+        body: "Three muscles running along the back of the thigh responsible for knee flexion and hip extension. They are trained with a stretch bias in RDLs — meaning the peak stimulus occurs when the muscle is lengthened under load. This stretch-based loading produces superior hypertrophy compared to exercises where the hamstrings work only in a shortened position.",
+        tags: ["lower body", "anatomy", "knee", "hip"],
+      },
+      {
+        id: "quads",
+        title: "Quads (Quadriceps)",
+        body: "Four muscles on the front of the thigh that extend the knee. The primary movers in squats, leg press, and Bulgarian split squats. The vastus medialis — the teardrop-shaped muscle above the inner knee — is often the weak link and the one most targeted by full-range squatting movements.",
+        tags: ["lower body", "anatomy", "knee extension"],
+      },
+      {
+        id: "rear_delt",
+        title: "Rear Delts (Posterior Deltoid)",
+        body: "The back portion of the shoulder muscle. Often underdeveloped because most pressing and isolation shoulder work targets the front and side delts. Weak rear delts contribute to forward shoulder posture and increase injury risk in overhead pressing. Face pulls and rear delt flies are programmed specifically to address this imbalance.",
+        tags: ["shoulder", "anatomy", "posture", "balance"],
+      },
+      {
+        id: "deep_core",
+        title: "Deep Core (TVA and Diaphragm)",
+        body: "The transverse abdominis (TVA) is the deepest layer of abdominal muscle, wrapping around the spine like a corset. It works with the diaphragm to create intra-abdominal pressure during bracing. Most people's visible abs are the rectus abdominis — the superficial 'six-pack' muscle — but the deep core is what actually protects the spine under load. Dead Bugs and Planks train the TVA specifically.",
+        tags: ["core", "anatomy", "spine", "stability"],
+      },
+      {
+        id: "brachialis",
+        title: "Brachialis",
+        body: "A muscle that runs underneath the bicep and is the primary elbow flexor. Unlike the bicep, it is active regardless of forearm rotation, which means it responds best to neutral grip (hammer) curls where the thumb points up throughout. Developing the brachialis pushes the bicep upward and creates more arm thickness overall.",
+        tags: ["arms", "anatomy", "curl", "bicep"],
+      },
+    ],
   },
 ];
