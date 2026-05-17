@@ -111,6 +111,47 @@ export const RELATIVE_STRENGTH_STANDARDS = [
   },
 ];
 
+// ── SQUAT:DEADLIFT RATIO ─────────────────────────────────────────────────────
+// Derived from 1RM benchmark tests. A squat higher than a deadlift almost
+// always indicates either a deadlift technique issue or an undertrained
+// posterior chain — both are programming signals.
+// Healthy range: squat is 80–95% of deadlift (ratio 0.80–0.95).
+// Source: Rippetoe, practical programming literature.
+export const SQUAT_DEADLIFT_BENCHMARK = {
+  id: 'squat_deadlift',
+  label: 'Squat : Deadlift',
+  source: '1rm',
+  keyA: 'back squat',
+  keyB: 'conventional deadlift',
+  healthyMin: 0.75,
+  healthyMax: 0.95,
+  context: 'Your squat 1RM relative to your deadlift 1RM. Most people deadlift more than they squat — a ratio above 1.0 often signals a deadlift technique gap or undertrained posterior chain.',
+  lowWarning: 'Your squat is notably weaker than your deadlift. This can indicate quad or upper back weakness limiting the squat pattern. Consider adding more front squats or paused squats to address the gap.',
+  highWarning: 'Your squat equals or exceeds your deadlift, which is uncommon. This usually points to a deadlift technique issue — specifically failing to load the hamstrings at the start — or an undertrained posterior chain. Review your deadlift setup and consider adding RDLs.',
+  balanced: 'Healthy squat-to-deadlift ratio. Your squat is appropriately below your deadlift, which reflects good posterior chain contribution to the pull.',
+};
+
+// ── HIP THRUST:SQUAT RATIO ───────────────────────────────────────────────────
+// Derived from 1RM benchmark tests. Research by Bret Contreras shows most
+// women are quad-dominant and underactivate glutes even with regular training.
+// A hip thrust significantly below the squat indicates glutes are undertrained
+// relative to quads — a direct programming signal.
+// Healthy range: hip thrust is 1.3–1.6× squat weight.
+// Source: Contreras et al., Journal of Strength and Conditioning Research.
+export const HIP_THRUST_SQUAT_BENCHMARK = {
+  id: 'hip_thrust_squat',
+  label: 'Hip Thrust : Squat',
+  source: '1rm',
+  keyA: 'barbell hip thrust',
+  keyB: 'back squat',
+  healthyMin: 1.3,
+  healthyMax: 1.8,
+  context: 'Your hip thrust 1RM relative to your squat 1RM. Research shows most women should hip thrust 30–60% more than they squat. A ratio below 1.3 suggests glutes are undertrained relative to quads.',
+  lowWarning: 'Your hip thrust is lower than expected relative to your squat. This is a strong indicator of glute underactivation and quad dominance — one of the most common gaps in female training. Prioritize hip thrust volume and loading progression.',
+  highWarning: 'Your hip thrust significantly exceeds your squat. This is generally positive and indicates strong glute development. Ensure squat volume is adequate to maintain balanced lower body strength.',
+  balanced: 'Good hip thrust to squat ratio. Your glutes are well-developed relative to your quad strength, which is ideal for injury prevention and lower body balance.',
+};
+
 // ── BILATERAL DEFICIT PAIRS ───────────────────────────────────────────────────
 // Unilateral exercises where we can flag >15% side-to-side asymmetry.
 // >15% is the clinical threshold used in return-to-sport assessment.
@@ -320,10 +361,21 @@ export function calculateMuscleScores(logs, bodyweightLbs = 170) {
   return scores;
 }
 
-// Evaluate push:pull and posterior:anterior ratios from muscle scores
-export function evaluateStrengthRatios(muscleScores) {
+// Evaluate all strength ratios — log-based and 1RM-based
+// muscleScores: from calculateMuscleScores
+// strengthTests: array of { exercise_key, weight_lbs, achieved_at } from personal_records
+export function evaluateStrengthRatios(muscleScores, strengthTests = []) {
   const results = [];
 
+  // Build latest 1RM test map
+  const testMap = {};
+  strengthTests.forEach(t => {
+    if (!testMap[t.exercise_key] || t.achieved_at > testMap[t.exercise_key].achieved_at) {
+      testMap[t.exercise_key] = t;
+    }
+  });
+
+  // ── Log-based ratios (push:pull, posterior:anterior) ──
   for (const bench of [PUSH_PULL_BENCHMARK, POSTERIOR_ANTERIOR_BENCHMARK]) {
     const a = muscleScores[bench.groupA]?.score || 0;
     const b = muscleScores[bench.groupB]?.score || 0;
@@ -335,6 +387,23 @@ export function evaluateStrengthRatios(muscleScores) {
       else if (ratio > bench.healthyMax) { status = 'high'; message = bench.highWarning; }
     }
     results.push({ ...bench, ratio, status, message });
+  }
+
+  // ── 1RM-based ratios (squat:deadlift, hip thrust:squat) ──
+  for (const bench of [SQUAT_DEADLIFT_BENCHMARK, HIP_THRUST_SQUAT_BENCHMARK]) {
+    const testA = testMap[bench.keyA];
+    const testB = testMap[bench.keyB];
+    const ratio = testA && testB && testB.weight_lbs > 0
+      ? testA.weight_lbs / testB.weight_lbs
+      : null;
+    let status = 'balanced';
+    let message = bench.balanced;
+    if (ratio !== null) {
+      if (ratio < bench.healthyMin) { status = 'low'; message = bench.lowWarning; }
+      else if (ratio > bench.healthyMax) { status = 'high'; message = bench.highWarning; }
+    }
+    const missingTest = !testA ? bench.keyA.replace(/_/g, ' ') : !testB ? bench.keyB.replace(/_/g, ' ') : null;
+    results.push({ ...bench, ratio, status, message, missingTest });
   }
 
   return results;

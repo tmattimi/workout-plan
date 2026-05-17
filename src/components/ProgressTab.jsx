@@ -489,7 +489,7 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
       // Calculate muscle scores
       const scores = calculateMuscleScores(combinedLogs, bodyweight);
       setMuscleScores(scores);
-      setStrengthRatios(evaluateStrengthRatios(scores));
+      setStrengthRatios(evaluateStrengthRatios(scores, tests));
       setRelativeStrength(evaluateRelativeStrength(tests, bodyweight));
 
       // Derive PRs from logs (source of truth — fixes the stale PR bug)
@@ -697,7 +697,9 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
                           {result.ratio.toFixed(2)}
                         </span>
                       ) : (
-                        <span style={{ fontSize: 10, color: '#bbb' }}>Needs more data</span>
+                        <span style={{ fontSize: 10, color: '#bbb' }}>
+                          {result.missingTest ? `Test ${result.missingTest} first` : 'Log more workouts'}
+                        </span>
                       )}
                     </div>
                     <div style={{ fontSize: 10, color: '#bbb', marginBottom: result.ratio !== null ? 10 : 0, lineHeight: 1.5 }}>{result.context}</div>
