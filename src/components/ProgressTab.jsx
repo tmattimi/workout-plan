@@ -681,52 +681,41 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
           )}
 
           {/* ── Strength Ratios ── */}
-          {strengthRatios.filter(r => r.ratio !== null).length > 0 && (
+          {strengthRatios.length > 0 && (
             <div style={{ marginBottom: 24 }}>
               <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.18em', color: '#999', marginBottom: 4 }}>Strength Balance</div>
               <div style={{ fontSize: 11, color: '#aaa', marginBottom: 12, lineHeight: 1.6 }}>
                 Evidence-based ratios used by strength coaches to identify muscle imbalances that affect injury risk and programming.
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {strengthRatios.filter(r => r.ratio !== null).map(result => (
-                  <div key={result.id} style={{ background: '#fff', border: `1px solid ${result.status === 'balanced' ? '#e8e8e8' : 'rgba(217,119,6,0.25)'}`, borderRadius: 10, padding: '13px 14px' }}>
+                {strengthRatios.map(result => (
+                  <div key={result.id} style={{ background: '#fff', border: `1px solid ${result.ratio === null ? '#e8e8e8' : result.status === 'balanced' ? '#e8e8e8' : 'rgba(217,119,6,0.25)'}`, borderRadius: 10, padding: '13px 14px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                       <span style={{ fontSize: 12, fontWeight: 500 }}>{result.label}</span>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: result.status === 'balanced' ? '#16a34a' : '#b45309', background: result.status === 'balanced' ? 'rgba(22,163,74,0.08)' : 'rgba(180,83,9,0.08)', padding: '2px 8px', borderRadius: 20 }}>
-                        {result.ratio.toFixed(2)}
-                      </span>
+                      {result.ratio !== null ? (
+                        <span style={{ fontSize: 12, fontWeight: 700, color: result.status === 'balanced' ? '#16a34a' : '#b45309', background: result.status === 'balanced' ? 'rgba(22,163,74,0.08)' : 'rgba(180,83,9,0.08)', padding: '2px 8px', borderRadius: 20 }}>
+                          {result.ratio.toFixed(2)}
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: 10, color: '#bbb' }}>Needs more data</span>
+                      )}
                     </div>
-                    <div style={{ fontSize: 10, color: '#bbb', marginBottom: 10, lineHeight: 1.5 }}>{result.context}</div>
-                    <BalanceIndicator ratio={result.ratio} min={result.healthyMin} max={result.healthyMax} />
-                    <div style={{ marginTop: 8, fontSize: 11, color: result.status === 'balanced' ? '#16a34a' : '#92400e', lineHeight: 1.6 }}>
-                      {result.message}
-                    </div>
+                    <div style={{ fontSize: 10, color: '#bbb', marginBottom: result.ratio !== null ? 10 : 0, lineHeight: 1.5 }}>{result.context}</div>
+                    {result.ratio !== null && (
+                      <>
+                        <BalanceIndicator ratio={result.ratio} min={result.healthyMin} max={result.healthyMax} />
+                        <div style={{ marginTop: 8, fontSize: 11, color: result.status === 'balanced' ? '#16a34a' : '#92400e', lineHeight: 1.6 }}>
+                          {result.message}
+                        </div>
+                      </>
+                    )}
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          {/* ── All training records beyond benchmarks ── */}
-          {topPRs.filter(pr => !BENCHMARK_LIFTS.some(l => l.name.toLowerCase() === pr.name.toLowerCase())).length > 0 && (
-            <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.18em', color: '#999', marginBottom: 10 }}>Other Training Records</div>
-              <div style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: 10, overflow: 'hidden' }}>
-                {topPRs.filter(pr => !BENCHMARK_LIFTS.some(l => l.name.toLowerCase() === pr.name.toLowerCase())).map((pr, i) => (
-                  <div key={i} style={{ padding: '11px 14px', borderBottom: '1px solid #f5f5f5', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <div style={{ fontSize: 12, fontWeight: 500, textTransform: 'capitalize' }}>{pr.name}</div>
-                      <div style={{ fontSize: 10, color: '#aaa', marginTop: 1 }}>{formatShort(pr.date)}</div>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 14, fontWeight: 700 }}>{pr.weight} lbs</div>
-                      <div style={{ fontSize: 10, color: '#aaa' }}>× {pr.reps} reps</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+
         </>
       )}
     </div>
