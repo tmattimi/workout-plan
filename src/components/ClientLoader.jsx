@@ -62,7 +62,7 @@ export default function ClientLoader({ children }) {
         .eq("is_active", true)
         .single();
 
-      // If not found by auth_user_id, try matching by email
+      // If not found by auth_user_id, try matching by email and auto-link
       if (error || !client) {
         const { data: { user } } = await supabase.auth.getUser();
         if (user?.email) {
@@ -80,6 +80,27 @@ export default function ClientLoader({ children }) {
               .update({ auth_user_id: authUserId })
               .eq("id", clientByEmail.id);
             client = { ...clientByEmail, auth_user_id: authUserId };
+          }
+        }
+      }
+
+      // Still not found — try matching by user metadata (set during invite)
+      if (!client) {
+        const { data: { user } } = await supabase.auth.getUser();
+        const clientIdFromMeta = user?.user_metadata?.client_id;
+        if (clientIdFromMeta) {
+          const { data: clientByMeta } = await supabase
+            .from("clients")
+            .select("*")
+            .eq("id", clientIdFromMeta)
+            .eq("is_active", true)
+            .single();
+          if (clientByMeta) {
+            await supabase
+              .from("clients")
+              .update({ auth_user_id: authUserId })
+              .eq("id", clientByMeta.id);
+            client = { ...clientByMeta, auth_user_id: authUserId };
           }
         }
       }
@@ -143,14 +164,19 @@ export default function ClientLoader({ children }) {
   if (state === "error") {
     return (
       <div style={{ minHeight: "100vh", background: "#111", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
-        <div style={{ textAlign: "center", color: "#f7f6f3" }}>
+        <div style={{ textAlign: "center", color: "#f7f6f3", maxWidth: 320 }}>
           <div style={{ fontSize: "36px", marginBottom: "12px" }}>🔗</div>
-          <div style={{ fontSize: "16px", marginBottom: "8px", ...F }}>No plan found</div>
-          <div style={{ fontSize: "12px", color: "#666", lineHeight: "1.6", marginBottom: "16px" }}>
-            Your account isn't linked to a plan yet. Contact your coach.
+          <div style={{ fontSize: "16px", marginBottom: "8px", fontFamily: "'Georgia',serif" }}>Account not linked</div>
+          <div style={{ fontSize: "12px", color: "#666", lineHeight: "1.7", marginBottom: "20px" }}>
+            Your account isn't connected to a client profile yet. This can happen if you signed up before your coach sent the invite link.
+            <br /><br />
+            Try signing out and clicking the invite link in your email again.
           </div>
-          <button onClick={handleSignOut} style={{ background: "transparent", color: "#aaa", border: "1px solid #333", borderRadius: "7px", padding: "8px 16px", fontSize: "12px", cursor: "pointer", ...F }}>
+          <button onClick={handleSignOut} style={{ background: "#f7f6f3", color: "#111", border: "none", borderRadius: "7px", padding: "10px 20px", fontSize: "13px", cursor: "pointer", fontFamily: "'Georgia',serif", marginBottom: "10px", width: "100%" }}>
             Sign out
+          </button>
+          <button onClick={() => loadClientData(session?.user?.id)} style={{ background: "transparent", color: "#aaa", border: "1px solid #333", borderRadius: "7px", padding: "10px 20px", fontSize: "13px", cursor: "pointer", fontFamily: "'Georgia',serif", width: "100%" }}>
+            Try again
           </button>
         </div>
       </div>

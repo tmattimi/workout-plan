@@ -27,14 +27,25 @@ module.exports = async function handler(req, res) {
       user_metadata: { name: clientName, role: 'client', client_id: clientId }
     });
 
-    if (createError && !createError.message.includes('already')) {
-      return res.status(400).json({ error: createError.message });
+    // Get the auth user ID — either from creation or by looking up existing user
+    let authUserId = userData?.user?.id;
+
+    if (createError) {
+      if (createError.message.includes('already')) {
+        // User already exists — look them up by email to get their ID
+        const { data: { users } } = await supabaseAdmin.auth.admin.listUsers();
+        const existing = users?.find(u => u.email === email.trim());
+        if (existing) authUserId = existing.id;
+      } else {
+        return res.status(400).json({ error: createError.message });
+      }
     }
 
-    if (!createError) {
+    // Always link the auth user to the client record
+    if (authUserId) {
       await supabaseAdmin
         .from('clients')
-        .update({ auth_user_id: userData.user.id, email: email.trim() })
+        .update({ auth_user_id: authUserId, email: email.trim() })
         .eq('id', clientId);
     }
 
@@ -80,7 +91,7 @@ async function sendInviteEmail(email, clientName, redirectTo, resendApiKey, setu
   const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${resendApiKey}` },
-    body: JSON.stringify({ from: 'onboarding@resend.dev', to: 'tara.mattimiro@gmail.com', subject: 'Your workout plan is ready', html })
+    body: JSON.stringify({ from: 'onboarding@resend.dev', to: email, subject: 'Your workout plan is ready', html })
   });
 
   const result = await response.json();
