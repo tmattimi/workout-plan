@@ -106,14 +106,20 @@ function ClientCard({ client, onSelect, unreadCount, lastActive, sessionCount })
 
 // ── Create Client Modal ────────────────────────────────────────────────────────
 function CreateClientModal({ onSave, onCancel, coachId }) {
-  const [form, setForm] = useState({ name: "", email: "", phone: "", goal: "recomp", sex: "male", notes: "" });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", goal: "", sex: "", notes: "" });
   const [saving, setSaving] = useState(false);
   const [created, setCreated] = useState(null);
 
   async function handleSave() {
     if (!form.name.trim()) return;
     setSaving(true);
-    const { data, error } = await createClient_db({ ...form, coach_id: coachId });
+    const payload = {
+      ...form,
+      coach_id: coachId,
+      goal: form.goal || "recomp",
+      sex: form.sex || "female",
+    };
+    const { data, error } = await createClient_db(payload);
     setSaving(false);
     if (data) setCreated(data);
   }
@@ -143,38 +149,49 @@ function CreateClientModal({ onSave, onCancel, coachId }) {
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}>
       <div style={{ background: "#fff", borderRadius: "12px", padding: "24px", maxWidth: "420px", width: "100%", maxHeight: "85vh", overflowY: "auto" }}>
-        <div style={{ fontSize: "16px", fontWeight: "600", marginBottom: "16px" }}>New Client</div>
-        {[["Name *", "name", "text"], ["Email", "email", "email"], ["Phone", "phone", "tel"]].map(([label, key, type]) => (
+        <div style={{ fontSize: "16px", fontWeight: "600", marginBottom: "4px" }}>New Client</div>
+        <div style={{ fontSize: "11px", color: "#aaa", marginBottom: "16px", lineHeight: 1.5 }}>
+          Only name is required to get started. Everything else can be filled in by the client when they complete their onboarding form.
+        </div>
+        {[["Name", "name", "text", true], ["Email", "email", "email", false], ["Phone", "phone", "tel", false]].map(([label, key, type, required]) => (
           <div key={key} style={{ marginBottom: "12px" }}>
-            <div style={{ fontSize: "11px", color: "#777", marginBottom: "4px" }}>{label}</div>
+            <div style={{ fontSize: "11px", color: "#777", marginBottom: "4px" }}>
+              {label} {required ? <span style={{ color: "#a02a2a" }}>*</span> : <span style={{ color: "#bbb" }}>(optional)</span>}
+            </div>
             <input type={type} value={form[key]} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
               style={{ width: "100%", padding: "9px 11px", borderRadius: "6px", border: "1px solid #e0e0e0", fontSize: "13px", ...F }} />
           </div>
         ))}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "12px" }}>
-          <div>
-            <div style={{ fontSize: "11px", color: "#777", marginBottom: "4px" }}>Goal</div>
-            <select value={form.goal} onChange={e => setForm(f => ({ ...f, goal: e.target.value }))}
-              style={{ width: "100%", padding: "9px 11px", borderRadius: "6px", border: "1px solid #e0e0e0", fontSize: "13px", ...F }}>
-              {["recomp","fat_loss","muscle_gain","strength","endurance"].map(g => (
-                <option key={g} value={g}>{g.replace("_"," ")}</option>
-              ))}
-            </select>
+
+        <div style={{ background: "#f9f9f7", borderRadius: "7px", padding: "10px 12px", marginBottom: "12px" }}>
+          <div style={{ fontSize: "10px", color: "#bbb", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px" }}>Optional — fill in if you know it</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "10px" }}>
+            <div>
+              <div style={{ fontSize: "11px", color: "#777", marginBottom: "4px" }}>Goal</div>
+              <select value={form.goal} onChange={e => setForm(f => ({ ...f, goal: e.target.value }))}
+                style={{ width: "100%", padding: "9px 11px", borderRadius: "6px", border: "1px solid #e0e0e0", fontSize: "13px", ...F, color: form.goal ? "#111" : "#aaa" }}>
+                <option value="">— not set —</option>
+                {["recomp","fat_loss","muscle_gain","strength"].map(g => (
+                  <option key={g} value={g}>{g.replace(/_/g," ")}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <div style={{ fontSize: "11px", color: "#777", marginBottom: "4px" }}>Sex</div>
+              <select value={form.sex} onChange={e => setForm(f => ({ ...f, sex: e.target.value }))}
+                style={{ width: "100%", padding: "9px 11px", borderRadius: "6px", border: "1px solid #e0e0e0", fontSize: "13px", ...F, color: form.sex ? "#111" : "#aaa" }}>
+                <option value="">— not set —</option>
+                <option value="female">Female</option>
+                <option value="male">Male</option>
+              </select>
+            </div>
           </div>
           <div>
-            <div style={{ fontSize: "11px", color: "#777", marginBottom: "4px" }}>Sex</div>
-            <select value={form.sex} onChange={e => setForm(f => ({ ...f, sex: e.target.value }))}
-              style={{ width: "100%", padding: "9px 11px", borderRadius: "6px", border: "1px solid #e0e0e0", fontSize: "13px", ...F }}>
-              <option value="male">Male</option>
-              <option value="female">Female</option>
-            </select>
+            <div style={{ fontSize: "11px", color: "#777", marginBottom: "4px" }}>Notes</div>
+            <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
+              rows={2} placeholder="Anything you already know — goals, injuries, experience..."
+              style={{ width: "100%", padding: "9px 11px", borderRadius: "6px", border: "1px solid #e0e0e0", fontSize: "12px", resize: "none", ...F }} />
           </div>
-        </div>
-        <div style={{ marginBottom: "16px" }}>
-          <div style={{ fontSize: "11px", color: "#777", marginBottom: "4px" }}>Intake Notes</div>
-          <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
-            rows={3} placeholder="Goals, injuries, experience level..."
-            style={{ width: "100%", padding: "9px 11px", borderRadius: "6px", border: "1px solid #e0e0e0", fontSize: "12px", resize: "none", ...F }} />
         </div>
         <div style={{ display: "flex", gap: "8px" }}>
           <button onClick={onCancel} style={{ flex: 1, background: "#f5f5f3", color: "#555", border: "1px solid #e0e0e0", borderRadius: "7px", padding: "12px", fontSize: "13px", cursor: "pointer", ...F }}>Cancel</button>
