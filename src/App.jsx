@@ -1146,55 +1146,135 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
             </div>
           )}
 
-          {/* Steps + sleep nudge */}
+          {/* Daily check-in — single button, opens bottom sheet */}
           {(() => {
             const todayKey = sessionDate;
-            const health = dailyHealth[todayKey] || {};
-            const needsSteps = !health.steps;
-            const needsSleep = !health.sleep;
-            if (!needsSteps && !needsSleep) return null;
+            const logged = dailyHealth[todayKey]?.logged;
             return (
-              <div style={{ margin: "8px 16px 4px", background: "#fff", border: "1px solid #e8e8e8", borderRadius: "8px", overflow: "hidden" }}>
-                <div style={{ padding: "10px 14px", borderBottom: "1px solid #f0f0f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: "11px", color: "#777", ...F }}>
-                    {needsSteps && needsSleep ? "Log steps + sleep" : needsSteps ? "Log today's steps" : "Log last night's sleep"}
-                  </span>
-                  <button onClick={() => setShowHealthLog(p => !p)} style={{ fontSize: "10px", color: "#555", background: "none", border: "1px solid #e0e0e0", borderRadius: "20px", padding: "3px 10px", cursor: "pointer" }}>
-                    {showHealthLog ? "Close" : "Log"}
+              <div style={{ margin: "8px 16px 4px" }}>
+                {logged ? (
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: "#f5f5f3", borderRadius: "7px" }}>
+                    <span style={{ fontSize: "11px", color: "#888" }}>
+                      {dailyHealth[todayKey]?.sleep_hours ? `${dailyHealth[todayKey].sleep_hours}h sleep` : ""}
+                      {dailyHealth[todayKey]?.sleep_hours && dailyHealth[todayKey]?.steps ? "  ·  " : ""}
+                      {dailyHealth[todayKey]?.steps ? `${parseInt(dailyHealth[todayKey].steps).toLocaleString()} steps` : ""}
+                      {!dailyHealth[todayKey]?.sleep_hours && !dailyHealth[todayKey]?.steps ? "Day logged" : ""}
+                    </span>
+                    <button onClick={() => setShowHealthLog(true)} style={{ fontSize: "10px", color: "#aaa", background: "none", border: "none", cursor: "pointer", padding: 0 }}>Edit</button>
+                  </div>
+                ) : (
+                  <button onClick={() => setShowHealthLog(true)} style={{ width: "100%", background: "none", border: "1px dashed #ddd", borderRadius: "7px", padding: "9px 14px", cursor: "pointer", color: "#bbb", fontSize: "11px", textAlign: "left", ...F }}>
+                    + Log your day
+                  </button>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* Daily check-in bottom sheet */}
+          {showHealthLog && (() => {
+            const todayKey = sessionDate;
+            const existing = dailyHealth[todayKey] || {};
+            return (
+              <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "flex-end" }}
+                onClick={e => e.target === e.currentTarget && setShowHealthLog(false)}>
+                <div style={{ background: "#fff", borderRadius: "16px 16px 0 0", padding: "20px 16px 40px", width: "100%", maxWidth: 640, margin: "0 auto", boxSizing: "border-box" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+                    <div style={{ fontSize: "14px", fontWeight: "600", ...F }}>How was your day?</div>
+                    <button onClick={() => setShowHealthLog(false)} style={{ background: "none", border: "none", fontSize: "22px", cursor: "pointer", color: "#bbb" }}>×</button>
+                  </div>
+
+                  {/* Quick-tap energy */}
+                  <div style={{ marginBottom: "14px" }}>
+                    <div style={{ fontSize: "10px", color: "#999", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.1em" }}>Energy level</div>
+                    <div style={{ display: "flex", gap: "5px" }}>
+                      {["Low", "Okay", "Good", "Great"].map((label, i) => {
+                        const val = [3, 5, 7, 9][i];
+                        const sel = existing.energy_level === val;
+                        return (
+                          <button key={label} onClick={() => {
+                            const updated = { ...dailyHealth, [todayKey]: { ...(dailyHealth[todayKey] || {}), energy_level: val } };
+                            setDailyHealth(updated);
+                            try { localStorage.setItem("daily_health_v1", JSON.stringify(updated)); } catch {}
+                          }} style={{ flex: 1, padding: "8px 4px", borderRadius: "6px", border: "1px solid " + (sel ? "#1a1a1a" : "#e0e0e0"), background: sel ? "#1a1a1a" : "#fff", color: sel ? "#fff" : "#555", fontSize: "11px", cursor: "pointer", ...F }}>
+                            {label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Number fields */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "12px" }}>
+                    {[
+                      { key: "sleep_hours", label: "Sleep (hours)", placeholder: "e.g. 7.5", step: "0.5", hint: "goal: 8 hrs" },
+                      { key: "steps", label: "Steps", placeholder: "e.g. 8500", step: "100", hint: "goal: 10,000" },
+                      { key: "weight_lbs", label: "Weight (lbs)", placeholder: "e.g. 148.5", step: "0.1", hint: "" },
+                      { key: "soreness_level", label: "Soreness (1–10)", placeholder: "e.g. 4", step: "1", hint: "1 = none" },
+                    ].map(({ key, label, placeholder, step, hint }) => (
+                      <div key={key}>
+                        <div style={{ fontSize: "10px", color: "#888", marginBottom: "3px" }}>{label}</div>
+                        <input
+                          type="number"
+                          step={step}
+                          defaultValue={existing[key] || ""}
+                          placeholder={placeholder}
+                          id={`health_${key}`}
+                          style={{ width: "100%", padding: "8px 10px", border: "1px solid #e0e0e0", borderRadius: "6px", fontSize: "13px", boxSizing: "border-box" }}
+                        />
+                        {hint && <div style={{ fontSize: "9px", color: "#ccc", marginTop: "2px" }}>{hint}</div>}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Notes */}
+                  <input
+                    type="text"
+                    id="health_notes"
+                    defaultValue={existing.notes || ""}
+                    placeholder="Anything else? (injury, stress, nutrition...)"
+                    style={{ width: "100%", padding: "8px 10px", border: "1px solid #e0e0e0", borderRadius: "6px", fontSize: "12px", boxSizing: "border-box", marginBottom: "14px", ...F }}
+                  />
+
+                  <button onClick={async () => {
+                    const get = id => document.getElementById(id)?.value;
+                    const updated = {
+                      ...dailyHealth,
+                      [todayKey]: {
+                        ...(dailyHealth[todayKey] || {}),
+                        sleep_hours: get("health_sleep_hours") ? parseFloat(get("health_sleep_hours")) : (existing.sleep_hours || null),
+                        steps: get("health_steps") ? parseInt(get("health_steps")) : (existing.steps || null),
+                        weight_lbs: get("health_weight_lbs") ? parseFloat(get("health_weight_lbs")) : (existing.weight_lbs || null),
+                        soreness_level: get("health_soreness_level") ? parseInt(get("health_soreness_level")) : (existing.soreness_level || null),
+                        notes: get("health_notes") || (existing.notes || null),
+                        logged: true,
+                        logged_at: new Date().toISOString(),
+                      }
+                    };
+                    setDailyHealth(updated);
+                    try { localStorage.setItem("daily_health_v1", JSON.stringify(updated)); } catch {}
+
+                    // Sync to Supabase
+                    if (clientData?.id) {
+                      try {
+                        const { upsertHealthLog } = await import("./lib/supabase");
+                        const entry = updated[todayKey];
+                        await upsertHealthLog(clientData.id, todayKey, {
+                          sleep_hours: entry.sleep_hours,
+                          steps: entry.steps,
+                          weight_lbs: entry.weight_lbs,
+                          soreness_level: entry.soreness_level,
+                          notes: entry.notes,
+                          energy_level: entry.energy_level,
+                        });
+                      } catch(e) { console.warn("Health log save failed:", e); }
+                    }
+
+                    setShowHealthLog(false);
+                  }} style={{ width: "100%", background: "#1a1a1a", color: "#f7f6f3", border: "none", borderRadius: "8px", padding: "13px", fontSize: "13px", cursor: "pointer", ...F }}>
+                    Save
                   </button>
                 </div>
-                {showHealthLog && (
-                  <div style={{ padding: "10px 14px", display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                    {needsSteps && (
-                      <div style={{ flex: 1, minWidth: "120px" }}>
-                        <div style={{ fontSize: "10px", color: "#999", marginBottom: "4px" }}>Steps today (goal: 10,000)</div>
-                        <input type="number" placeholder="e.g. 8500"
-                          onBlur={e => {
-                            if (!e.target.value) return;
-                            const updated = { ...dailyHealth, [todayKey]: { ...(dailyHealth[todayKey] || {}), steps: parseInt(e.target.value) } };
-                            setDailyHealth(updated);
-                            try { localStorage.setItem("daily_health_v1", JSON.stringify(updated)); } catch {}
-                            setShowHealthLog(false);
-                          }}
-                          style={{ width: "100%", padding: "7px 10px", border: "1px solid #e0e0e0", borderRadius: "5px", fontSize: "12px", boxSizing: "border-box" }} />
-                      </div>
-                    )}
-                    {needsSleep && (
-                      <div style={{ flex: 1, minWidth: "120px" }}>
-                        <div style={{ fontSize: "10px", color: "#999", marginBottom: "4px" }}>Sleep last night (goal: 8 hrs)</div>
-                        <input type="number" step="0.5" placeholder="e.g. 7.5"
-                          onBlur={e => {
-                            if (!e.target.value) return;
-                            const updated = { ...dailyHealth, [todayKey]: { ...(dailyHealth[todayKey] || {}), sleep: parseFloat(e.target.value) } };
-                            setDailyHealth(updated);
-                            try { localStorage.setItem("daily_health_v1", JSON.stringify(updated)); } catch {}
-                            setShowHealthLog(false);
-                          }}
-                          style={{ width: "100%", padding: "7px 10px", border: "1px solid #e0e0e0", borderRadius: "5px", fontSize: "12px", boxSizing: "border-box" }} />
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
             );
           })()}

@@ -553,7 +553,6 @@ export default function BodyTab({ clientId }) {
     { id: "measurements", label: "Measurements" },
     { id: "photos", label: "Photos" },
     { id: "scans", label: "Scans" },
-    { id: "daily", label: "Daily" },
   ];
 
   return (
@@ -572,7 +571,36 @@ export default function BodyTab({ clientId }) {
       {section === "measurements" && <MeasurementsSection clientId={clientId} />}
       {section === "photos" && <PhotosSection />}
       {section === "scans" && <BodyScanSection />}
-      {section === "daily" && <DailyHealthSection clientId={clientId} />}
+      {/* Health history summary — data logged from Plan tab */}
+      {section === "measurements" && (() => {
+        // Show last 7 days health strip if any data exists
+        const loadedData = (() => { try { return JSON.parse(localStorage.getItem("health_data_v1") || "{}"); } catch { return {}; } })();
+        const last7 = Array.from({ length: 7 }, (_, i) => {
+          const d = new Date(); d.setDate(d.getDate() - (6 - i));
+          const key = d.toISOString().slice(0, 10);
+          return { label: d.toLocaleDateString("en-US", { weekday: "short" }), ...loadedData[key], date: key };
+        });
+        const hasAny = last7.some(d => d.logged || d.steps || d.sleep_hours);
+        if (!hasAny) return null;
+        return (
+          <div style={{ marginTop: "16px", marginBottom: "4px" }}>
+            <div style={{ fontSize: "9px", letterSpacing: "0.18em", textTransform: "uppercase", color: "#999", marginBottom: "8px" }}>Recent check-ins</div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "3px" }}>
+              {last7.map((d, i) => {
+                const hasData = d.logged || d.steps || d.sleep_hours;
+                const energyColor = d.energy_level >= 7 ? "#2d7a1e" : d.energy_level >= 4 ? "#c47a0a" : d.energy_level ? "#a02020" : null;
+                return (
+                  <div key={i} style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: "8px", color: "#bbb", marginBottom: "3px" }}>{d.label}</div>
+                    <div style={{ height: "5px", borderRadius: "2px", background: hasData ? (energyColor || "#1a1a1a") : "#f0f0f0" }} />
+                    {d.sleep_hours && <div style={{ fontSize: "8px", color: "#aaa", marginTop: "2px" }}>{d.sleep_hours}h</div>}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
