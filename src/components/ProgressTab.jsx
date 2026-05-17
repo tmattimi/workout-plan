@@ -106,11 +106,8 @@ function StrengthTestFlow({ clientId, bodyweight, onComplete, onCancel }) {
 
   function calculateResult() {
     const w = parseFloat(testWeight);
-    const r = parseInt(testReps);
-    if (!w || !r || r < 1) { setError('Enter valid weight and reps.'); return; }
-    if (r > 15) { setError('For an accurate result, use a weight you can lift for 15 reps or fewer.'); return; }
-    const estimated = epley1RM(w, r);
-    setE1rm(estimated);
+    if (!w || w <= 0) { setError('Enter the weight you lifted.'); return; }
+    setE1rm(w); // 1RM IS the weight — no estimation
     setError('');
     setStep('result');
   }
@@ -126,8 +123,8 @@ function StrengthTestFlow({ clientId, bodyweight, onComplete, onCancel }) {
         exercise_name: lift.name,
         exercise_key: lift.exerciseKey,
         weight_lbs: parseFloat(testWeight),
-        reps: parseInt(testReps),
-        estimated_1rm: e1rm,
+        reps: 1,
+        estimated_1rm: parseFloat(testWeight),
         record_type: 'strength_test',
         achieved_at: new Date().toISOString().slice(0, 10),
         primary_muscle: lift.primaryGroup,
@@ -218,44 +215,30 @@ function StrengthTestFlow({ clientId, bodyweight, onComplete, onCancel }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
         <span style={{ fontSize: 28 }}>{lift.icon}</span>
         <div>
-          <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.15em', color: '#999' }}>Log Your Set</div>
+          <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.15em', color: '#999' }}>Log Your 1-Rep Max</div>
           <div style={{ fontSize: 20, fontWeight: 'normal', ...F }}>{lift.name}</div>
         </div>
       </div>
 
       <div style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: 10, padding: '16px', marginBottom: 20 }}>
-        <div style={{ marginBottom: 16 }}>
-          <label style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.14em', color: '#aaa', display: 'block', marginBottom: 8 }}>Weight used (lbs)</label>
-          <input
-            type="number"
-            value={testWeight}
-            onChange={e => setTestWeight(e.target.value)}
-            placeholder="e.g. 185"
-            style={{ width: '100%', padding: '12px 14px', borderRadius: 8, border: '1px solid #e0e0e0', fontSize: 18, fontWeight: 600, textAlign: 'center', ...F }}
-          />
-        </div>
-        <div>
-          <label style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.14em', color: '#aaa', display: 'block', marginBottom: 8 }}>Reps completed</label>
-          <input
-            type="number"
-            value={testReps}
-            onChange={e => setTestReps(e.target.value)}
-            placeholder="e.g. 5"
-            min="1"
-            max="15"
-            style={{ width: '100%', padding: '12px 14px', borderRadius: 8, border: '1px solid #e0e0e0', fontSize: 18, fontWeight: 600, textAlign: 'center', ...F }}
-          />
-        </div>
+        <label style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.14em', color: '#aaa', display: 'block', marginBottom: 8 }}>Weight lifted for 1 rep (lbs)</label>
+        <input
+          type="number"
+          value={testWeight}
+          onChange={e => setTestWeight(e.target.value)}
+          placeholder="e.g. 185"
+          style={{ width: '100%', padding: '12px 14px', borderRadius: 8, border: '1px solid #e0e0e0', fontSize: 22, fontWeight: 600, textAlign: 'center', ...F }}
+        />
       </div>
 
       {error && <div style={{ color: '#b91c1c', fontSize: 12, marginBottom: 12, padding: '8px 12px', background: '#fee2e2', borderRadius: 7 }}>{error}</div>}
 
       <p style={{ fontSize: 11, color: '#aaa', lineHeight: 1.65, marginBottom: 16, textAlign: 'center' }}>
-        Use a weight you can lift for 3 to 8 reps with good form. This range gives the most accurate strength reading.
+        Enter the maximum weight you successfully lifted for exactly 1 rep with good form today.
       </p>
 
       <button onClick={calculateResult} style={{ width: '100%', background: '#111', color: '#fff', border: 'none', borderRadius: 10, padding: '14px', fontSize: 14, cursor: 'pointer', ...F }}>
-        Calculate my strength →
+        Save my 1-Rep Max →
       </button>
     </div>
   );
@@ -272,15 +255,15 @@ function StrengthTestFlow({ clientId, bodyweight, onComplete, onCancel }) {
       </div>
 
       <div style={{ background: '#111', borderRadius: 12, padding: '24px 20px', marginBottom: 20, textAlign: 'center' }}>
-        <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.15em', color: '#888', marginBottom: 8 }}>Your strength baseline</div>
-        <div style={{ fontSize: 36, fontWeight: 700, color: '#fff', letterSpacing: '-1px' }}>{testWeight} lbs × {testReps}</div>
-        <div style={{ fontSize: 13, color: '#888', marginTop: 6 }}>Saved and tracked over time</div>
+        <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.15em', color: '#888', marginBottom: 8 }}>1-Rep Max</div>
+        <div style={{ fontSize: 42, fontWeight: 700, color: '#fff', letterSpacing: '-1px' }}>{testWeight} <span style={{ fontSize: 20, color: '#888' }}>lbs</span></div>
+        <div style={{ fontSize: 13, color: '#888', marginTop: 6 }}>{lift.name} · {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
       </div>
 
-      {/* Working weight recommendations */}
+      {/* Training zone recommendations based on true 1RM */}
       <div style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: 10, padding: '14px', marginBottom: 20 }}>
-        <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.14em', color: '#aaa', marginBottom: 12 }}>Recommended working weights</div>
-        {[['Strength (low reps, heavy)', 0.90, 0.97], ['Muscle growth (6–12 reps)', 0.67, 0.85], ['Endurance (15+ reps)', 0.50, 0.65]].map(([label, minPct, maxPct]) => (
+        <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.14em', color: '#aaa', marginBottom: 12 }}>Training zones based on your 1RM</div>
+        {[['Strength (1–3 reps)', 0.90, 1.0], ['Hypertrophy (6–12 reps)', 0.67, 0.85], ['Endurance (15+ reps)', 0.50, 0.65]].map(([label, minPct, maxPct]) => (
           <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: '1px solid #f5f5f5' }}>
             <span style={{ fontSize: 12, color: '#555' }}>{label}</span>
             <span style={{ fontSize: 12, fontWeight: 600 }}>{Math.round(e1rm * minPct)}–{Math.round(e1rm * maxPct)} lbs</span>
@@ -291,10 +274,10 @@ function StrengthTestFlow({ clientId, bodyweight, onComplete, onCancel }) {
       {error && <div style={{ color: '#b91c1c', fontSize: 12, marginBottom: 12, padding: '8px 12px', background: '#fee2e2', borderRadius: 7 }}>{error}</div>}
 
       <button onClick={saveResult} style={{ width: '100%', background: '#111', color: '#fff', border: 'none', borderRadius: 10, padding: '14px', fontSize: 14, cursor: 'pointer', marginBottom: 10, ...F }}>
-        Save this result
+        Save this 1RM
       </button>
       <button onClick={() => setStep('test')} style={{ width: '100%', background: 'transparent', color: '#888', border: '1px solid #e8e8e8', borderRadius: 10, padding: '12px', fontSize: 13, cursor: 'pointer', ...F }}>
-        Re-enter weight and reps
+        Re-enter weight
       </button>
     </div>
   );
@@ -603,31 +586,37 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
         <>
           {/* ── Benchmark 1RM Tests ── */}
           <div style={{ marginBottom: 20 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-              <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.18em', color: '#999' }}>Benchmark Strength</div>
-              <button onClick={() => setView('test')} style={{ background: 'none', border: 'none', fontSize: 11, color: '#2563a8', cursor: 'pointer', ...F }}>Test now</button>
+            <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.18em', color: '#999', marginBottom: 10 }}>1-Rep Max Benchmarks</div>
+            <div style={{ fontSize: 11, color: '#aaa', marginBottom: 10, lineHeight: 1.6 }}>
+              Your true 1RM for each benchmark lift. Retest every 8–12 weeks to track strength gains.
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7 }}>
               {BENCHMARK_LIFTS.map(lift => {
                 const test = latestTests[lift.exerciseKey];
+                const mg = MUSCLE_GROUPS[lift.primaryGroup];
                 return (
-                  <div key={lift.id} style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: 9, padding: '11px 12px' }}>
+                  <div key={lift.id} style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: 9, padding: '11px 12px', borderTop: `3px solid ${mg?.color || '#ddd'}` }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                      <span style={{ fontSize: 16 }}>{lift.icon}</span>
+                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: mg?.color || '#ddd', flexShrink: 0 }} />
                       <span style={{ fontSize: 11, fontWeight: 500, color: '#1a1a1a' }}>{lift.name}</span>
                     </div>
                     {test ? (
                       <>
-                        <div style={{ fontSize: 18, fontWeight: 700, color: MUSCLE_GROUPS[lift.primaryGroup]?.color }}>{test.estimated_1rm || epley1RM(test.weight_lbs, test.reps)}</div>
-                        <div style={{ fontSize: 10, color: '#aaa', marginTop: 1 }}>lbs · {formatShort(test.achieved_at)}</div>
+                        <div style={{ fontSize: 20, fontWeight: 700, color: mg?.color || '#111' }}>{test.weight_lbs} <span style={{ fontSize: 11, color: '#aaa', fontWeight: 400 }}>lbs</span></div>
+                        <div style={{ fontSize: 10, color: '#aaa', marginTop: 1 }}>{formatShort(test.achieved_at)}</div>
                       </>
                     ) : (
-                      <div style={{ fontSize: 11, color: '#ccc', paddingTop: 4 }}>Not tested yet</div>
+                      <button onClick={() => setView('test')} style={{ fontSize: 11, color: '#2563a8', background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginTop: 4, ...F }}>
+                        Test now →
+                      </button>
                     )}
                   </div>
                 );
               })}
             </div>
+            <button onClick={() => setView('test')} style={{ marginTop: 10, width: '100%', background: '#111', color: '#fff', border: 'none', borderRadius: 8, padding: '11px', fontSize: 12, cursor: 'pointer', ...F }}>
+              + Run a Strength Test
+            </button>
           </div>
 
           {/* ── Muscle strength scores ── */}
@@ -687,7 +676,10 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
           {/* ── Top PRs from logged workouts ── */}
           {topPRs.length > 0 && (
             <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.18em', color: '#999', marginBottom: 10 }}>Top Workout PRs</div>
+              <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.18em', color: '#999', marginBottom: 4 }}>Training Records</div>
+              <div style={{ fontSize: 11, color: '#aaa', marginBottom: 10, lineHeight: 1.6 }}>
+                Best sets logged in your workouts. These are multi-rep maxes from training — different from your 1RM benchmarks above.
+              </div>
               <div style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: 10, overflow: 'hidden' }}>
                 {topPRs.map((pr, i) => (
                   <div key={i} style={{ padding: '11px 14px', borderBottom: '1px solid #f5f5f5', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -697,7 +689,7 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
                     </div>
                     <div style={{ textAlign: 'right' }}>
                       <div style={{ fontSize: 14, fontWeight: 700 }}>{pr.weight} lbs</div>
-                      <div style={{ fontSize: 9, color: '#aaa' }}>× {pr.reps} reps</div>
+                      <div style={{ fontSize: 10, color: '#aaa' }}>× {pr.reps} reps</div>
                     </div>
                   </div>
                 ))}
