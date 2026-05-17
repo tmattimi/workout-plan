@@ -557,7 +557,9 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
   const [dailyHealth, setDailyHealth] = useState(() => { try { return JSON.parse(localStorage.getItem("daily_health_v1") || "{}"); } catch { return {}; } });
   const [showHealthLog, setShowHealthLog] = useState(false);
   const [showStretches, setShowStretches] = useState(false);
-  const [showSkipModal, setShowSkipModal] = useState(false);
+  const [sessionSkipped, setSessionSkipped] = useState({});  // { [sessionDate]: { reason, skipped } }
+  const [showActivityLog, setShowActivityLog] = useState(false);
+  const [activityForm, setActivityForm] = useState({ type: 'class', description: '', duration: '' });
 
   // State from storage
   const [logs, setLogs] = useState(loadWorkoutLogs);
@@ -784,7 +786,8 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
 
   const tabs = [
     ["plan","Plan"], ["progress","Progress"], ["body","Body"],
-    ["nutrition","Nutrition"], ["cycle","Cycle"],
+    ["nutrition","Nutrition"],
+    ...(clientData?.sex === "female" ? [["cycle","Cycle"]] : []),
     ["tools","Tools"],
   ];
 
@@ -911,16 +914,19 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
                   Warm-Up
                 </button>
               )}
-              {current.type !== "rest" && (
-                <button onClick={() => setShowSkipModal(true)} style={{ background: "rgba(255,255,255,0.06)", color: "#9a9a9e", border: "1px solid rgba(255,255,255,0.12)", borderRadius: "20px", padding: "4px 12px", fontSize: "11px", cursor: "pointer", ...F }}>
-                  Skip / Replace
-                </button>
-              )}
+
             </div>
           </div>
 
           {/* Exercises */}
-          <div>
+          <div style={{ position: "relative" }}>
+            {sessionSkipped[sessionDate] && (
+              <div style={{ position: "absolute", inset: 0, background: "rgba(247,246,243,0.7)", zIndex: 10, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
+                <div style={{ background: "#fff", border: "1px solid #e0e0e0", borderRadius: "10px", padding: "14px 20px", textAlign: "center", boxShadow: "0 2px 12px rgba(0,0,0,0.08)" }}>
+                  <div style={{ fontSize: "13px", color: "#aaa", ...F }}>Session skipped</div>
+                </div>
+              </div>
+            )}
             {(() => {
               // Group exercises — identify superset pairs
               const renderedGroups = new Set();
@@ -1284,6 +1290,138 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
             );
           })()}
 
+          {/* Skip session / Log activity — inline, no modal needed */}
+          {current.type !== "rest" && (() => {
+            const skipped = sessionSkipped[sessionDate];
+            const ACTIVITY_TYPES = [
+              { id: 'class', label: 'Class' },
+              { id: 'run', label: 'Run' },
+              { id: 'walk', label: 'Walk' },
+              { id: 'bike', label: 'Cycling' },
+              { id: 'swim', label: 'Swim' },
+              { id: 'rowing', label: 'Rowing' },
+              { id: 'sport', label: 'Sport' },
+              { id: 'other', label: 'Other' },
+            ];
+
+            async function logActivity() {
+              const entry = {
+                activity_date: sessionDate,
+                activity_type: activityForm.type,
+                description: activityForm.description || ACTIVITY_TYPES.find(a => a.id === activityForm.type)?.label,
+                duration_minutes: activityForm.duration ? parseInt(activityForm.duration) : null,
+                notes: `Logged instead of: ${current.focus}`,
+              };
+              try {
+                const existing = JSON.parse(localStorage.getItem("activity_log_v1") || "[]");
+                localStorage.setItem("activity_log_v1", JSON.stringify([{ id: Date.now(), ...entry }, ...existing]));
+                if (clientData?.id) {
+                  const { logActivity: logAct } = await import("./lib/supabase");
+                  await logAct(clientData.id, entry);
+                }
+              } catch(e) {}
+              setShowActivityLog(false);
+              setActivityForm({ type: 'class', description: '', duration: '' });
+            }
+
+            return (
+              <div style={{ margin: "8px 16px 0" }}>
+                {/* Skip toggle */}
+                {!skipped && (
+                  <button
+                    onClick={() => setSessionSkipped(prev => ({ ...prev, [sessionDate]: { skipped: true } }))}
+                    style={{ background: "none", border: "1px dashed #ddd", borderRadius: "7px", padding: "7px 14px", cursor: "pointer", color: "#bbb", fontSize: "11px", ...F, width: "100%", textAlign: "left" }}>
+                    Mark session as skipped
+                  </button>
+                )}
+                {skipped && (
+                  <div style={{ background: "#f5f5f3", borderRadius: "8px", padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontSize: "12px", color: "#999", ...F }}>Session marked as skipped</span>
+                    <button onClick={() => setSessionSkipped(prev => { const n = {...prev}; delete n[sessionDate]; return n; })}
+                      style={{ background: "none", border: "none", color: "#bbb", fontSize: "11px", cursor: "pointer" }}>Undo</button>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* Log a different activity instead */}
+          {current.type !== "rest" && (() => {
+            const ACTIVITY_TYPES = [
+              { id: 'class', label: 'Class', placeholder: 'Spin, HIIT, Pilates...' },
+              { id: 'run', label: 'Run', placeholder: 'Outdoor, treadmill...' },
+              { id: 'walk', label: 'Walk', placeholder: 'Outdoor, incline...' },
+              { id: 'bike', label: 'Cycling', placeholder: 'Stationary, outdoor...' },
+              { id: 'swim', label: 'Swim', placeholder: 'Laps, water aerobics...' },
+              { id: 'rowing', label: 'Rowing', placeholder: 'Erg, on-water...' },
+              { id: 'sport', label: 'Sport', placeholder: 'Tennis, hiking...' },
+              { id: 'other', label: 'Other', placeholder: 'Elliptical, stairmaster...' },
+            ];
+
+            async function handleLogActivity() {
+              const entry = {
+                activity_date: sessionDate,
+                activity_type: activityForm.type,
+                description: activityForm.description || ACTIVITY_TYPES.find(a => a.id === activityForm.type)?.label,
+                duration_minutes: activityForm.duration ? parseInt(activityForm.duration) : null,
+              };
+              try {
+                const existing = JSON.parse(localStorage.getItem("activity_log_v1") || "[]");
+                localStorage.setItem("activity_log_v1", JSON.stringify([{ id: Date.now(), ...entry }, ...existing]));
+                if (clientData?.id) {
+                  const { logActivity } = await import("./lib/supabase");
+                  await logActivity(clientData.id, entry);
+                }
+              } catch(e) {}
+              setShowActivityLog(false);
+              setActivityForm({ type: 'class', description: '', duration: '' });
+            }
+
+            return (
+              <div style={{ margin: "6px 16px 4px" }}>
+                {!showActivityLog ? (
+                  <button onClick={() => setShowActivityLog(true)}
+                    style={{ background: "none", border: "1px dashed #ddd", borderRadius: "7px", padding: "7px 14px", cursor: "pointer", color: "#bbb", fontSize: "11px", ...F, width: "100%", textAlign: "left" }}>
+                    + Log a class or cardio instead
+                  </button>
+                ) : (
+                  <div style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "8px", padding: "12px" }}>
+                    <div style={{ fontSize: "9px", letterSpacing: "0.15em", textTransform: "uppercase", color: "#999", marginBottom: "10px" }}>Log Activity</div>
+                    {/* Type chips */}
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "5px", marginBottom: "10px" }}>
+                      {ACTIVITY_TYPES.map(a => (
+                        <button key={a.id} onClick={() => setActivityForm(p => ({ ...p, type: a.id }))}
+                          style={{ padding: "4px 10px", borderRadius: "20px", border: `1px solid ${activityForm.type === a.id ? "#111" : "#e0e0e0"}`, background: activityForm.type === a.id ? "#111" : "#fff", color: activityForm.type === a.id ? "#fff" : "#555", fontSize: "11px", cursor: "pointer", ...F }}>
+                          {a.label}
+                        </button>
+                      ))}
+                    </div>
+                    <div style={{ display: "flex", gap: "8px", marginBottom: "10px" }}>
+                      <input
+                        value={activityForm.description}
+                        onChange={e => setActivityForm(p => ({ ...p, description: e.target.value }))}
+                        placeholder={ACTIVITY_TYPES.find(a => a.id === activityForm.type)?.placeholder || "Description"}
+                        style={{ flex: 2, padding: "7px 10px", borderRadius: "6px", border: "1px solid #e0e0e0", fontSize: "12px", ...F }}
+                      />
+                      <input
+                        type="number"
+                        value={activityForm.duration}
+                        onChange={e => setActivityForm(p => ({ ...p, duration: e.target.value }))}
+                        placeholder="min"
+                        style={{ flex: 1, padding: "7px 10px", borderRadius: "6px", border: "1px solid #e0e0e0", fontSize: "12px", ...F }}
+                      />
+                    </div>
+                    <div style={{ display: "flex", gap: "6px" }}>
+                      <button onClick={handleLogActivity} style={{ background: "#111", color: "#fff", border: "none", borderRadius: "6px", padding: "8px 14px", fontSize: "12px", cursor: "pointer", ...F }}>Save</button>
+                      <button onClick={() => { setShowActivityLog(false); setActivityForm({ type: 'class', description: '', duration: '' }); }}
+                        style={{ background: "none", border: "1px solid #ddd", borderRadius: "6px", padding: "8px 12px", fontSize: "12px", cursor: "pointer", color: "#999" }}>Cancel</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
           {/* Add exercise */}
           {current.type !== "rest" && (() => {
             const EXERCISE_CATALOG = getAllNames() || ["Ab Wheel Rollout", "Alternating Dumbbell Curl", "Arnold Press", "Bulgarian Split Squat (Dumbbell)", "Cable Crunch", "Cable Curl (Low Pulley)", "Cable Fly (Low-to-High)", "Cable Lateral Raise (Single-Arm)", "Cat-Cow", "Chest and Shoulder Doorway Stretch", "Chest-Supported DB Row", "Dead Bug", "Dumbbell Bench Press", "Face Pull (Rope Attachment)", "Foam Roll", "Goblet Squat", "Hammer Curl", "Hanging Knee Raise", "Hip Flexor Stretch", "Hip Thrust (Barbell or Machine)", "Incline Dumbbell Curl", "Incline Dumbbell Press", "Incline Treadmill", "Lat Pulldown (Wide Overhand)", "Lateral Raise", "Leg Extension", "Leg Press", "Light Walk", "Overhead Tricep Extension", "Pallof Press (Cable)", "Plank", "Pull-Up (or Assisted Pull-Up)", "Rear Delt Fly (Bent-Over)", "Romanian Deadlift (Dumbbell)", "Rowing Machine", "Rowing Machine or Incline Treadmill", "Seated Cable Row (Neutral Grip)", "Seated Calf Raise", "Seated Dumbbell Overhead Press", "Side Plank", "Single-Arm Dumbbell Row", "Single-Arm Overhead DB Press", "Single-Leg Hamstring Curl", "Standing Calf Raise", "Stationary Bike", "Stationary Bike or Brisk Walk", "Straight-Arm Cable Pulldown", "Tricep Rope Pushdown"];
@@ -1380,130 +1518,6 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
           onDismiss={() => setRestTimer(null)}
         />
       )}
-
-      {/* Skip / Replace modal */}
-      {showSkipModal && (() => {
-        const ACTIVITY_TYPES = [
-          { id: 'class', label: 'Fitness Class', examples: 'Spin, HIIT, Pilates, Barre, Yoga' },
-          { id: 'run', label: 'Run / Jog', examples: 'Outdoor or treadmill' },
-          { id: 'walk', label: 'Walk', examples: 'Outdoor, incline treadmill' },
-          { id: 'bike', label: 'Cycling', examples: 'Outdoor, stationary, Peloton' },
-          { id: 'swim', label: 'Swimming', examples: 'Laps, water aerobics' },
-          { id: 'rowing', label: 'Rowing', examples: 'Erg, on-water' },
-          { id: 'sport', label: 'Sport / Activity', examples: 'Tennis, hiking, dancing' },
-          { id: 'other', label: 'Other Cardio', examples: 'Elliptical, stairmaster, etc.' },
-        ];
-        const [skipMode, setSkipMode] = useState('skip'); // 'skip' | 'replace'
-        const [activityType, setActivityType] = useState('class');
-        const [activityDesc, setActivityDesc] = useState('');
-        const [duration, setDuration] = useState('');
-        const [skipNote, setSkipNote] = useState('');
-
-        async function handleSkip() {
-          // Log as a skipped day in health logs
-          const entry = {
-            session_skipped: true,
-            skip_reason: skipNote || null,
-            skip_date: sessionDate,
-          };
-          try {
-            localStorage.setItem(`skip_${sessionDate}`, JSON.stringify(entry));
-            if (clientData?.id) {
-              const { upsertHealthLog } = await import('./lib/supabase');
-              await upsertHealthLog(clientData.id, sessionDate, { notes: `Session skipped: ${skipNote || 'no reason given'}` });
-            }
-          } catch(e) {}
-          setShowSkipModal(false);
-        }
-
-        async function handleReplace() {
-          const activity = {
-            activity_date: sessionDate,
-            activity_type: activityType,
-            description: activityDesc || ACTIVITY_TYPES.find(a => a.id === activityType)?.label,
-            duration_minutes: duration ? parseInt(duration) : null,
-            notes: `Replaced ${current.focus} workout`,
-          };
-          try {
-            localStorage.setItem(`activity_log_${sessionDate}`, JSON.stringify(activity));
-            if (clientData?.id) {
-              const { logActivity } = await import('./lib/supabase');
-              await logActivity(clientData.id, activity);
-            }
-          } catch(e) {}
-          setShowSkipModal(false);
-        }
-
-        return (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'flex-end' }}
-            onClick={e => e.target === e.currentTarget && setShowSkipModal(false)}>
-            <div style={{ background: '#fff', borderRadius: '16px 16px 0 0', padding: '20px 16px 40px', width: '100%', maxWidth: 640, margin: '0 auto', boxSizing: 'border-box' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <div style={{ fontSize: '15px', fontWeight: '600', ...F }}>{current.focus}</div>
-                <button onClick={() => setShowSkipModal(false)} style={{ background: 'none', border: 'none', fontSize: '22px', cursor: 'pointer', color: '#bbb' }}>×</button>
-              </div>
-
-              {/* Mode toggle */}
-              <div style={{ display: 'flex', gap: '6px', marginBottom: '16px' }}>
-                {[['skip', 'Skip this session'], ['replace', 'Replace with activity']].map(([mode, label]) => (
-                  <button key={mode} onClick={() => setSkipMode(mode)}
-                    style={{ flex: 1, padding: '10px', borderRadius: '8px', border: `1px solid ${skipMode === mode ? '#111' : '#e0e0e0'}`, background: skipMode === mode ? '#111' : '#fff', color: skipMode === mode ? '#fff' : '#555', fontSize: '12px', cursor: 'pointer', ...F }}>
-                    {label}
-                  </button>
-                ))}
-              </div>
-
-              {skipMode === 'skip' && (
-                <>
-                  <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>Reason (optional)</div>
-                  <input value={skipNote} onChange={e => setSkipNote(e.target.value)}
-                    placeholder="Rest day, sick, travel, life..."
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #e0e0e0', fontSize: '13px', marginBottom: '14px', boxSizing: 'border-box', ...F }} />
-                  <div style={{ fontSize: '11px', color: '#aaa', marginBottom: '14px', lineHeight: 1.5 }}>
-                    Skipped days won't count against your training metrics — your ACWR and sessions/week will only reflect days you actually trained.
-                  </div>
-                  <button onClick={handleSkip} style={{ width: '100%', background: '#111', color: '#f7f6f3', border: 'none', borderRadius: '8px', padding: '13px', fontSize: '13px', cursor: 'pointer', ...F }}>
-                    Log as Skipped
-                  </button>
-                </>
-              )}
-
-              {skipMode === 'replace' && (
-                <>
-                  <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>Activity type</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginBottom: '12px' }}>
-                    {ACTIVITY_TYPES.map(a => (
-                      <button key={a.id} onClick={() => setActivityType(a.id)}
-                        style={{ padding: '5px 10px', borderRadius: '20px', border: `1px solid ${activityType === a.id ? '#111' : '#e0e0e0'}`, background: activityType === a.id ? '#111' : '#fff', color: activityType === a.id ? '#fff' : '#555', fontSize: '11px', cursor: 'pointer', ...F }}>
-                        {a.label}
-                      </button>
-                    ))}
-                  </div>
-                  <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-                    <div style={{ flex: 2 }}>
-                      <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Description</div>
-                      <input value={activityDesc} onChange={e => setActivityDesc(e.target.value)}
-                        placeholder={ACTIVITY_TYPES.find(a => a.id === activityType)?.examples}
-                        style={{ width: '100%', padding: '9px 12px', borderRadius: '7px', border: '1px solid #e0e0e0', fontSize: '12px', boxSizing: 'border-box', ...F }} />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Duration (min)</div>
-                      <input type="number" value={duration} onChange={e => setDuration(e.target.value)} placeholder="45"
-                        style={{ width: '100%', padding: '9px 12px', borderRadius: '7px', border: '1px solid #e0e0e0', fontSize: '12px', boxSizing: 'border-box', ...F }} />
-                    </div>
-                  </div>
-                  <div style={{ fontSize: '11px', color: '#aaa', marginBottom: '14px', lineHeight: 1.5 }}>
-                    This activity will be logged in your tracking and counted in your cardio:strength balance metrics.
-                  </div>
-                  <button onClick={handleReplace} style={{ width: '100%', background: '#111', color: '#f7f6f3', border: 'none', borderRadius: '8px', padding: '13px', fontSize: '13px', cursor: 'pointer', ...F }}>
-                    Log Activity
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-        );
-      })()}
 
       {/* PR Celebration overlay */}
       {prCelebration && (
