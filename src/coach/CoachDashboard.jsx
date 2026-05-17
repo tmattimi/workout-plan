@@ -592,9 +592,7 @@ function ClientDetail({ client, coachId, plans, onBack, onDelete, onAssignPlan }
           <button onClick={handleSendInvite} disabled={inviting} style={{ flex: 1, background: inviteStatus === "sent" ? "#2d7a1e" : "#333", color: "#fff", border: "none", borderRadius: "5px", padding: "8px 10px", fontSize: "11px", cursor: "pointer", ...F }}>
             {inviting ? "Sending..." : inviteStatus === "sent" ? "✓ Invite Sent" : inviteStatus === "exists" ? "Resend Invite" : "Send Invite"}
           </button>
-          <button onClick={() => navigator.clipboard.writeText(clientUrl)} style={{ background: "#222", color: "#aaa", border: "1px solid #333", borderRadius: "5px", padding: "8px 10px", fontSize: "10px", cursor: "pointer", ...F, whiteSpace: "nowrap" }}>
-            Copy link
-          </button>
+
         </div>
         {inviteError && <div style={{ fontSize: "10px", color: "#f87171", marginTop: "6px" }}>{inviteError}</div>}
         {setupLink && (
