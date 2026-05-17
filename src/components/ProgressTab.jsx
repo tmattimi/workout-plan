@@ -7,6 +7,9 @@ import {
 import {
   getClientMeasurements, getHealthLogs, getClientLogs, getClientPRs, getActivities
 } from '../lib/supabase';
+import {
+  calculateACWR, calculateProgressionStatus, calculateRecoveryScore, analyzeBodyComposition
+} from '../lib/trainingAnalytics';
 
 const F = { fontFamily: "'Georgia','Times New Roman',serif" };
 const SERIF = { ...F };
@@ -370,6 +373,10 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
   const [relativeStrength, setRelativeStrength] = useState([]);
   const [measurements, setMeasurements] = useState([]);
   const [healthLogs, setHealthLogs] = useState([]);
+  const [acwr, setAcwr] = useState(null);
+  const [progressionStatus, setProgressionStatus] = useState([]);
+  const [recoveryScore, setRecoveryScore] = useState(null);
+  const [bodyComposition, setBodyComposition] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const loadData = useCallback(async () => {
@@ -423,6 +430,13 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
       setStrengthTests(tests);
       setMeasurements(measRes.data || []);
       setHealthLogs(healthRes.data || []);
+
+      // ── Analytics calculations ──
+      const acwrResult = calculateACWR(combinedLogs);
+      setAcwr(acwrResult);
+      setProgressionStatus(calculateProgressionStatus(combinedLogs));
+      setRecoveryScore(calculateRecoveryScore(healthRes.data || [], acwrResult));
+      setBodyComposition(analyzeBodyComposition(measRes.data || [], combinedLogs));
     } catch (err) { console.error('Progress load error:', err); }
     setLoading(false);
   }, [clientId, bodyweight, localLogs]);
@@ -523,6 +537,7 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
     { id: 'strength', label: 'Strength' },
     { id: 'body', label: 'Body' },
     { id: 'health', label: 'Health' },
+    { id: 'analytics', label: 'Analytics' },
   ];
 
   return (
@@ -610,6 +625,37 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
                 </div>
               )}
             </>
+          )}
+
+          {/* Recovery score */}
+          {recoveryScore && (
+            <div style={{ marginTop: 16, paddingBottom: 8 }}>
+              <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.18em', color: '#999', marginBottom: 10 }}>Today's Readiness</div>
+              <div style={{ background: '#fff', borderLeft: `4px solid ${recoveryScore.color}`, border: '1px solid #e8e8e8', borderRadius: 10, padding: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: '#111' }}>Recovery Score</div>
+                    <div style={{ fontSize: 11, color: '#888', marginTop: 2 }}>{recoveryScore.dataPoints} indicator{recoveryScore.dataPoints !== 1 ? 's' : ''} logged today</div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: 38, fontWeight: 700, color: recoveryScore.color, ...F, lineHeight: 1 }}>{recoveryScore.score}</div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: recoveryScore.color }}>{recoveryScore.label}</div>
+                  </div>
+                </div>
+                <div style={{ height: 8, background: '#f0f0f0', borderRadius: 4, overflow: 'hidden', marginBottom: 10 }}>
+                  <div style={{ height: '100%', width: `${recoveryScore.score}%`, background: recoveryScore.color, borderRadius: 4, transition: 'width 0.8s ease' }} />
+                </div>
+                <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
+                  {recoveryScore.factors.map((f, i) => (
+                    <div key={i} style={{ background: f.status === 'good' ? 'rgba(22,163,74,0.08)' : f.status === 'ok' ? 'rgba(37,99,168,0.08)' : 'rgba(185,28,28,0.08)', borderRadius: 20, padding: '3px 10px', display: 'flex', gap: 5, alignItems: 'center' }}>
+                      <span style={{ fontSize: 10, color: f.status === 'good' ? '#16a34a' : f.status === 'ok' ? '#2563a8' : '#b91c1c' }}>{f.label}</span>
+                      <span style={{ fontSize: 10, fontWeight: 600, color: '#555' }}>{f.value}</span>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ fontSize: 11, color: '#666', lineHeight: 1.6, ...F }}>{recoveryScore.advice}</div>
+              </div>
+            </div>
           )}
         </div>
       )}
@@ -948,6 +994,173 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
                 ))}
               </div>
             </>
+          )}
+        </div>
+      )}
+
+      {/* ── ANALYTICS TAB ── */}
+      {activeTab === 'analytics' && (
+        <div style={{ padding: '16px 16px 60px' }}>
+
+          {/* ── ACWR Training Load ── */}
+          {acwr ? (
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.18em', color: '#999', marginBottom: 4 }}>Training Load · ACWR</div>
+              <div style={{ fontSize: 11, color: '#aaa', marginBottom: 12, lineHeight: 1.6 }}>
+                Acute:Chronic Workload Ratio — compares your last 7 days of training load against your 28-day baseline. Used across professional sports to monitor injury risk.
+              </div>
+              <div style={{ background: '#fff', borderLeft: `4px solid ${acwr.zoneColor}`, border: '1px solid #e8e8e8', borderRadius: 10, padding: '16px', marginBottom: 10 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: '#111' }}>ACWR Ratio</div>
+                    <div style={{ fontSize: 11, color: '#888', marginTop: 2 }}>Optimal range: 0.8 – 1.3</div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: 38, fontWeight: 700, color: acwr.zoneColor, ...F, lineHeight: 1 }}>{acwr.ratio}</div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: acwr.zoneColor }}>{acwr.zone}</div>
+                  </div>
+                </div>
+                {/* Zone bar */}
+                <div style={{ position: 'relative', height: 10, background: '#f0f0f0', borderRadius: 5, marginBottom: 6 }}>
+                  {/* Optimal zone shading */}
+                  <div style={{ position: 'absolute', left: `${(0.8/2.5)*100}%`, width: `${((1.3-0.8)/2.5)*100}%`, height: '100%', background: '#16a34a22', borderRadius: 5 }} />
+                  <div style={{ position: 'absolute', left: `${(0.8/2.5)*100}%`, width: 2, height: '100%', background: '#16a34a55' }} />
+                  <div style={{ position: 'absolute', left: `${(1.3/2.5)*100}%`, width: 2, height: '100%', background: '#16a34a55' }} />
+                  <div style={{ position: 'absolute', left: `${(1.5/2.5)*100}%`, width: 2, height: '100%', background: '#d9770655' }} />
+                  {/* Marker */}
+                  <div style={{ position: 'absolute', left: `${Math.min(98, (acwr.ratio/2.5)*100)}%`, width: 14, height: 14, background: acwr.zoneColor, borderRadius: '50%', top: -2, transform: 'translateX(-50%)', border: '2px solid #fff', boxShadow: '0 1px 4px rgba(0,0,0,0.2)' }} />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <span style={{ fontSize: 9, color: '#bbb' }}>0 · Under</span>
+                  <span style={{ fontSize: 9, color: '#16a34a', fontWeight: 600 }}>0.8–1.3 Optimal</span>
+                  <span style={{ fontSize: 9, color: '#d97706' }}>1.5+ Risk</span>
+                </div>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                  <div style={{ flex: 1, background: '#f9f9f7', borderRadius: 7, padding: '10px 12px' }}>
+                    <div style={{ fontSize: 9, color: '#bbb', textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 3 }}>Acute (7d)</div>
+                    <div style={{ fontSize: 16, fontWeight: 700, ...F }}>{acwr.acute.toLocaleString()}</div>
+                    <div style={{ fontSize: 9, color: '#aaa' }}>lbs lifted</div>
+                  </div>
+                  <div style={{ flex: 1, background: '#f9f9f7', borderRadius: 7, padding: '10px 12px' }}>
+                    <div style={{ fontSize: 9, color: '#bbb', textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 3 }}>Chronic (28d avg)</div>
+                    <div style={{ fontSize: 16, fontWeight: 700, ...F }}>{acwr.chronic.toLocaleString()}</div>
+                    <div style={{ fontSize: 9, color: '#aaa' }}>lbs/week avg</div>
+                  </div>
+                </div>
+                <div style={{ fontSize: 11, color: '#666', lineHeight: 1.6, ...F }}>{acwr.zoneMessage}</div>
+              </div>
+              {/* Weekly load chart */}
+              {acwr.weeklyLoads.filter(w => w.value > 0).length >= 3 && (
+                <div style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: 10, padding: '14px' }}>
+                  <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.14em', color: '#aaa', marginBottom: 10 }}>Weekly Load (8 weeks)</div>
+                  <Sparkline data={acwr.weeklyLoads} color={acwr.zoneColor} height={55} fillArea />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+                    <span style={{ fontSize: 9, color: '#bbb' }}>{acwr.weeklyLoads[0]?.label}</span>
+                    <span style={{ fontSize: 9, color: '#bbb' }}>{acwr.weeklyLoads[acwr.weeklyLoads.length-1]?.label}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: 10, padding: '16px', marginBottom: 24 }}>
+              <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.18em', color: '#999', marginBottom: 6 }}>Training Load · ACWR</div>
+              <div style={{ fontSize: 12, color: '#bbb', lineHeight: 1.6 }}>Log at least 4 weeks of sessions to see your Acute:Chronic Workload Ratio.</div>
+            </div>
+          )}
+
+          {/* ── Progressive Overload ── */}
+          {progressionStatus.length > 0 && (
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.18em', color: '#999', marginBottom: 4 }}>Progressive Overload</div>
+              <div style={{ fontSize: 11, color: '#aaa', marginBottom: 12, lineHeight: 1.6 }}>
+                Month-over-month strength change per exercise. Stalled lifts (no increase in 4+ weeks) may need a program adjustment.
+              </div>
+              {/* Summary counts */}
+              <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+                {[
+                  { label: 'Progressing', status: 'progressing', color: '#16a34a' },
+                  { label: 'Stalled', status: 'stalled', color: '#d97706' },
+                  { label: 'Regressing', status: 'regressing', color: '#b91c1c' },
+                ].map(s => {
+                  const count = progressionStatus.filter(p => p.status === s.status).length;
+                  if (count === 0) return null;
+                  return (
+                    <div key={s.status} style={{ flex: 1, background: '#fff', border: `1px solid ${s.color}40`, borderRadius: 8, padding: '10px 12px', textAlign: 'center' }}>
+                      <div style={{ fontSize: 22, fontWeight: 700, color: s.color, ...F }}>{count}</div>
+                      <div style={{ fontSize: 9, color: '#aaa', textTransform: 'uppercase', letterSpacing: '.1em' }}>{s.label}</div>
+                    </div>
+                  );
+                }).filter(Boolean)}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {progressionStatus.filter(p => p.status !== 'new').slice(0, 12).map((ex, i) => (
+                  <div key={i} style={{ background: '#fff', border: `1px solid ${ex.status === 'regressing' ? '#b91c1c40' : ex.status === 'stalled' ? '#d9770640' : '#e8e8e8'}`, borderRadius: 9, padding: '11px 13px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 12, fontWeight: 500, textTransform: 'capitalize', marginBottom: 3 }}>{ex.displayName}</div>
+                      <div style={{ fontSize: 10, color: '#aaa' }}>{ex.sessions} sessions · best: {ex.bestRecent} lbs</div>
+                      {ex.trend.length >= 2 && (
+                        <div style={{ marginTop: 6, height: 24 }}>
+                          <Sparkline data={ex.trend} color={ex.statusColor} height={24} showDots={false} fillArea />
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: ex.statusColor }}>{ex.statusLabel}</div>
+                      {ex.changePct && <div style={{ fontSize: 9, color: '#aaa' }}>{ex.changePct}%</div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── Body Composition Trajectory ── */}
+          {bodyComposition && (
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.18em', color: '#999', marginBottom: 4 }}>Body Composition Trajectory</div>
+              <div style={{ fontSize: 11, color: '#aaa', marginBottom: 12, lineHeight: 1.6 }}>
+                Analysis of your weight change rate vs strength trend. Based on research by Helms, Aragon & Fitschen on natural athletes.
+              </div>
+              <div style={{ background: '#fff', borderLeft: `4px solid ${bodyComposition.color}`, border: '1px solid #e8e8e8', borderRadius: 10, padding: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                  <div>
+                    <div style={{ fontSize: 16, fontWeight: 600, color: bodyComposition.color, ...F }}>{bodyComposition.assessment}</div>
+                    <div style={{ fontSize: 11, color: '#888', marginTop: 2 }}>Over {bodyComposition.weeks} weeks</div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: bodyComposition.totalChange > 0 ? '#b91c1c' : bodyComposition.totalChange < 0 ? '#16a34a' : '#888', ...F }}>
+                      {bodyComposition.totalChange > 0 ? '+' : ''}{bodyComposition.totalChange} lbs
+                    </div>
+                    <div style={{ fontSize: 10, color: '#aaa' }}>total</div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                  <div style={{ flex: 1, background: '#f9f9f7', borderRadius: 7, padding: '9px 11px' }}>
+                    <div style={{ fontSize: 9, color: '#bbb', textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 2 }}>Weekly rate</div>
+                    <div style={{ fontSize: 15, fontWeight: 700, ...F }}>{bodyComposition.weeklyRate > 0 ? '+' : ''}{bodyComposition.weeklyRate} lbs</div>
+                    <div style={{ fontSize: 9, color: '#aaa' }}>{bodyComposition.weeklyRatePct > 0 ? '+' : ''}{bodyComposition.weeklyRatePct}% BW/wk</div>
+                  </div>
+                  {bodyComposition.strengthTrend !== null && (
+                    <div style={{ flex: 1, background: '#f9f9f7', borderRadius: 7, padding: '9px 11px' }}>
+                      <div style={{ fontSize: 9, color: '#bbb', textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 2 }}>Strength trend</div>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: bodyComposition.strengthTrend > 0 ? '#16a34a' : bodyComposition.strengthTrend < 0 ? '#b91c1c' : '#888', ...F }}>
+                        {bodyComposition.strengthTrend > 0 ? '+' : ''}{bodyComposition.strengthTrend} lbs
+                      </div>
+                      <div style={{ fontSize: 9, color: '#aaa' }}>avg working weight</div>
+                    </div>
+                  )}
+                </div>
+                <div style={{ fontSize: 11, color: '#666', lineHeight: 1.65, ...F }}>{bodyComposition.detail}</div>
+              </div>
+            </div>
+          )}
+
+          {/* No analytics data */}
+          {!acwr && progressionStatus.length === 0 && !bodyComposition && (
+            <div style={{ textAlign: 'center', padding: '60px 20px', color: '#aaa' }}>
+              <div style={{ fontSize: 11, letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>Not enough data yet</div>
+              <div style={{ fontSize: 14, ...F, lineHeight: 1.7 }}>Log sessions consistently for 4+ weeks to unlock training load and progression analytics.</div>
+            </div>
           )}
         </div>
       )}
