@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import MuscleScience from "./MuscleScience";
 import AlternativeExercises from "./AlternativeExercises";
+import GoalTracker from "./GoalTracker";
 
 const F = { fontFamily: "'Georgia','Times New Roman',serif" };
 
@@ -356,7 +357,7 @@ export default function ToolsTab({ principles, clientEquipment, clientInjuries, 
         />
       )}
 
-      {section === "goals" && <GoalsSection clientId={clientId} />}
+      {section === "goals" && <GoalTracker clientId={clientId} />}
 
       {section === "muscles" && (
         <div style={{ margin: "0 -16px" }}>

@@ -5,7 +5,7 @@ import {
   epley1RM, calculateMuscleScores, evaluateStrengthRatios, evaluateRelativeStrength, getExerciseWeights
 } from '../lib/muscleWeights';
 import {
-  getClientMeasurements, getHealthLogs, getClientLogs, getClientPRs, getActivities
+  getClientMeasurements, getHealthLogs, getClientLogs, getClientPRs, getActivities, getGoals
 } from '../lib/supabase';
 import {
   calculateACWR, calculateProgressionStatus, calculateRecoveryScore, analyzeBodyComposition
@@ -58,7 +58,43 @@ function Sparkline({ data, color = '#2563a8', height = 50, showDots = true, fill
   );
 }
 
-// ── Bar chart (horizontal) ────────────────────────────────────────────────────
+// ── Sparkline with goal line overlay ────────────────────────────────────────
+function SparklineWithGoal({ data, color = '#2563a8', height = 50, fillArea = false, goalValue, goalColor = '#b91c1c', goalLabel }) {
+  if (!data || data.length < 2) return null;
+  const vals = data.map(d => d.value);
+  const allVals = goalValue ? [...vals, goalValue] : vals;
+  const min = Math.min(...allVals);
+  const max = Math.max(...allVals);
+  const range = max - min || 1;
+  const W = 100; const H = height;
+
+  function toY(v) { return H - ((v - min) / range) * (H - 8) - 4; }
+  function toX(i) { return (i / (vals.length - 1)) * W; }
+
+  const pts = vals.map((v, i) => `${toX(i)},${toY(v)}`);
+  const polyline = pts.join(' ');
+  const area = `${toX(0)},${H} ${polyline} ${toX(vals.length-1)},${H}`;
+  const goalY = goalValue !== undefined && goalValue !== null ? toY(goalValue) : null;
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} preserveAspectRatio="none">
+      {fillArea && <polygon points={area} fill={color} opacity="0.08" />}
+      <polyline points={polyline} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      {/* Goal line */}
+      {goalY !== null && (
+        <>
+          <line x1="0" y1={goalY} x2={W} y2={goalY} stroke={goalColor} strokeWidth="1.5" strokeDasharray="3,2" opacity="0.8" />
+          <rect x={W - 18} y={goalY - 8} width={18} height={10} fill={goalColor} opacity="0.9" rx="2" />
+          <text x={W - 9} y={goalY - 1} textAnchor="middle" fill="white" fontSize="5" fontWeight="bold">GOAL</text>
+        </>
+      )}
+      {/* Latest dot */}
+      {vals.length > 0 && (
+        <circle cx={toX(vals.length-1)} cy={toY(vals[vals.length-1])} r="3.5" fill={color} />
+      )}
+    </svg>
+  );
+}
 function HBar({ value, max, color, label, sublabel }) {
   const pct = max > 0 ? Math.min(100, (value / max) * 100) : 0;
   return (
@@ -377,19 +413,21 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
   const [progressionStatus, setProgressionStatus] = useState([]);
   const [recoveryScore, setRecoveryScore] = useState(null);
   const [bodyComposition, setBodyComposition] = useState(null);
+  const [goals, setGoals] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const loadData = useCallback(async () => {
     if (!supabase || !clientId) return;
     setLoading(true);
     try {
-      const [logsRes, prRes, measRes, healthRes] = await Promise.all([
+      const [logsRes, prRes, measRes, healthRes, goalsRes] = await Promise.all([
         supabase.from('workout_logs').select('*, exercises(name, primary_muscle)')
           .eq('client_id', clientId).eq('completed', true)
           .not('weight_lbs', 'is', null).order('session_date', { ascending: false }).limit(500),
         supabase.from('personal_records').select('*').eq('client_id', clientId).order('achieved_at', { ascending: false }),
         getClientMeasurements(clientId),
         getHealthLogs(clientId, 90),
+        getGoals(clientId),
       ]);
 
       const allPRs = prRes.data || [];
@@ -430,6 +468,14 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
       setStrengthTests(tests);
       setMeasurements(measRes.data || []);
       setHealthLogs(healthRes.data || []);
+
+      // Goals — Supabase first, fallback to localStorage
+      const supabaseGoals = goalsRes?.data || [];
+      if (supabaseGoals.length > 0) {
+        setGoals(supabaseGoals);
+      } else {
+        try { setGoals(JSON.parse(localStorage.getItem('goals_v1') || '[]')); } catch { setGoals([]); }
+      }
 
       // ── Analytics calculations ──
       const acwrResult = calculateACWR(combinedLogs);
@@ -532,6 +578,31 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
     .map(([g, v]) => ({ group: g, vol: v, pct: Math.round((v / totalMuscleVol) * 100), color: MUSCLE_GROUPS[g]?.color || '#ddd', label: MUSCLE_GROUPS[g]?.label || g }))
     .sort((a, b) => b.vol - a.vol).slice(0, 6);
 
+  // ── Goal lines for charts ─────────────────────────────────────────────────
+  const activeGoals = goals.filter(g => !g.completed);
+  const goalWeightTarget = activeGoals.find(g => g.type === 'bodyweight')?.target_value
+    ?? (clientData?.goal_weight_lbs || null);
+  const goalBFTarget = activeGoals.find(g => g.type === 'body_fat')?.target_value || null;
+  const goalWaistTarget = activeGoals.find(g =>
+    g.type === 'measurement' && (g.metric_key === 'waist_in' || g.name?.toLowerCase().includes('waist'))
+  )?.target_value || null;
+  const goalHipsTarget = activeGoals.find(g =>
+    g.type === 'measurement' && (g.metric_key === 'hips_in' || g.name?.toLowerCase().includes('hip'))
+  )?.target_value || null;
+
+  // Strength goals — match by exercise name
+  const strengthGoals = activeGoals.filter(g => g.type === 'strength' && g.exercise_name && g.target_value);
+
+  // For each benchmark lift, check if there's a matching strength goal
+  const liftGoals = {};
+  BENCHMARK_LIFTS.forEach(lift => {
+    const match = strengthGoals.find(g =>
+      g.exercise_name?.toLowerCase().includes(lift.name.toLowerCase().split(' ')[0]) ||
+      lift.name.toLowerCase().includes(g.exercise_name?.toLowerCase() || '')
+    );
+    if (match) liftGoals[lift.exerciseKey] = match.target_value;
+  });
+
   const TABS = [
     { id: 'overview', label: 'Overview' },
     { id: 'strength', label: 'Strength' },
@@ -562,7 +633,55 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
             </div>
           ) : (
             <>
-              {/* Key stats row */}
+              {/* Goals summary */}
+          {activeGoals.length > 0 && (
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.18em', color: '#999', marginBottom: 10 }}>Active Goals</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {activeGoals.slice(0, 5).map((goal, i) => {
+                  const currentVal = goal.current_value ?? goal.currentValue ?? 0;
+                  const targetVal = goal.target_value ?? goal.targetValue;
+                  const lowerIsBetter = goal.type === 'bodyweight' || goal.type === 'body_fat' || goal.type === 'measurement';
+                  const startVal = goal.start_value || currentVal;
+                  let pct = null;
+                  if (targetVal && startVal !== undefined) {
+                    if (lowerIsBetter && startVal > targetVal) {
+                      pct = Math.min(100, Math.max(0, Math.round(((startVal - currentVal) / (startVal - targetVal)) * 100)));
+                    } else if (!lowerIsBetter) {
+                      pct = Math.min(100, Math.round((currentVal / targetVal) * 100));
+                    }
+                  }
+                  const accentColor = pct >= 100 ? '#16a34a' : pct >= 50 ? '#2563a8' : '#c47a0a';
+                  return (
+                    <div key={goal.id || i} style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: 9, padding: '12px 14px', borderLeft: `3px solid ${accentColor}` }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: targetVal ? 8 : 0 }}>
+                        <div>
+                          <div style={{ fontSize: 12, fontWeight: 600, color: '#111' }}>{goal.name}</div>
+                          {goal.target_date && <div style={{ fontSize: 10, color: '#bbb', marginTop: 2 }}>By {goal.target_date}</div>}
+                        </div>
+                        {targetVal && pct !== null && (
+                          <div style={{ fontSize: 13, fontWeight: 700, color: accentColor }}>{pct}%</div>
+                        )}
+                      </div>
+                      {targetVal && pct !== null && (
+                        <>
+                          <div style={{ height: 6, background: '#f0f0f0', borderRadius: 3, overflow: 'hidden', marginBottom: 4 }}>
+                            <div style={{ height: '100%', width: `${pct}%`, background: accentColor, borderRadius: 3, transition: 'width 0.6s ease' }} />
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#aaa' }}>
+                            <span>Current: {currentVal} {goal.unit}</span>
+                            <span>Target: {targetVal} {goal.unit}</span>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Key stats row */}
               <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.18em', color: '#999', marginBottom: 10 }}>At a Glance</div>
               <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
                 <StatCard label="Sessions / wk" value={sessionsPerWeek} sub="last 8 weeks" />
@@ -711,11 +830,16 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
                         )}
                       </div>
                     </div>
-                    {/* 1RM history sparkline */}
+                    {/* 1RM history sparkline with goal line */}
                     {history.length >= 2 && (
                       <div style={{ marginTop: 10 }}>
-                        <div style={{ fontSize: 9, color: '#bbb', marginBottom: 4 }}>1RM history</div>
-                        <Sparkline data={history} color={mg?.color || '#2563a8'} height={36} fillArea showDots={false} />
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                          <span style={{ fontSize: 9, color: '#bbb' }}>1RM history</span>
+                          {liftGoals[lift.exerciseKey] && (
+                            <span style={{ fontSize: 9, color: '#16a34a', fontWeight: 600 }}>Goal: {liftGoals[lift.exerciseKey]} lbs</span>
+                          )}
+                        </div>
+                        <SparklineWithGoal data={history} color={mg?.color || '#2563a8'} height={36} fillArea goalValue={liftGoals[lift.exerciseKey] || null} goalColor="#16a34a" />
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 2 }}>
                           <span style={{ fontSize: 8, color: '#ccc' }}>{formatShort(history[0].date)} · {history[0].value} lbs</span>
                           <span style={{ fontSize: 8, color: '#ccc' }}>{formatShort(history[history.length-1].date)} · {history[history.length-1].value} lbs</span>
@@ -868,7 +992,7 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
                       </div>
                     )}
                   </div>
-                  <Sparkline data={weightTrend} color="#2563a8" height={60} fillArea />
+                  <SparklineWithGoal data={weightTrend} color="#2563a8" height={60} fillArea goalValue={goalWeightTarget} goalColor="#16a34a" goalLabel="Goal" />
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
                     <span style={{ fontSize: 9, color: '#bbb' }}>{formatShort(weightTrend[0]?.date)} · {weightTrend[0]?.value} lbs</span>
                     <span style={{ fontSize: 9, color: '#bbb' }}>{formatShort(weightTrend[weightTrend.length-1]?.date)} · {weightTrend[weightTrend.length-1]?.value} lbs</span>
@@ -880,7 +1004,7 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
               {waistTrend.length >= 2 && (
                 <div style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: 10, padding: '14px', marginBottom: 14 }}>
                   <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.14em', color: '#aaa', marginBottom: 10 }}>Waist (in)</div>
-                  <Sparkline data={waistTrend} color="#d97706" height={50} fillArea />
+                  <SparklineWithGoal data={waistTrend} color="#d97706" height={50} fillArea goalValue={goalWaistTarget} goalColor="#16a34a" />
                 </div>
               )}
 
@@ -888,7 +1012,7 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
               {hipsTrend.length >= 2 && (
                 <div style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: 10, padding: '14px', marginBottom: 14 }}>
                   <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.14em', color: '#aaa', marginBottom: 10 }}>Hips (in)</div>
-                  <Sparkline data={hipsTrend} color="#b91c1c" height={50} fillArea />
+                  <SparklineWithGoal data={hipsTrend} color="#b91c1c" height={50} fillArea goalValue={goalHipsTarget} goalColor="#16a34a" />
                 </div>
               )}
 
@@ -896,7 +1020,7 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
               {bfTrend.length >= 2 && (
                 <div style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: 10, padding: '14px', marginBottom: 14 }}>
                   <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.14em', color: '#aaa', marginBottom: 10 }}>Body Fat %</div>
-                  <Sparkline data={bfTrend} color="#7c3aed" height={50} fillArea />
+                  <SparklineWithGoal data={bfTrend} color="#7c3aed" height={50} fillArea goalValue={goalBFTarget} goalColor="#16a34a" />
                 </div>
               )}
 
