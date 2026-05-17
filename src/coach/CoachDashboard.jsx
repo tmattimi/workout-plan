@@ -109,10 +109,12 @@ function CreateClientModal({ onSave, onCancel, coachId }) {
   const [form, setForm] = useState({ name: "", email: "", phone: "", goal: "", sex: "", notes: "" });
   const [saving, setSaving] = useState(false);
   const [created, setCreated] = useState(null);
+  const [createError, setCreateError] = useState(null);
 
   async function handleSave() {
     if (!form.name.trim()) return;
     setSaving(true);
+    setCreateError(null);
     const payload = {
       ...form,
       coach_id: coachId,
@@ -121,7 +123,11 @@ function CreateClientModal({ onSave, onCancel, coachId }) {
     };
     const { data, error } = await createClient_db(payload);
     setSaving(false);
-    if (data) setCreated(data);
+    if (data) {
+      setCreated(data);
+    } else {
+      setCreateError(error?.message || "Something went wrong. Please try again.");
+    }
   }
 
   if (created) {
@@ -193,6 +199,11 @@ function CreateClientModal({ onSave, onCancel, coachId }) {
               style={{ width: "100%", padding: "9px 11px", borderRadius: "6px", border: "1px solid #e0e0e0", fontSize: "12px", resize: "none", ...F }} />
           </div>
         </div>
+        {createError && (
+          <div style={{ background: "#fff0f0", border: "1px solid #f0b0b0", borderRadius: 7, padding: "10px 12px", marginBottom: 10, fontSize: 12, color: "#a02020", lineHeight: 1.5 }}>
+            {createError}
+          </div>
+        )}
         <div style={{ display: "flex", gap: "8px" }}>
           <button onClick={onCancel} style={{ flex: 1, background: "#f5f5f3", color: "#555", border: "1px solid #e0e0e0", borderRadius: "7px", padding: "12px", fontSize: "13px", cursor: "pointer", ...F }}>Cancel</button>
           <button onClick={handleSave} disabled={saving || !form.name.trim()} style={{ flex: 2, background: "#111", color: "#fff", border: "none", borderRadius: "7px", padding: "12px", fontSize: "13px", cursor: "pointer", ...F }}>
