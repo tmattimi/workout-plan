@@ -5,23 +5,17 @@ import ClientLoader from './components/ClientLoader';
 import App from './App';
 
 const path = window.location.pathname;
-const hash = window.location.hash;
 
 // /coach -> coach dashboard
 const isCoach = path.startsWith('/coach');
-
-// Password setup/reset — Supabase puts tokens in the URL hash
-const isPasswordSetup = hash.includes('access_token') || 
-                        hash.includes('type=invite') || 
-                        hash.includes('type=recovery');
 
 function Root() {
   if (isCoach) return <CoachDashboard />;
   return (
     <ClientLoader>
       {({ clientData, adaptedSchedule, onSignOut }) => (
-        <App 
-          clientData={clientData} 
+        <App
+          clientData={clientData}
           adaptedSchedule={adaptedSchedule}
           onSignOut={onSignOut}
         />
