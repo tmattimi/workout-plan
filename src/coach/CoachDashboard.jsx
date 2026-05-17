@@ -442,7 +442,7 @@ function PlanBuilder({ coachId, onBack }) {
 }
 
 // ── Client Detail ──────────────────────────────────────────────────────────────
-function ClientDetail({ client, coachId, plans, onBack, onAssignPlan }) {
+function ClientDetail({ client, coachId, plans, onBack, onDelete, onAssignPlan }) {
   const [view, setView] = useState("overview"); // overview | notes | messages | assign
   const [overview, setOverview] = useState(null);
   const [note, setNote] = useState("");
@@ -489,7 +489,10 @@ function ClientDetail({ client, coachId, plans, onBack, onAssignPlan }) {
     setDeleting(true);
     const { error } = await deleteClient_db(client.id);
     setDeleting(false);
-    if (!error) onBack(); // go back to client list
+    if (!error) {
+      if (onDelete) onDelete(client.id);
+      else onBack();
+    }
   }
 
   async function handleSendInvite() {
@@ -1323,6 +1326,10 @@ export default function CoachDashboard() {
           coachId={session.user.id}
           plans={plans}
           onBack={() => setSelectedClient(null)}
+          onDelete={(clientId) => {
+            setClients(prev => prev.filter(c => c.id !== clientId));
+            setSelectedClient(null);
+          }}
           onAssignPlan={handleAssignPlan}
         />
       ) : view === "clients" ? (
