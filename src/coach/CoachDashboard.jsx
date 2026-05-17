@@ -454,6 +454,7 @@ function ClientDetail({ client, coachId, plans, onBack, onDelete, onAssignPlan }
   const [inviting, setInviting] = useState(false);
   const [inviteStatus, setInviteStatus] = useState(client.auth_user_id ? "exists" : null);
   const [inviteError, setInviteError] = useState("");
+  const [setupLink, setSetupLink] = useState(null);
   const [editForm, setEditForm] = useState({ name: client.name || "", email: client.email || "", phone: client.phone || "", goal: client.goal || "recomp", sex: client.sex || "male", notes: client.notes || "" });
   const [seeding, setSeeding] = useState(false);
   const [seedResult, setSeedResult] = useState(null);
@@ -518,6 +519,7 @@ function ClientDetail({ client, coachId, plans, onBack, onDelete, onAssignPlan }
         setInviteError(result.error);
       } else {
         setInviteStatus("sent");
+        if (result.setupLink) setSetupLink(result.setupLink);
       }
     } catch (err) {
       setInviteError("Failed to send invite. Please try again.");
@@ -595,6 +597,19 @@ function ClientDetail({ client, coachId, plans, onBack, onDelete, onAssignPlan }
           </button>
         </div>
         {inviteError && <div style={{ fontSize: "10px", color: "#f87171", marginTop: "6px" }}>{inviteError}</div>}
+        {setupLink && (
+          <div style={{ marginTop: "10px", background: "#1a1a1a", borderRadius: "7px", padding: "10px 12px" }}>
+            <div style={{ fontSize: "9px", color: "#666", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "6px" }}>
+              Direct setup link — send this to your client if they didn't receive the email
+            </div>
+            <div style={{ fontSize: "10px", color: "#888", wordBreak: "break-all", marginBottom: "8px", fontFamily: "monospace" }}>
+              {setupLink.substring(0, 60)}...
+            </div>
+            <button onClick={() => { navigator.clipboard.writeText(setupLink); }} style={{ background: "#333", color: "#f7f6f3", border: "none", borderRadius: "5px", padding: "6px 12px", fontSize: "10px", cursor: "pointer", ...F }}>
+              Copy setup link
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Sub-nav */}

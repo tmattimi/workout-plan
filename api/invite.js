@@ -29,9 +29,7 @@ module.exports = async function handler(req, res) {
       }
     );
 
-    if (inviteError && !inviteError.message.toLowerCase().includes('already')) {
-      return res.status(400).json({ error: inviteError.message });
-    }
+    console.error('inviteUserByEmail error:', JSON.stringify(inviteError));
 
     // Get the auth user ID — from invite or existing user lookup
     let authUserId = inviteData?.user?.id;
@@ -51,7 +49,22 @@ module.exports = async function handler(req, res) {
         .eq('id', clientId);
     }
 
-    return res.status(200).json({ success: true, emailSent: true });
+    // Generate a magic link regardless — useful if invite email wasn't sent
+    // or if user already exists
+    const { data: linkData } = await supabaseAdmin.auth.admin.generateLink({
+      type: 'magiclink',
+      email: email.trim(),
+      options: { redirectTo: redirectTo || 'https://workout-plan-ivory-tau.vercel.app/' }
+    });
+
+    const setupLink = linkData?.properties?.action_link;
+    console.log('Setup link generated:', setupLink ? 'yes' : 'no');
+
+    return res.status(200).json({ 
+      success: true, 
+      emailSent: !inviteError,
+      setupLink: setupLink || null
+    });
 
   } catch (err) {
     console.error('Server error:', err);
