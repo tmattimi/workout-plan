@@ -1272,8 +1272,8 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
 
       {tab === "progress" && <NewProgressTab clientId={clientData?.id} bodyweight={clientData?.weight || 170} localLogs={logs} measurements={measurements} />}
       {tab === "body" && <BodyTab clientId={clientData?.id} />}
-      {tab === "nutrition" && <NutritionTab />}
-      {tab === "cycle" && <CycleTracking />}
+      {tab === "nutrition" && <NutritionTab clientId={clientData?.id} />}
+      {tab === "cycle" && <CycleTracking clientId={clientData?.id} />}
       {tab === "tools" && (
         <ToolsTab
           principles={principles}
@@ -1281,6 +1281,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
           clientInjuries={clientInjuries}
           onEquipmentChange={handleEquipmentChange}
           onInjuryChange={handleInjuryChange}
+          clientId={clientData?.id}
         />
       )}
 
@@ -1292,6 +1293,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
           onEquipmentChange={handleEquipmentChange}
           onInjuryChange={handleInjuryChange}
           defaultSection="guide"
+          clientId={clientData?.id}
         />
       )}
 

@@ -185,7 +185,7 @@ function AddFoodModal({ onAdd, onClose }) {
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
-export default function NutritionTab() {
+export default function NutritionTab({ clientId }) {
   const [data, setData] = useState(loadNutrition);
   const [targets, setTargets] = useState(() => loadTargets() || { calories: 2200, protein: 170, carbs: 220, fat: 70 });
   const [view, setView] = useState("today"); // today | week | targets
@@ -193,6 +193,35 @@ export default function NutritionTab() {
   const [editingTargets, setEditingTargets] = useState(false);
   const [saved, setSaved] = useState(false);
   const [selectedDate, setSelectedDate] = useState(today());
+
+  // Load from Supabase on mount
+  useEffect(() => {
+    if (!clientId) return;
+    async function loadFromSupabase() {
+      try {
+        const { getNutritionLogs, getNutritionTargets } = await import("../lib/supabase");
+        const [logsResult, targetsResult] = await Promise.all([
+          getNutritionLogs(clientId, 60),
+          getNutritionTargets(clientId),
+        ]);
+        if (logsResult.data?.length > 0) {
+          // Convert array of rows to the {date: [items]} format
+          const byDate = {};
+          logsResult.data.forEach(row => {
+            const d = row.log_date;
+            if (!byDate[d]) byDate[d] = [];
+            byDate[d].push({ id: row.id, name: row.food_name, calories: row.calories || 0, protein: row.protein_g || 0, carbs: row.carbs_g || 0, fat: row.fat_g || 0, time: row.meal_time, fromSupabase: true });
+          });
+          setData(prev => ({ ...byDate, ...prev }));
+        }
+        if (targetsResult.data) {
+          const t = targetsResult.data;
+          setTargets({ calories: t.calories || 2200, protein: t.protein_g || 170, carbs: t.carbs_g || 220, fat: t.fat_g || 70 });
+        }
+      } catch(e) { console.warn("Nutrition load failed:", e); }
+    }
+    loadFromSupabase();
+  }, [clientId]);
 
   useEffect(() => { saveNutrition(data); }, [data]);
   useEffect(() => { saveTargets(targets); }, [targets]);
@@ -206,18 +235,55 @@ export default function NutritionTab() {
     fat: acc.fat + (item.fat || 0),
   }), { calories: 0, protein: 0, carbs: 0, fat: 0 });
 
-  function addFood(food) {
-    const updated = { ...data, [selectedDate]: [...dayLog, { ...food, time: new Date().toTimeString().slice(0, 5) }] };
+  async function addFood(food) {
+    const entry = { ...food, time: new Date().toTimeString().slice(0, 5) };
+    const updated = { ...data, [selectedDate]: [...dayLog, entry] };
     setData(updated);
+    saveNutrition(updated);
     setShowAdd(false);
+
+    if (clientId) {
+      try {
+        const { logNutritionEntry } = await import("../lib/supabase");
+        await logNutritionEntry(clientId, {
+          log_date: selectedDate,
+          food_name: food.name,
+          calories: food.calories,
+          protein_g: food.protein,
+          carbs_g: food.carbs,
+          fat_g: food.fat,
+          meal_time: entry.time,
+        });
+      } catch(e) { console.warn("Nutrition Supabase write failed:", e); }
+    }
   }
 
-  function removeFood(id) {
+  async function removeFood(id) {
     const updated = { ...data, [selectedDate]: dayLog.filter(f => f.id !== id) };
     setData(updated);
+    saveNutrition(updated);
+    if (clientId && typeof id === 'number' && id > 1000000000000) {
+      // Only attempt Supabase delete for Supabase-originated IDs (bigint, not Date.now())
+    } else if (clientId) {
+      try {
+        const { deleteNutritionEntry } = await import("../lib/supabase");
+        await deleteNutritionEntry(id);
+      } catch(e) { console.warn("Nutrition delete failed:", e); }
+    }
   }
 
-  function saveTargetsDone() { setSaved(true); setEditingTargets(false); setTimeout(() => setSaved(false), 2000); }
+  async function saveTargetsDone() {
+    setSaved(true);
+    setEditingTargets(false);
+    saveTargets(targets);
+    if (clientId) {
+      try {
+        const { upsertNutritionTargets } = await import("../lib/supabase");
+        await upsertNutritionTargets(clientId, { calories: targets.calories, protein_g: targets.protein, carbs_g: targets.carbs, fat_g: targets.fat });
+      } catch(e) { console.warn("Targets save failed:", e); }
+    }
+    setTimeout(() => setSaved(false), 2000);
+  }
 
   // Weekly summary
   const last7 = Array.from({ length: 7 }, (_, i) => {

@@ -644,3 +644,209 @@ export async function seedClientDataFromIntake(clientId, intake) {
 
   return { errors, intakeDate, hasMeasurements, prCount: prUpserts.length };
 }
+
+// ── NUTRITION ─────────────────────────────────────────────────────────────────
+export async function logNutritionEntry(clientId, entry) {
+  if (!supabase) return { data: null };
+  const { data, error } = await supabase
+    .from('nutrition_logs')
+    .insert({ client_id: clientId, ...entry })
+    .select().single();
+  return { data, error };
+}
+
+export async function deleteNutritionEntry(entryId) {
+  if (!supabase) return { error: null };
+  return await supabase.from('nutrition_logs').delete().eq('id', entryId);
+}
+
+export async function getNutritionLogs(clientId, daysBack = 30) {
+  if (!supabase) return { data: [] };
+  const since = new Date();
+  since.setDate(since.getDate() - daysBack);
+  const { data, error } = await supabase
+    .from('nutrition_logs')
+    .select('*')
+    .eq('client_id', clientId)
+    .gte('log_date', since.toISOString().slice(0, 10))
+    .order('log_date', { ascending: false });
+  return { data: data || [], error };
+}
+
+export async function upsertNutritionTargets(clientId, targets) {
+  if (!supabase) return { data: null };
+  const { data, error } = await supabase
+    .from('nutrition_targets')
+    .upsert({ client_id: clientId, ...targets }, { onConflict: 'client_id' })
+    .select().single();
+  return { data, error };
+}
+
+export async function getNutritionTargets(clientId) {
+  if (!supabase) return { data: null };
+  const { data, error } = await supabase
+    .from('nutrition_targets')
+    .select('*')
+    .eq('client_id', clientId)
+    .single();
+  return { data, error };
+}
+
+// ── GOALS ─────────────────────────────────────────────────────────────────────
+export async function saveGoal(clientId, goal) {
+  if (!supabase) return { data: null };
+  const { data, error } = await supabase
+    .from('client_goals')
+    .upsert({ client_id: clientId, ...goal }, { onConflict: 'id' })
+    .select().single();
+  return { data, error };
+}
+
+export async function deleteGoal(goalId) {
+  if (!supabase) return { error: null };
+  return await supabase.from('client_goals').delete().eq('id', goalId);
+}
+
+export async function getGoals(clientId) {
+  if (!supabase) return { data: [] };
+  const { data, error } = await supabase
+    .from('client_goals')
+    .select('*')
+    .eq('client_id', clientId)
+    .order('created_at', { ascending: false });
+  return { data: data || [], error };
+}
+
+// ── HEALTH LOGS ───────────────────────────────────────────────────────────────
+export async function upsertHealthLog(clientId, logDate, healthData) {
+  if (!supabase) return { data: null };
+  const { data, error } = await supabase
+    .from('client_health_logs')
+    .upsert({ client_id: clientId, log_date: logDate, ...healthData }, { onConflict: 'client_id,log_date' })
+    .select().single();
+  return { data, error };
+}
+
+export async function getHealthLogs(clientId, daysBack = 14) {
+  if (!supabase) return { data: [] };
+  const since = new Date();
+  since.setDate(since.getDate() - daysBack);
+  const { data, error } = await supabase
+    .from('client_health_logs')
+    .select('*')
+    .eq('client_id', clientId)
+    .gte('log_date', since.toISOString().slice(0, 10))
+    .order('log_date', { ascending: false });
+  return { data: data || [], error };
+}
+
+// ── CYCLE TRACKING ────────────────────────────────────────────────────────────
+export async function upsertCycleData(clientId, cycleData) {
+  if (!supabase) return { data: null };
+  const { data, error } = await supabase
+    .from('cycle_data')
+    .upsert({ client_id: clientId, ...cycleData }, { onConflict: 'client_id' })
+    .select().single();
+  return { data, error };
+}
+
+export async function getCycleData(clientId) {
+  if (!supabase) return { data: null };
+  const { data, error } = await supabase
+    .from('cycle_data')
+    .select('*')
+    .eq('client_id', clientId)
+    .single();
+  return { data, error };
+}
+
+export async function upsertCycleSymptoms(clientId, logDate, symptoms) {
+  if (!supabase) return { data: null };
+  const { data, error } = await supabase
+    .from('cycle_symptoms')
+    .upsert({ client_id: clientId, log_date: logDate, symptoms }, { onConflict: 'client_id,log_date' })
+    .select().single();
+  return { data, error };
+}
+
+export async function getCycleSymptoms(clientId) {
+  if (!supabase) return { data: [] };
+  const { data, error } = await supabase
+    .from('cycle_symptoms')
+    .select('*')
+    .eq('client_id', clientId)
+    .order('log_date', { ascending: false });
+  return { data: data || [], error };
+}
+
+// ── MONTHLY INTENTIONS ────────────────────────────────────────────────────────
+export async function upsertMonthlyIntentions(clientId, monthKey, intentionData) {
+  if (!supabase) return { data: null };
+  const { data, error } = await supabase
+    .from('monthly_intentions')
+    .upsert({ client_id: clientId, month_key: monthKey, ...intentionData }, { onConflict: 'client_id,month_key' })
+    .select().single();
+  return { data, error };
+}
+
+export async function getMonthlyIntentions(clientId) {
+  if (!supabase) return { data: [] };
+  const { data, error } = await supabase
+    .from('monthly_intentions')
+    .select('*')
+    .eq('client_id', clientId)
+    .order('month_key', { ascending: false });
+  return { data: data || [], error };
+}
+
+// ── PHOTO STORAGE ─────────────────────────────────────────────────────────────
+export async function uploadPhoto(clientId, monthKey, poseId, base64DataUrl) {
+  if (!supabase) return { url: null };
+  // Convert base64 data URL to blob
+  const arr = base64DataUrl.split(',');
+  const mime = arr[0].match(/:(.*?);/)[1];
+  const bstr = atob(arr[1]);
+  const n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  for (let i = 0; i < n; i++) u8arr[i] = bstr.charCodeAt(i);
+  const blob = new Blob([u8arr], { type: mime });
+
+  const path = `${clientId}/${monthKey}/${poseId}.jpg`;
+  const { error } = await supabase.storage
+    .from('progress-photos')
+    .upload(path, blob, { upsert: true, contentType: mime });
+
+  if (error) return { url: null, error };
+
+  const { data } = supabase.storage.from('progress-photos').getPublicUrl(path);
+  return { url: data.publicUrl, error: null };
+}
+
+export async function getPhotoUrls(clientId) {
+  if (!supabase) return { data: [] };
+  const { data, error } = await supabase.storage
+    .from('progress-photos')
+    .list(`${clientId}`, { limit: 100 });
+  return { data, error };
+}
+
+// ── BODY SCANS ────────────────────────────────────────────────────────────────
+export async function saveBodyScan(clientId, scan) {
+  if (!supabase) return { data: null };
+  // Store extracted metrics in DB; image stays in localStorage (too large for DB)
+  const { data, error } = await supabase
+    .from('body_scans')
+    .insert({ client_id: clientId, scan_date: scan.date, scan_type: scan.scan_type, metrics: scan.metrics })
+    .select().single();
+  return { data, error };
+}
+
+export async function getBodyScans(clientId) {
+  if (!supabase) return { data: [] };
+  const { data, error } = await supabase
+    .from('body_scans')
+    .select('*')
+    .eq('client_id', clientId)
+    .order('scan_date', { ascending: false });
+  return { data: data || [], error };
+}

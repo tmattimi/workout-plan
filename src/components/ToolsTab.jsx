@@ -29,7 +29,7 @@ const REFLECTION_PROMPTS = [
 ];
 
 // ── Goals section ─────────────────────────────────────────────────────────────
-function GoalsSection() {
+function GoalsSection({ clientId }) {
   const monthKey = getMonthKey();
   const [goals, setGoals] = useState(loadGoals);
   const [adding, setAdding] = useState(false);
@@ -41,18 +41,56 @@ function GoalsSection() {
   const [progressVal, setProgressVal] = useState("");
 
   useEffect(() => { saveGoals(goals); }, [goals]);
-  useEffect(() => { saveMonthData(monthKey, monthData); }, [monthData, monthKey]);
+  useEffect(() => {
+    saveMonthData(monthKey, monthData);
+    if (clientId) {
+      import("../lib/supabase").then(({ upsertMonthlyIntentions }) => {
+        upsertMonthlyIntentions(clientId, monthKey, { goals: monthData.goals, reflection: monthData.reflection, prompt_index: monthData.promptIndex });
+      }).catch(() => {});
+    }
+  }, [monthData, monthKey, clientId]);
+
+  // Load from Supabase on mount
+  useEffect(() => {
+    if (!clientId) return;
+    import("../lib/supabase").then(async ({ getGoals, getMonthlyIntentions }) => {
+      const [goalsResult, intentionsResult] = await Promise.all([getGoals(clientId), getMonthlyIntentions(clientId)]);
+      if (goalsResult.data?.length > 0) {
+        const mapped = goalsResult.data.map(g => ({
+          id: g.id, type: g.type, name: g.name, targetValue: g.target_value,
+          currentValue: g.current_value, unit: g.unit, targetDate: g.target_date,
+          notes: g.notes, completed: g.completed, completedDate: g.completed_date,
+          createdDate: g.created_at?.slice(0,10), prevPct: 0,
+        }));
+        setGoals(mapped);
+        saveGoals(mapped);
+      }
+      if (intentionsResult.data?.length > 0) {
+        const thisMonth = intentionsResult.data.find(m => m.month_key === monthKey);
+        if (thisMonth) {
+          setMonthData({ goals: thisMonth.goals || ["","",""], reflection: thisMonth.reflection || "", promptIndex: thisMonth.prompt_index || 0 });
+        }
+      }
+    }).catch(() => {});
+  }, [clientId]);
 
   const active = goals.filter(g => !g.completed);
   const completed = goals.filter(g => g.completed);
   const prompt = REFLECTION_PROMPTS[monthData.promptIndex % REFLECTION_PROMPTS.length];
 
-  function addGoal() {
+  async function addGoal() {
     if (!newGoal.name.trim()) return;
     const gt = GOAL_TYPES.find(t => t.id === newGoal.type);
-    setGoals(p => [{ id: Date.now(), ...newGoal, targetValue: newGoal.targetValue ? parseFloat(newGoal.targetValue) : null, unit: gt.unit, currentValue: 0, prevPct: 0, completed: false, createdDate: new Date().toISOString().slice(0, 10) }, ...p]);
+    const goal = { id: String(Date.now()), ...newGoal, targetValue: newGoal.targetValue ? parseFloat(newGoal.targetValue) : null, unit: gt.unit, currentValue: 0, prevPct: 0, completed: false, createdDate: new Date().toISOString().slice(0, 10) };
+    setGoals(p => [goal, ...p]);
     setNewGoal({ type: "strength", name: "", targetValue: "", targetDate: "", notes: "" });
     setAdding(false);
+    if (clientId) {
+      try {
+        const { saveGoal } = await import("../lib/supabase");
+        await saveGoal(clientId, { id: goal.id, type: goal.type, name: goal.name, target_value: goal.targetValue, current_value: 0, unit: goal.unit, target_date: goal.targetDate || null, notes: goal.notes || null, completed: false });
+      } catch(e) { console.warn("Goal save failed:", e); }
+    }
   }
 
   function updateProgress(goal) {
@@ -216,7 +254,7 @@ function GuideSection({ principles }) {
 }
 
 // ── Main ToolsTab ─────────────────────────────────────────────────────────────
-export default function ToolsTab({ principles, clientEquipment, clientInjuries, onEquipmentChange, onInjuryChange, defaultSection }) {
+export default function ToolsTab({ principles, clientEquipment, clientInjuries, onEquipmentChange, onInjuryChange, defaultSection, clientId }) {
   const [section, setSection] = useState(defaultSection || "alternatives");
 
   const SECTIONS = [
@@ -248,7 +286,7 @@ export default function ToolsTab({ principles, clientEquipment, clientInjuries, 
         />
       )}
 
-      {section === "goals" && <GoalsSection />}
+      {section === "goals" && <GoalsSection clientId={clientId} />}
 
       {section === "muscles" && (
         <div style={{ margin: "0 -16px" }}>

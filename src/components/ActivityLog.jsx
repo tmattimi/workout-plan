@@ -139,11 +139,29 @@ function getThisWeekRange() {
   return [start.toISOString().slice(0, 10), end.toISOString().slice(0, 10)];
 }
 
-export default function ActivityLog() {
+export default function ActivityLog({ clientId }) {
   const [activities, setActivities] = useState(loadActivities);
   const [adding, setAdding] = useState(false);
 
   useEffect(() => { saveActivities(activities); }, [activities]);
+
+  useEffect(() => {
+    if (!clientId) return;
+    import("../lib/supabase").then(async ({ getActivities }) => {
+      const { data } = await getActivities(clientId, 100);
+      if (data?.length > 0) {
+        setActivities(prev => {
+          const supabaseActivities = data.map(row => ({
+            id: `sb_${row.id}`, type: row.activity_type, duration: row.duration_minutes,
+            distance: row.distance_miles, intensity: row.intensity,
+            notes: row.notes, date: row.activity_date,
+          }));
+          const localOnly = prev.filter(a => !String(a.id).startsWith("sb_"));
+          return [...localOnly, ...supabaseActivities];
+        });
+      }
+    }).catch(() => {});
+  }, [clientId]);
 
   const sorted = [...activities].sort((a, b) => b.date.localeCompare(a.date));
   const [weekStart, weekEnd] = getThisWeekRange();
@@ -187,7 +205,15 @@ export default function ActivityLog() {
         )}
       </div>
 
-      {adding && <AddActivityForm onAdd={a => { setActivities(prev => [a, ...prev]); setAdding(false); }} onCancel={() => setAdding(false)} />}
+      {adding && <AddActivityForm onAdd={a => {
+              setActivities(prev => [a, ...prev]);
+              setAdding(false);
+              if (clientId) {
+                import("../lib/supabase").then(({ logActivity }) => {
+                  logActivity(clientId, { activity_type: a.type, duration_minutes: a.duration, distance_miles: a.distance || null, intensity: a.intensity, notes: a.notes || null, activity_date: a.date });
+                }).catch(() => {});
+              }
+            }} onCancel={() => setAdding(false)} />}
 
       {sorted.length === 0 && !adding && (
         <div style={{ textAlign: "center", padding: "30px 20px", color: "#bbb", ...F }}>

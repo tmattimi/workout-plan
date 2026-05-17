@@ -206,15 +206,46 @@ function CycleCalendar({ lastStart, cycleLength, symptoms, onDayClick }) {
   );
 }
 
-export default function CycleTracking() {
+export default function CycleTracking({ clientId }) {
   const [data, setData] = useState(() => loadCycleData() || { lastPeriodStart: "", cycleLength: 28 });
   const [symptoms, setSymptoms] = useState(loadSymptomLog);
   const [section, setSection] = useState("overview");
   const [selectedDay, setSelectedDay] = useState(null);
   const [saved, setSaved] = useState(false);
 
-  useEffect(() => { saveCycleData(data); }, [data]);
-  useEffect(() => { saveSymptomLog(symptoms); }, [symptoms]);
+  useEffect(() => {
+    saveCycleData(data);
+    if (clientId && data.lastPeriodStart) {
+      import("../lib/supabase").then(({ upsertCycleData }) => {
+        upsertCycleData(clientId, { last_period_start: data.lastPeriodStart, cycle_length: data.cycleLength });
+      }).catch(() => {});
+    }
+  }, [data, clientId]);
+
+  useEffect(() => {
+    saveSymptomLog(symptoms);
+  }, [symptoms]);
+
+  // Load from Supabase on mount
+  useEffect(() => {
+    if (!clientId) return;
+    import("../lib/supabase").then(async ({ getCycleData, getCycleSymptoms }) => {
+      const [cycleResult, symptomsResult] = await Promise.all([getCycleData(clientId), getCycleSymptoms(clientId)]);
+      if (cycleResult.data) {
+        const d = cycleResult.data;
+        if (d.last_period_start) {
+          const cycleState = { lastPeriodStart: d.last_period_start, cycleLength: d.cycle_length || 28 };
+          setData(cycleState);
+          saveCycleData(cycleState);
+        }
+      }
+      if (symptomsResult.data?.length > 0) {
+        const sympMap = {};
+        symptomsResult.data.forEach(row => { sympMap[row.log_date] = row.symptoms || []; });
+        setSymptoms(prev => ({ ...sympMap, ...prev }));
+      }
+    }).catch(() => {});
+  }, [clientId]);
 
   const phaseInfo = getPhaseInfo(data.lastPeriodStart, data.cycleLength);
   const phase = phaseInfo ? PHASES[phaseInfo.phase] : null;
@@ -226,6 +257,11 @@ export default function CycleTracking() {
     const existing = symptoms[date] || [];
     const updated = existing.includes(symptom) ? existing.filter(s => s !== symptom) : [...existing, symptom];
     setSymptoms(p => ({ ...p, [date]: updated }));
+    if (clientId) {
+      import("../lib/supabase").then(({ upsertCycleSymptoms }) => {
+        upsertCycleSymptoms(clientId, date, updated);
+      }).catch(() => {});
+    }
   }
 
   return (

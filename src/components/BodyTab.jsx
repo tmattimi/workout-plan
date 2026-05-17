@@ -427,7 +427,7 @@ function BodyScanSection() {
 }
 
 // ── Daily health log section ──────────────────────────────────────────────────
-function DailyHealthSection() {
+function DailyHealthSection({ clientId }) {
   const [healthData, setHealthData] = useState(loadHealthData);
   const [editingDate, setEditingDate] = useState(today());
   const [form, setForm] = useState({});
@@ -435,15 +435,44 @@ function DailyHealthSection() {
 
   useEffect(() => {
     const existing = healthData[editingDate] || {};
-    setForm({ steps: existing.steps || "", sleep_hours: existing.sleep_hours || "", sleep_quality: existing.sleep_quality || "", hrv: existing.hrv || "", resting_hr: existing.resting_hr || "", weight_lbs: existing.weight_lbs || "" });
-  }, [editingDate]);
+    setForm({ steps: existing.steps || "", sleep_hours: existing.sleep_hours || "", sleep_quality: existing.sleep_quality || "", hrv: existing.hrv || existing.hrv_ms || "", resting_hr: existing.resting_hr || "", weight_lbs: existing.weight_lbs || "" });
+  }, [editingDate, healthData]);
 
-  function handleSave() {
+  // Load from Supabase on mount
+  useEffect(() => {
+    if (!clientId) return;
+    import("../lib/supabase").then(async ({ getHealthLogs }) => {
+      const { data } = await getHealthLogs(clientId, 30);
+      if (data?.length > 0) {
+        const byDate = {};
+        data.forEach(row => {
+          byDate[row.log_date] = { steps: row.steps, sleep_hours: row.sleep_hours, sleep_quality: row.sleep_quality, hrv: row.hrv_ms, resting_hr: row.resting_hr, weight_lbs: row.weight_lbs };
+        });
+        setHealthData(prev => ({ ...byDate, ...prev }));
+      }
+    }).catch(() => {});
+  }, [clientId]);
+
+  async function handleSave() {
     const updated = { ...healthData, [editingDate]: { ...form, logged_at: new Date().toISOString() } };
     setHealthData(updated);
     saveHealthData(updated);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
+
+    if (clientId) {
+      try {
+        const { upsertHealthLog } = await import("../lib/supabase");
+        await upsertHealthLog(clientId, editingDate, {
+          steps: form.steps ? parseInt(form.steps) : null,
+          sleep_hours: form.sleep_hours ? parseFloat(form.sleep_hours) : null,
+          sleep_quality: form.sleep_quality ? parseInt(form.sleep_quality) : null,
+          hrv_ms: form.hrv ? parseInt(form.hrv) : null,
+          resting_hr: form.resting_hr ? parseInt(form.resting_hr) : null,
+          weight_lbs: form.weight_lbs ? parseFloat(form.weight_lbs) : null,
+        });
+      } catch(e) { console.warn("Health log save failed:", e); }
+    }
   }
 
   const last7 = Array.from({ length: 7 }, (_, i) => {
@@ -543,7 +572,7 @@ export default function BodyTab({ clientId }) {
       {section === "measurements" && <MeasurementsSection clientId={clientId} />}
       {section === "photos" && <PhotosSection />}
       {section === "scans" && <BodyScanSection />}
-      {section === "daily" && <DailyHealthSection />}
+      {section === "daily" && <DailyHealthSection clientId={clientId} />}
     </div>
   );
 }
