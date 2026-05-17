@@ -537,10 +537,13 @@ function CardioSwapCard({ sessionType, onLog }) {
 
 // ── Main App ───────────────────────────────────────────────────────────────────
 export default function App({ clientData, adaptedSchedule, onSignOut }) {
-  // Use coach-assigned plan if available, otherwise fall back to default
-  const activeSchedule = adaptedSchedule || schedule;
+  // Only use a plan if it came from the database (assigned by coach)
+  // Never fall back to the hardcoded default — that's Skyler's plan
+  const activeSchedule = adaptedSchedule || null;
+  const hasPlan = !!(adaptedSchedule && adaptedSchedule.length > 0);
 
   const [activeDay, setActiveDay] = useState(() => {
+    if (!activeSchedule) return 0;
     const days = ["SUN","MON","TUE","WED","THU","FRI","SAT"];
     const idx = activeSchedule.findIndex(d => d.day === days[new Date().getDay()]);
     return idx >= 0 ? idx : 0;
@@ -597,9 +600,9 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
     return prompt.lastShownMonth !== month;
   });
 
-  const current = activeSchedule[activeDay];
-  const sessionKey = makeSessionKey(current.day, sessionDate);
-  const warmup = getWarmupForDay(current.type);
+  const current = activeSchedule ? activeSchedule[activeDay] : null;
+  const sessionKey = current ? makeSessionKey(current.day, sessionDate) : "";
+  const warmup = current ? getWarmupForDay(current.type) : [];
 
   const handleLogsChange = useCallback((newLogs) => {
     setLogs(newLogs);
@@ -879,6 +882,33 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
       {/* PLAN */}
       {tab === "plan" && (
         <>
+          {/* No plan assigned yet */}
+          {!hasPlan && (
+            <div style={{ padding: "60px 24px", textAlign: "center" }}>
+              <div style={{ fontSize: "36px", marginBottom: "16px" }}>📋</div>
+              <div style={{ fontSize: "20px", fontWeight: "normal", ...F, color: "#111", marginBottom: "10px" }}>
+                Your plan is on its way
+              </div>
+              <div style={{ fontSize: "13px", color: "#888", lineHeight: "1.8", ...F, maxWidth: "280px", margin: "0 auto 24px" }}>
+                Your coach is reviewing your intake and building your personalized program. You'll see your full workout plan here as soon as it's ready.
+              </div>
+              <div style={{ background: "#f5f5f3", borderRadius: "10px", padding: "16px 20px", display: "inline-block", textAlign: "left", maxWidth: "280px" }}>
+                <div style={{ fontSize: "10px", letterSpacing: "0.15em", textTransform: "uppercase", color: "#bbb", marginBottom: "8px" }}>What happens next</div>
+                {["Your intake has been submitted", "Coach reviews your goals & data", "Your custom program is built", "Plan appears here — ready to go"].map((step, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
+                    <div style={{ width: "20px", height: "20px", borderRadius: "50%", background: i === 0 ? "#2d7a1e" : "#e8e8e8", color: i === 0 ? "#fff" : "#bbb", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "9px", fontWeight: "700", flexShrink: 0 }}>
+                      {i === 0 ? "✓" : i + 1}
+                    </div>
+                    <div style={{ fontSize: "12px", color: i === 0 ? "#2d7a1e" : "#888" }}>{step}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Plan exists — show full UI */}
+          {hasPlan && (
+          <>
           {/* Day selector */}
           <div style={{ display: "flex", overflowX: "auto", background: "#fff", borderBottom: "1px solid #e5e5e5", msOverflowStyle: "none", scrollbarWidth: "none" }}>
             {activeSchedule.map((d, i) => (
@@ -1490,6 +1520,8 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
           <div style={{ margin: "12px 16px 80px", padding: "10px 12px", background: "#f0f0ee", borderRadius: "7px", color: "#777", fontSize: "11px", lineHeight: "1.55" }}>
             Tap <strong>Warm-Up</strong> before lifting. Tap <strong>Log</strong> on any exercise to record sets — the rest timer starts automatically. Tap <strong>Stretch</strong> when you're done to cool down. Tap ▼ for form cues.
           </div>
+          </>
+          )}
         </>
       )}
 
