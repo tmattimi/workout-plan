@@ -201,10 +201,10 @@ export const schedule = [
     focus: "Lower Body — Quad Definition & Glute Volume",
     muscles: ["Quads", "Glutes", "Calves"],
     cardio: {
-      name: "StairMaster",
-      protocol: "Level 6–8 for 15–20 minutes post-session",
+      name: "StairMaster (Optional)",
+      protocol: "Level 5–6 for 10–15 minutes post-session — only if legs feel recovered",
       zone: "Zone 2 (60–70% max HR)",
-      feel: "Post-session cardio after legs. Keep the level moderate — legs will already be fatigued. Steady conversational pace. The stairmaster is low-impact on the lower back and knees compared to running, which makes it a good fit given your injury history."
+      feel: "This is optional. Wilson et al. (2012) found post-leg cardio can impair quad and glute recovery when fatigue is high. If your legs feel genuinely spent after this session, skip it — you already have 85+ min of cardio in the week between Tuesday, Thursday, and Friday. If legs feel good, a short easy StairMaster is fine."
     },
     exercises: [
       {

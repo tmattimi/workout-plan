@@ -479,54 +479,64 @@ const CARDIO_OPTIONS = [
   },
 ];
 
-function CardioSwapCard({ sessionType, onLog }) {
+function CardioSwapCard({ sessionType, cardio, sessionKey, onLog }) {
   const F = { fontFamily: "'Georgia','Times New Roman',serif" };
-  const recommended = CARDIO_OPTIONS.find(o => o.bestFor.includes(sessionType) && !o.warningFor?.includes(sessionType)) || CARDIO_OPTIONS[2];
-  const [selected, setSelected] = useState(recommended);
-  const [showAlts, setShowAlts] = useState(false);
   const [logged, setLogged] = useState(false);
+  const [showAlts, setShowAlts] = useState(false);
+  const [selected, setSelected] = useState(null);
+
+  // Use day's own cardio as primary — only fall back to CARDIO_OPTIONS if none
+  const primary = cardio || CARDIO_OPTIONS.find(o => o.bestFor.includes(sessionType)) || CARDIO_OPTIONS[2];
+  const display = selected || primary;
+
+  function handleMarkDone() {
+    setLogged(true);
+    onLog && onLog({ type: selected?.id || 'cardio', name: display.name, duration: display.protocol?.match(/\d+/)?.[0] || 20 });
+    setShowAlts(false);
+  }
 
   function handleSelect(option) {
     setSelected(option);
     setShowAlts(false);
-    if (!logged) {
-      setLogged(true);
-      onLog && onLog({ type: option.id, name: option.name, duration: 20 });
-    }
   }
 
   return (
-    <div style={{ borderBottom: "1px solid #ebebeb", background: "#f9f9f7" }}>
+    <div style={{ borderBottom: "1px solid #ebebeb", background: logged ? "#f0f7f0" : "#f9f9f7" }}>
       <div style={{ padding: "11px 16px", display: "flex", gap: "11px", alignItems: "flex-start" }}>
         <div style={{ width: "24px", height: "24px", borderRadius: "50%", background: logged ? "#2d7a1e" : "#e8e8e8", color: logged ? "#fff" : "#888", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "8px", fontWeight: "800", flexShrink: 0, marginTop: "1px" }}>
-          {logged ? "✓" : "Z3"}
+          {logged ? "✓" : "Z2"}
         </div>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: "9px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#999", marginBottom: "2px" }}>Cardio · Zone 3 · 20 min</div>
-          <div style={{ fontSize: "13px", fontWeight: "600", color: "#1a1a1a", marginBottom: "3px" }}>{selected.name}</div>
-          <div style={{ fontSize: "11px", color: "#555", lineHeight: "1.5", marginBottom: "5px", ...F }}>{selected.protocol}</div>
-          <div style={{ fontSize: "10px", color: "#888", lineHeight: "1.5", fontStyle: "italic", ...F }}>{selected.benefit}</div>
-          {selected.warningFor?.includes(sessionType) && (
-            <div style={{ marginTop: "5px", fontSize: "10px", color: "#a02020", lineHeight: "1.5" }}>{selected.warning}</div>
+          <div style={{ fontSize: "9px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#999", marginBottom: "2px" }}>
+            {display.zone || "Cardio"} · {display.protocol?.match(/(\d+)\s*min/)?.[1] || 20} min
+          </div>
+          <div style={{ fontSize: "13px", fontWeight: "600", color: "#1a1a1a", marginBottom: "3px" }}>{display.name}</div>
+          <div style={{ fontSize: "11px", color: "#555", lineHeight: "1.5", marginBottom: "5px", ...F }}>{display.protocol}</div>
+          {display.feel && <div style={{ fontSize: "10px", color: "#888", lineHeight: "1.5", fontStyle: "italic", ...F }}>{display.feel}</div>}
+          {!logged && (
+            <div style={{ display: "flex", gap: "8px", marginTop: "8px", alignItems: "center" }}>
+              <button onClick={handleMarkDone}
+                style={{ background: "#111", color: "#fff", border: "none", borderRadius: "6px", padding: "6px 12px", fontSize: "11px", cursor: "pointer", ...F }}>
+                Mark done
+              </button>
+              <button onClick={() => setShowAlts(p => !p)}
+                style={{ background: "none", border: "none", color: "#aaa", fontSize: "10px", cursor: "pointer", padding: 0, textDecoration: "underline" }}>
+                {showAlts ? "Close" : "Switch"}
+              </button>
+            </div>
           )}
-          <button onClick={() => setShowAlts(p => !p)} style={{ marginTop: "8px", background: "none", border: "none", color: "#aaa", fontSize: "10px", cursor: "pointer", padding: 0, textDecoration: "underline" }}>
-            {showAlts ? "Close" : "Switch cardio"}
-          </button>
         </div>
       </div>
 
       {showAlts && (
         <div style={{ padding: "0 16px 12px 51px" }}>
-          {CARDIO_OPTIONS.filter(o => o.id !== selected.id).map(option => {
-            const hasWarning = option.warningFor?.includes(sessionType);
-            return (
-              <button key={option.id} onClick={() => handleSelect(option)} style={{ width: "100%", textAlign: "left", background: "#fff", border: "1px solid #e8e8e8", borderRadius: "7px", padding: "9px 12px", marginBottom: "5px", cursor: "pointer" }}>
-                <div style={{ fontSize: "12px", fontWeight: "600", color: "#1a1a1a", marginBottom: "2px", ...F }}>{option.name}</div>
-                <div style={{ fontSize: "10px", color: "#888" }}>{option.protocol}</div>
-                {hasWarning && <div style={{ fontSize: "10px", color: "#a02020", marginTop: "3px" }}>{option.warning}</div>}
-              </button>
-            );
-          })}
+          {CARDIO_OPTIONS.map(option => (
+            <button key={option.id} onClick={() => handleSelect(option)}
+              style={{ width: "100%", textAlign: "left", background: selected?.id === option.id ? "#f0f4ff" : "#fff", border: "1px solid #e8e8e8", borderRadius: "7px", padding: "9px 12px", marginBottom: "5px", cursor: "pointer" }}>
+              <div style={{ fontSize: "12px", fontWeight: "600", color: "#1a1a1a", marginBottom: "2px", ...F }}>{option.name}</div>
+              <div style={{ fontSize: "10px", color: "#888" }}>{option.protocol}</div>
+            </button>
+          ))}
         </div>
       )}
     </div>
@@ -1147,6 +1157,8 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
             </div>
             <CardioSwapCard
               sessionType={current.type}
+              cardio={current.cardio}
+              sessionKey={sessionKey}
               onLog={(activity) => {
                 // auto-log to activity log
                 try {
