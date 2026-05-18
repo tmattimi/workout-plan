@@ -181,57 +181,57 @@ Use ONLY exercises from this list. The name must match exactly.
 
   prompt += `
 ══════════════════════════════════════════
-PROGRAMMING SCIENCE REQUIREMENTS
+PROGRAMMING REQUIREMENTS
 ══════════════════════════════════════════
-Apply these evidence-based principles:
 
-1. EXERCISE ORDER: Compound bilateral first → compound unilateral → isolation → core. Never put core before compound lifts.
-2. VOLUME: 10–20 sets per muscle group per week. Beginners: lower end. Advanced: higher end.
-3. REP RANGES: Strength (1–5 reps, 80–95% 1RM), Hypertrophy (6–15 reps, 65–80% 1RM), Endurance (15–30 reps).
-4. PROGRESSIVE OVERLOAD: Note the training goal for each exercise (strength/hypertrophy/endurance).
-5. REST PERIODS: Compound: 2–3 min. Isolation: 60–90 sec. Supersets: 45–60 sec.
-6. INJURY ACCOMMODATION: If any injury flag exists, substitute every contraindicated exercise — no exceptions.
-7. GOAL ALIGNMENT: If goal is fat loss, include cardio finishers. If muscle gain, minimize cardio. If glute focus, 40%+ of lower body exercises should be glute-dominant.
-8. FEMALE-SPECIFIC (if female): Higher frequency for glutes and upper body is more effective. Hip thrusts, RDLs, and cable kickbacks are priority exercises.
-9. WARM-UP: Every session needs a 2-exercise warm-up set sequence.
+EXERCISE ORDER PER SESSION (strictly follow this):
+1. WARM-UP: 2-3 activation/mobility exercises (light weight, high reps, targeting muscles for that day)
+2. MAIN LIFTS: 3-5 compound movements (heaviest, most demanding first)
+3. ACCESSORY WORK: 3-5 isolation or unilateral exercises
+4. CORE FINISHER: 2-3 core exercises at the end (never before main lifts)
+5. CARDIO FINISHER: Only for fat_loss or recomp goals — 15-20 min Zone 2 at end of session
 
-TASK: Generate the complete weekly program as JSON only. No explanation, no markdown, no code blocks.
+VOLUME & REPS:
+- Compound lifts: 3-4 sets × 6-10 reps, rest 2-3 min
+- Accessory work: 3-4 sets × 10-15 reps, rest 60-90 sec  
+- Core: 3 sets × 12-20 reps, rest 45-60 sec
+- Warm-up: 2 sets × 12-15 reps (light activation only)
 
-Return this exact structure:
+INJURY RULES: If injury flags exist, skip ALL exercises that load that joint. No exceptions.
+FEMALE CLIENTS: Prioritize hip thrusts, RDLs, glute bridges, cable kickbacks for lower body days.
+GLUTE FOCUS: 60%+ of leg day exercises must be posterior chain (glutes/hamstrings dominant).
+
+TASK: Return ONLY a JSON object. No text before or after. No markdown. Start with { end with }.
+
+EXACT JSON STRUCTURE REQUIRED:
 {
-  "programName": "descriptive name for this client",
+  "programName": "string",
   "phase": "Phase 1 — Foundation",
   "durationWeeks": 8,
-  "coachNotes": "3-4 sentences explaining the key programming decisions and why they suit this specific client",
+  "coachNotes": "2-3 sentences on key decisions for this specific client",
   "weeklySchedule": [
     {
       "day": "MON",
-      "label": "Push",
-      "type": "push",
-      "focus": "Chest + Shoulders + Triceps",
-      "muscles": ["Chest", "Shoulders", "Triceps"],
+      "label": "Glutes + Hamstrings",
+      "type": "posterior",
+      "focus": "Glutes + Hamstrings",
+      "muscles": ["Glutes", "Hamstrings"],
       "warmup": [
-        { "name": "exercise name", "sets": 2, "reps": "10–12", "note": "activation focus" }
+        { "name": "EXACT exercise name from library", "sets": 2, "reps": "15", "note": "activation" },
+        { "name": "EXACT exercise name from library", "sets": 2, "reps": "12", "note": "mobility" }
       ],
       "exercises": [
-        {
-          "name": "exercise name exactly as in library",
-          "sets": 4,
-          "reps": "8–10",
-          "rest": "2–3 min",
-          "category": "Compound Bilateral",
-          "order": 1,
-          "goal": "hypertrophy",
-          "rationale": "1 sentence why this exercise for this client specifically"
-        }
+        { "name": "EXACT exercise name from library", "sets": 4, "reps": "8-10", "rest": "2-3 min", "category": "Main Lift", "order": 1, "goal": "hypertrophy", "rationale": "why this exercise" },
+        { "name": "EXACT exercise name from library", "sets": 3, "reps": "12-15", "rest": "90 sec", "category": "Accessory", "order": 2, "goal": "hypertrophy", "rationale": "why this exercise" },
+        { "name": "EXACT exercise name from library", "sets": 3, "reps": "15-20", "rest": "60 sec", "category": "Core", "order": 3, "goal": "endurance", "rationale": "core stability" }
       ],
-      "cardio": null
+      "cardio": { "name": "Incline Treadmill Walk", "protocol": "3.5 mph at 10% incline, 15 min", "zone": "Zone 2" }
     },
     {
       "day": "SUN",
       "label": "Rest",
       "type": "rest",
-      "focus": "Active Recovery",
+      "focus": "Rest & Recovery",
       "muscles": [],
       "warmup": [],
       "exercises": [],
@@ -240,8 +240,9 @@ Return this exact structure:
   ]
 }
 
-Include all 7 days of the week. Rest days should have type "rest" and empty exercises array.
-Cardio: only include if goal is fat_loss or recomp. Format: { "name": "Incline Treadmill", "protocol": "4.0 mph at 10% incline, 20 min", "zone": "Zone 2" }
+IMPORTANT: Include ALL 7 days (MON through SUN). Training days get full exercises. Rest days get empty arrays.
+Each training day must have: 2 warmup exercises, 4-6 main/accessory exercises, 2 core exercises.
+Use ONLY exercise names exactly as they appear in the library above.
 `;
 
   return prompt;
