@@ -93,21 +93,16 @@ export default function AICoachPanel({ client, overview }) {
     const userPrompt = clientData + `\nANALYSIS REQUESTED: ${selectedType.prompt}`;
 
     try {
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
+      const response = await fetch("/api/generate-program", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          system: systemPrompt,
-          messages: [{ role: "user", content: userPrompt }],
-        }),
+        body: JSON.stringify({ prompt: systemPrompt + "\n\n" + userPrompt }),
       });
 
       const data = await response.json();
-      if (data.error) throw new Error(data.error.message);
+      if (data.error) throw new Error(data.error);
 
-      const text = data.content?.[0]?.text || "No response received.";
+      const text = data.result || "No response received.";
       const entry = { type: selectedType.label, result: text, timestamp: new Date().toLocaleTimeString() };
       setResult(entry);
       setHistory(prev => [entry, ...prev].slice(0, 5));

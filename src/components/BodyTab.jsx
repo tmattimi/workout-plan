@@ -354,20 +354,8 @@ function BodyScanSection() {
     const base64 = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result.split(",")[1]); r.onerror = rej; r.readAsDataURL(file); });
     const mediaType = file.type || "image/jpeg";
     try {
-      const resp = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514", max_tokens: 1000,
-          system: `Extract body composition data from scans. Return ONLY valid JSON: {"weight_lbs":number|null,"body_fat_pct":number|null,"lean_mass_lbs":number|null,"fat_mass_lbs":number|null,"bmr_kcal":number|null,"visceral_fat":number|null,"scan_type":"InBody"|"DEXA"|"Other","scan_date":"YYYY-MM-DD"|null,"notes":string|null}`,
-          messages: [{ role: "user", content: [{ type: "image", source: { type: "base64", media_type: mediaType, data: base64 } }, { type: "text", text: "Extract all body composition metrics." }] }]
-        })
-      });
-      const data = await resp.json();
-      const raw = data.content?.[0]?.text || "{}";
-      let parsed = {};
-      try { parsed = JSON.parse(raw.replace(/```json|```/g, "").trim()); } catch {}
-      const entry = { id: Date.now(), date: parsed.scan_date || today(), scan_type: parsed.scan_type || "Scan", metrics: parsed, imageData: `data:${mediaType};base64,${base64}` };
+      // Image analysis requires vision AI — enter metrics manually below
+      const entry = { id: Date.now(), date: today(), scan_type: "Scan", metrics: {}, imageData: `data:${mediaType};base64,${base64}` };
       const updated = [entry, ...scans];
       setScans(updated);
     } catch {}

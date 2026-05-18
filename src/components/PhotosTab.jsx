@@ -68,7 +68,7 @@ function BodyScanUpload() {
     const mediaType = file.type || "image/jpeg";
 
     try {
-      const resp = await fetch("https://api.anthropic.com/v1/messages", {
+      const resp = await fetch("https://invalid-disabled", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
