@@ -389,12 +389,100 @@ export const schedule = [
     core_finisher: [],
   },
   {
-    day: "SAT", label: "Rest", type: "rest",
-    focus: "Rest & Recovery",
-    muscles: [],
-    cardio: null,
-    exercises: [],
-    core_finisher: [],
+    day: "SAT", label: "Glutes + Abs", type: "posterior",
+    focus: "Optional — Glutes, Legs & Core",
+    muscles: ["Glutes", "Hamstrings", "Hip Abductors", "Core", "Abs"],
+    cardio: {
+      name: "StairMaster",
+      protocol: "Level 5–6 for 15 minutes post-session",
+      zone: "Zone 2 (60–70% max HR)",
+      feel: "Easy finish. This is the 5th session of the week — keep the cardio genuinely light. The purpose is additional caloric burn and blood flow, not cardiovascular fatigue."
+    },
+    exercises: [
+      {
+        name: "Hip Thrust (Barbell or Machine)", muscles: ["Glutes", "Hamstrings"], category: "Compound Bilateral", order: 1, sets: 4, reps: "10–12", rest: "2 min", eccentric: "3s down",
+        why: "Third weekly glute stimulus. Contreras et al. — glutes respond well to 3x/week frequency. Higher rep range than Monday creates a different metabolic stress while using the same movement pattern. This session completes the weekly glute volume target.",
+        form: [
+          { label: "Setup", text: "Upper back on bench below shoulder blades. Feet flat, hip-width, toes slightly out." },
+          { label: "Drive", text: "Push through heels. Drive hips up to a straight line from knee to shoulder." },
+          { label: "Top", text: "Squeeze both glutes hard. Hold one second. Lower back must not hyperextend." },
+          { label: "Watch for", text: "Knees caving, lower back hyperextending, pushing through toes." }
+        ]
+      },
+      {
+        name: "Cable Hip Abduction (Standing)", muscles: ["Glute Medius", "TFL"], category: "Isolation Unilateral", order: 2, sets: 3, reps: "20 each side", rest: "60 sec", eccentric: "2s return",
+        why: "Second dedicated glute medius session of the week. Hip abductor strength is directly linked to ACL stability (Distefano et al.) and SI joint control. Higher reps this session for metabolic stimulus.",
+        form: [
+          { label: "Abduct", text: "Lift directly out to the side, slight knee bend. Stop at 40–45°. Squeeze the outer glute." },
+          { label: "Watch for", text: "Torso leaning, hip hiking to assist, losing balance." }
+        ]
+      },
+      {
+        name: "Lying Leg Curl (Machine)", muscles: ["Hamstrings"], category: "Isolation Bilateral", order: 3, sets: 3, reps: "12–15", rest: "90 sec", eccentric: "3s return",
+        why: "Second weekly hamstring isolation. Complements the RDL stretch-loading from Monday with a contraction-focused stimulus. Together these two movements hit the full hamstring length-tension curve.",
+        form: [
+          { label: "Setup", text: "Pad just above the heel. Hips flat on the pad throughout." },
+          { label: "Curl", text: "Curl toward the glutes as far as possible. Pause one second at full contraction." },
+          { label: "Return", text: "3 full seconds to full extension." },
+          { label: "Watch for", text: "Hips lifting to gain range, rushing the return." }
+        ]
+      },
+      {
+        name: "Cable Kickback (Glutes)", muscles: ["Glute Max"], category: "Isolation Unilateral", order: 4, sets: 3, reps: "15–20 each side", rest: "60 sec", eccentric: "2s return",
+        why: "Glute contraction-position isolation. Different loading angle from the hip thrust — hits the glute max in the shortened range. Three sets per side contributes meaningfully to the weekly glute volume total.",
+        form: [
+          { label: "Kick", text: "Drive the leg straight back with a slight knee bend. Stop when the glute is fully contracted." },
+          { label: "Watch for", text: "Rotating the torso, hyperextending the lower back." }
+        ]
+      },
+      {
+        name: "Seated Calf Raise", muscles: ["Soleus"], category: "Isolation Bilateral", order: 5, sets: 3, reps: "20–25", rest: "60 sec", eccentric: "3s down",
+        why: "High-rep calf work for lower leg definition. The soleus responds to higher rep ranges given its slow-twitch fiber dominance.",
+        form: [
+          { label: "Stretch", text: "Full heel drop below the step at the bottom." },
+          { label: "Rise", text: "Drive onto the ball of the foot as high as possible. Hold one second." }
+        ]
+      },
+    ],
+    core_finisher: [
+      {
+        name: "Cable Crunch", muscles: ["Rectus Abdominis"], category: "Core Stage 2", bodyweight: false, sets: 4, reps: "12–15", rest: "45 sec", eccentric: "2s return",
+        why: "Direct ab isolation with progressive overload capability. Cable keeps constant tension through the full range of spinal flexion. This is the most effective loaded abs exercise for developing definition.",
+        form: [
+          { label: "Setup", text: "Rope attachment at the top pulley. Kneel facing the stack, rope ends beside the ears." },
+          { label: "Crunch", text: "Pull elbows toward knees — flex the spine, don't just pull with the arms. Lower back rounds slightly at the bottom." },
+          { label: "Return", text: "2 controlled seconds back to full extension. Feel the abs stretch at the top." },
+          { label: "Watch for", text: "Pulling with arms instead of crunching the spine, or sitting back into the hips." }
+        ]
+      },
+      {
+        name: "Hanging Knee Raise", bodyweight: true, muscles: ["Lower Abs", "Hip Flexors"], category: "Core Stage 2", sets: 3, reps: "12–15", rest: "45 sec", eccentric: "3s down",
+        why: "Lower abdominal emphasis — the area most visible in the defined midsection. The eccentric (lowering) portion is where most of the stimulus comes from.",
+        form: [
+          { label: "Setup", text: "Hang from a pull-up bar with an overhand grip, arms fully extended." },
+          { label: "Raise", text: "Draw the knees toward the chest, rounding the lower back slightly at the top." },
+          { label: "Return", text: "3 full seconds to lower back to the hanging position. Do not swing." },
+          { label: "Watch for", text: "Swinging momentum, cutting the range of motion short, or dropping quickly." }
+        ]
+      },
+      {
+        name: "Bicycle Crunch", bodyweight: true, muscles: ["Obliques", "Rectus Abdominis"], category: "Core Stage 2", sets: 3, reps: "20 each side", rest: "45 sec", eccentric: "2s",
+        why: "Highest oblique activation of any bodyweight ab exercise per Escamilla et al. (2006). Rotation under controlled tempo produces the oblique definition that narrows the waist appearance.",
+        form: [
+          { label: "Setup", text: "Lie on your back. Hands lightly behind the head — do not pull the neck." },
+          { label: "Move", text: "Bring right elbow toward left knee as left leg extends. Switch in a controlled pedaling motion." },
+          { label: "Tempo", text: "Slow and deliberate. Each rotation should take 2 full seconds. Fast reps produce momentum, not muscle." },
+          { label: "Watch for", text: "Pulling the neck forward, rushing, or not fully rotating the torso." }
+        ]
+      },
+      {
+        name: "Dead Bug", bodyweight: true, muscles: ["TVA", "Multifidus"], category: "Core Stage 1", sets: 2, reps: "8 each side", rest: "45 sec", eccentric: "3s lowering",
+        form: [
+          { label: "Move", text: "Lower opposite arm and leg slowly. Lower back stays completely flat. Switch and repeat." },
+          { label: "Watch for", text: "Lower back lifting — that ends the rep." }
+        ]
+      },
+    ],
   },
   {
     day: "SUN", label: "Rest", type: "rest",
