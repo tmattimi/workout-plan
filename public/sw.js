@@ -1,7 +1,7 @@
-const CACHE = 'workout-v3';
+const CACHE = 'workout-v4';
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', e => {
-  e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== 'workout-v3').map(k => caches.delete(k)))));
+  e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== 'workout-v4').map(k => caches.delete(k)))));
   self.clients.claim();
 });
 self.addEventListener('fetch', e => {

@@ -33,11 +33,8 @@ const F = { fontFamily: "'Georgia','Times New Roman',serif" };
 function makeSessionKey(day, date) { return `${day}_${date}`; }
 
 const categoryStyle = (cat) => {
-  if (cat === "Compound Bilateral") return { bg: "#1a1a1a", color: "#fff", short: "Compound" };
-  if (cat === "Compound Unilateral") return { bg: "#2563a8", color: "#fff", short: "Compound Uni" };
-  if (cat === "Isolation Unilateral") return { bg: "#7a3aa0", color: "#fff", short: "Isolation Uni" };
   if (cat && cat.startsWith("Core")) return { bg: "#147a50", color: "#fff", short: cat.includes("Stage 1") ? "Core S1" : cat.includes("Stage 2") ? "Core S2" : "Core S3" };
-  return { bg: "#555", color: "#fff", short: "Isolation" };
+  return { bg: "#333", color: "#fff", short: cat || "Exercise" };
 };
 
 // ── Mini chart ─────────────────────────────────────────────────────────────────
