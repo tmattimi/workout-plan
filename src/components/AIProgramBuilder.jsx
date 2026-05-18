@@ -168,16 +168,40 @@ CURRENT STRENGTH (Personal Records)
     prompt += `\nRecent training: ${sessionDates.length} sessions logged\n`;
   }
 
-  // Exercise library
-  prompt += `\n══════════════════════════════════════════
-APPROVED EXERCISE LIBRARY
-══════════════════════════════════════════
-Use ONLY exercises from this list. The name must match exactly.
+  // Exercise library — filtered and capped to keep prompt under token limit
+  const focusKeywords = (intake?.focus_areas || []).join(' ').toLowerCase();
+  const hasGluteFocus = focusKeywords.includes('glute') || focusKeywords.includes('lower');
+  const hasUpperFocus = focusKeywords.includes('upper') || focusKeywords.includes('back') || focusKeywords.includes('shoulder');
 
-`;
+  // Group exercises by muscle, send top exercises per group
+  const muscleGroups = {};
   exerciseList.forEach(ex => {
-    prompt += `${ex.name} [${ex.primary_muscle || ex.category}]\n`;
+    const muscle = ex.primary_muscle || ex.category || 'Other';
+    if (!muscleGroups[muscle]) muscleGroups[muscle] = [];
+    muscleGroups[muscle].push(ex.name);
   });
+
+  // Prioritize relevant muscle groups, limit total exercises
+  const priorityMuscles = hasGluteFocus
+    ? ['Glutes', 'Hamstrings', 'Quads', 'Back', 'Shoulders', 'Chest', 'Core', 'Triceps', 'Biceps', 'Calves']
+    : hasUpperFocus
+    ? ['Back', 'Shoulders', 'Chest', 'Glutes', 'Hamstrings', 'Quads', 'Core', 'Triceps', 'Biceps', 'Calves']
+    : ['Glutes', 'Quads', 'Hamstrings', 'Back', 'Chest', 'Shoulders', 'Core', 'Triceps', 'Biceps', 'Calves'];
+
+  prompt += `\n══════════════════════════════════════════
+EXERCISE LIBRARY (use exact names)
+══════════════════════════════════════════
+`;
+  let exCount = 0;
+  priorityMuscles.forEach(muscle => {
+    const exes = muscleGroups[muscle] || [];
+    if (exes.length === 0) return;
+    const limit = ['Glutes','Hamstrings','Back','Quads'].includes(muscle) ? 12 : 8;
+    const selected = exes.slice(0, limit);
+    prompt += `\n${muscle}: ${selected.join(', ')}\n`;
+    exCount += selected.length;
+  });
+  prompt += `\nTotal: ${exCount} exercises available.\n`;
 
   prompt += `
 ══════════════════════════════════════════
