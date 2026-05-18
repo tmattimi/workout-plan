@@ -521,21 +521,16 @@ export default function AIProgramBuilder({ client, intake, overview }) {
     const prompt = buildFullPrompt(client, intake, overview, safeExercises);
 
     try {
-      const resp = await fetch("https://api.anthropic.com/v1/messages", {
+      const resp = await fetch("/api/generate-program", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          system: "You are an expert personal trainer and exercise scientist. Return only valid JSON with no markdown, no explanation, no code blocks. Your response must start with { and end with }.",
-          messages: [{ role: "user", content: prompt }],
-        }),
+        body: JSON.stringify({ prompt }),
       });
 
       const data = await resp.json();
-      if (data.error) throw new Error(data.error.message);
+      if (data.error) throw new Error(data.error);
 
-      const raw = (data.content?.[0]?.text || "{}").replace(/```json|```/g, "").trim();
+      const raw = (data.result || "{}").replace(/```json|```/g, "").trim();
       let parsed;
       try { parsed = JSON.parse(raw); }
       catch { throw new Error("Could not parse the generated program. Please try again."); }
