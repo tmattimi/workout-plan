@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { schedule, principles } from "./data";
+import { schedule as skylerSchedule, principles as skylerPrinciples } from "./data";
+import { schedule as taraSchedule, principles as taraPrinciples } from "./tara-data";
 import { getAllNames } from "./data/exercises";
 import {
   loadWorkoutLogs, saveWorkoutLogs, loadMeasurements, saveMeasurements,
@@ -537,10 +538,15 @@ function CardioSwapCard({ sessionType, onLog }) {
 
 // ── Main App ───────────────────────────────────────────────────────────────────
 export default function App({ clientData, adaptedSchedule, onSignOut }) {
-  // Only use a plan if it came from the database (assigned by coach)
-  // Never fall back to the hardcoded default — that's Skyler's plan
-  const activeSchedule = adaptedSchedule || null;
-  const hasPlan = !!(adaptedSchedule && adaptedSchedule.length > 0);
+  // Route to client-specific hardcoded schedule if no DB plan assigned yet
+  const clientName = clientData?.name?.toLowerCase() || "";
+  const defaultSchedule = clientName.includes("tara") ? taraSchedule : skylerSchedule;
+  const defaultPrinciples = clientName.includes("tara") ? taraPrinciples : skylerPrinciples;
+
+  // Only use DB plan if assigned by coach, otherwise use client-specific default
+  const activeSchedule = adaptedSchedule || defaultSchedule;
+  const hasPlan = true; // always show plan — each client has their own default
+  const principles = defaultPrinciples;
 
   const [activeDay, setActiveDay] = useState(() => {
     if (!activeSchedule) return 0;
