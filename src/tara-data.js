@@ -20,10 +20,10 @@ export const schedule = [
     focus: "Glutes & Posterior Chain",
     muscles: ["Glutes", "Hamstrings", "Hip Abductors", "Core"],
     cardio: {
-      name: "Incline Treadmill Walk",
-      protocol: "3.5–4.0 mph at 10–12% incline for 20 minutes",
+      name: "StairMaster",
+      protocol: "Level 6–8 for 20 minutes post-session",
       zone: "Zone 2 (60–70% max HR)",
-      feel: "Conversational pace — you can speak in full sentences. This is fat oxidation pace. Legs are warm from the session so it'll feel comfortable."
+      feel: "Conversational pace — you should be able to speak in full sentences. Post-session cardio after strength training draws more from fat stores because glycogen has been depleted. Keep the level moderate — this is not a hard effort."
     },
     exercises: [
       {
@@ -112,10 +112,10 @@ export const schedule = [
     focus: "Upper Body — Back & Biceps",
     muscles: ["Back", "Biceps", "Rear Delts", "Core"],
     cardio: {
-      name: "Incline Treadmill Walk",
-      protocol: "3.5 mph at 10% incline for 15 minutes",
+      name: "StairMaster (Warm-Up)",
+      protocol: "Level 5–7 for 20 minutes before lifting",
       zone: "Zone 2 (60–70% max HR)",
-      feel: "Active recovery. Keep it conversational. The purpose is blood flow and a small additional caloric burn — not cardiovascular fatigue."
+      feel: "Keep it genuinely easy — conversational pace, full sentences. This is a moving warm-up, not a cardio session. If you feel your legs fatiguing before you've touched a weight, bring the level down. The goal is blood flow and joint prep, not energy expenditure."
     },
     exercises: [
       {
@@ -201,10 +201,10 @@ export const schedule = [
     focus: "Lower Body — Quad Definition & Glute Volume",
     muscles: ["Quads", "Glutes", "Calves"],
     cardio: {
-      name: "Stationary Bike or Elliptical",
-      protocol: "Moderate resistance for 15–20 minutes",
+      name: "StairMaster",
+      protocol: "Level 6–8 for 15–20 minutes post-session",
       zone: "Zone 2 (60–70% max HR)",
-      feel: "Joint-friendly recovery cardio. The bike is ideal after a leg session — keeps blood moving without additional impact stress on the knee or lower back."
+      feel: "Post-session cardio after legs. Keep the level moderate — legs will already be fatigued. Steady conversational pace. The stairmaster is low-impact on the lower back and knees compared to running, which makes it a good fit given your injury history."
     },
     exercises: [
       {
@@ -290,7 +290,12 @@ export const schedule = [
     day: "THU", label: "Upper Push", type: "push",
     focus: "Upper Body — Chest, Shoulders & Triceps",
     muscles: ["Chest", "Shoulders", "Triceps"],
-    cardio: null,
+    cardio: {
+      name: "StairMaster (Warm-Up)",
+      protocol: "Level 5–7 for 20 minutes before lifting",
+      zone: "Zone 2 (60–70% max HR)",
+      feel: "Same as Tuesday — easy warm-up pace. Shoulders and upper body need blood flow before pressing. Keep the level low enough that you're not breathing hard when you step off."
+    },
     exercises: [
       {
         name: "Dumbbell Bench Press", muscles: ["Chest", "Front Delt", "Tricep"], category: "Compound Bilateral", order: 1, sets: 3, reps: "8–10", rest: "2 min", eccentric: "3s down",
@@ -376,9 +381,9 @@ export const schedule = [
     muscles: ["Quads", "Hamstrings", "Glutes", "Calves", "Cardiovascular"],
     cardio: {
       name: "Cycle Class",
-      protocol: "45-minute class. Zone 2–3 for the base, push to Zone 4 on sprints, recover fully between efforts.",
+      protocol: "45-minute class. Stay in Zone 2–3 for the base intervals, push to Zone 4–5 on sprints, recover fully between efforts. Log it as 45 min.",
       zone: "Zone 2–4",
-      feel: "This is your dedicated cardio day. It counts toward weekly lower body volume and energy expenditure. Embrace the sprints — that's where the recomp work happens."
+      feel: "This is your dedicated cardio day and it counts as lower body volume. The sprint intervals are where the metabolic benefit comes from for recomp — don't hold back on those. Recover fully between efforts so you can actually push the next one."
     },
     exercises: [],
     core_finisher: [],
