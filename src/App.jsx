@@ -730,7 +730,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
     if (clientData && clientData.id) {
       try {
         const { logSet, upsertPR, getAllExercises } = await import("./lib/supabase");
-        const exObj = current.exercises && current.exercises.find(function(e) { return e.name === exercise; });
+        const exObj = current?.exercises && current.exercises.find(function(e) { return e.name === exercise; });
         
         // Try to get exercise_id from the plan exercise first,
         // then fall back to looking it up by name in the exercises table
@@ -745,7 +745,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
           await logSet(clientData.id, {
             exercise_id: exId,
             plan_exercise_id: (exObj && exObj.plan_exercise_id) || null,
-            plan_day_id: current.plan_day_id || null,
+            plan_day_id: current?.plan_day_id || null,
             session_date: sessionDate,
             set_number: setNumber || 1,
             weight_lbs: weight,
@@ -768,7 +768,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
 
   // When PR celebration closes, start the rest timer
   function handlePRDismiss() {
-    const ex = current.exercises?.find(e => e.name === prCelebration?.exercise);
+    const ex = current?.exercises?.find(e => e.name === prCelebration?.exercise);
     const restSecs = parseRestSeconds(ex?.rest);
     setPRCelebration(null);
     if (restSecs) setRestTimer({ seconds: restSecs, exercise: prCelebration?.exercise });
@@ -781,11 +781,11 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
     setShowMonthlyPrompt(false);
   }
 
-  const completedExercises = current.exercises?.filter(ex => {
+  const completedExercises = current?.exercises?.filter(ex => {
     const exLog = logs[`${sessionKey}__${ex.name}`];
     return exLog?.sets?.some(s => s.done);
   }).length || 0;
-  const trackableCount = current.exercises?.filter(ex => ex.category !== "Recovery" && ex.category !== "Mobility").length || 0;
+  const trackableCount = current?.exercises?.filter(ex => ex.category !== "Recovery" && ex.category !== "Mobility").length || 0;
 
   const tabs = [
     ["plan","Plan"], ["progress","Progress"], ["body","Body"],
@@ -795,7 +795,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
   ];
 
   // Monthly prompt modal
-  if (showMonthlyPrompt && tab === "plan") {
+  if (showMonthlyPrompt && tab === "plan" && current) {
     return (
       <div style={{ ...F, background: "#f7f6f3", minHeight: "100vh", maxWidth: 640, margin: "0 auto" }}>
         <div style={{ background: "#111", padding: "22px 18px" }}>
@@ -837,7 +837,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
             <div style={{ fontSize: "16px", color: "#f7f6f3", fontWeight: "normal" }}>Cool Down & Stretch</div>
           </div>
         </div>
-        <PostWorkoutStretches muscles={current.muscles || []} onDone={() => setShowStretches(false)} />
+        <PostWorkoutStretches muscles={current?.muscles || []} onDone={() => setShowStretches(false)} />
       </div>
     );
   }
@@ -1148,7 +1148,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
                 // auto-log to activity log
                 try {
                   const existing = JSON.parse(localStorage.getItem("activity_log_v1") || "[]");
-                  const entry = { id: Date.now(), type: activity.type, duration: activity.duration, date: sessionDate, intensity: "moderate", notes: `${current.focus} — post-lift cardio`, autoLogged: true };
+                  const entry = { id: Date.now(), type: activity.type, duration: activity.duration, date: sessionDate, intensity: "moderate", notes: `${current?.focus} — post-lift cardio`, autoLogged: true };
                   localStorage.setItem("activity_log_v1", JSON.stringify([entry, ...existing]));
                 } catch(e) {}
               }}
@@ -1158,7 +1158,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
 
           {/* Overload suggestions */}
           <OverloadSuggestions
-            sessionExercises={current.exercises}
+            sessionExercises={current?.exercises}
             sessionLogs={logs}
             sessionKey={sessionKey}
             allLogs={logs}
@@ -1340,7 +1340,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
                 activity_type: activityForm.type,
                 description: activityForm.description || ACTIVITY_TYPES.find(a => a.id === activityForm.type)?.label,
                 duration_minutes: activityForm.duration ? parseInt(activityForm.duration) : null,
-                notes: `Logged instead of: ${current.focus}`,
+                notes: `Logged instead of: ${current?.focus}`,
               };
               try {
                 const existing = JSON.parse(localStorage.getItem("activity_log_v1") || "[]");
@@ -1455,7 +1455,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
           {/* Add exercise */}
           {current.type !== "rest" && (() => {
             const EXERCISE_CATALOG = getAllNames() || ["Ab Wheel Rollout", "Alternating Dumbbell Curl", "Arnold Press", "Bulgarian Split Squat (Dumbbell)", "Cable Crunch", "Cable Curl (Low Pulley)", "Cable Fly (Low-to-High)", "Cable Lateral Raise (Single-Arm)", "Cat-Cow", "Chest and Shoulder Doorway Stretch", "Chest-Supported DB Row", "Dead Bug", "Dumbbell Bench Press", "Face Pull (Rope Attachment)", "Foam Roll", "Goblet Squat", "Hammer Curl", "Hanging Knee Raise", "Hip Flexor Stretch", "Hip Thrust (Barbell or Machine)", "Incline Dumbbell Curl", "Incline Dumbbell Press", "Incline Treadmill", "Lat Pulldown (Wide Overhand)", "Lateral Raise", "Leg Extension", "Leg Press", "Light Walk", "Overhead Tricep Extension", "Pallof Press (Cable)", "Plank", "Pull-Up (or Assisted Pull-Up)", "Rear Delt Fly (Bent-Over)", "Romanian Deadlift (Dumbbell)", "Rowing Machine", "Rowing Machine or Incline Treadmill", "Seated Cable Row (Neutral Grip)", "Seated Calf Raise", "Seated Dumbbell Overhead Press", "Side Plank", "Single-Arm Dumbbell Row", "Single-Arm Overhead DB Press", "Single-Leg Hamstring Curl", "Standing Calf Raise", "Stationary Bike", "Stationary Bike or Brisk Walk", "Straight-Arm Cable Pulldown", "Tricep Rope Pushdown"];
-            const cmKey = `${current.day}_${sessionDate}`;
+            const cmKey = `${current?.day}_${sessionDate}`;
             const dayMovements = customMovements[cmKey] || [];
             const searchTerm = newMovement.name.toLowerCase();
             const matches = searchTerm.length > 1
