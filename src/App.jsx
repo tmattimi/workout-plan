@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import SwapModal from "./components/SwapModal";
+import { getSwaps } from "./data/swaps";
 import { schedule as skylerSchedule, principles as skylerPrinciples } from "./data";
 import { schedule as taraSchedule, principles as taraPrinciples } from "./tara-data";
 import { getAllNames } from "./data/exercises";
@@ -563,6 +565,8 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
   });
   const [tab, setTab] = useState("plan");
   const [expandedEx, setExpandedEx] = useState(null);
+  const [swappedExercises, setSwappedExercises] = useState({}); // { originalName: swapObj }
+  const [activeSwapModal, setActiveSwapModal] = useState(null); // exercise object
   const [expandedPrinciple, setExpandedPrinciple] = useState(null);
   const [showLogger, setShowLogger] = useState({});
   const [sessionDate, setSessionDate] = useState(today());
@@ -1001,7 +1005,15 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: "13px", fontWeight: "600", marginBottom: "4px", display: "flex", alignItems: "center", gap: "5px" }}>
                         {hasPR && <span style={{ fontSize: "8px", letterSpacing: "0.12em", textTransform: "uppercase", background: "#f59e0b", color: "#111", padding: "2px 6px", borderRadius: "3px", marginRight: "2px" }}>PR</span>}
-                        {ex.name}
+                        {swappedExercises[ex.name] ? (
+                          <span>
+                            <span style={{ textDecoration: "line-through", color: "#bbb", fontSize: "11px" }}>{ex.name}</span>
+                            <span style={{ display: "block", color: "#111" }}>{swappedExercises[ex.name].name}</span>
+                          </span>
+                        ) : ex.name}
+                        {swappedExercises[ex.name] && (
+                          <span style={{ fontSize: "8px", letterSpacing: "0.1em", textTransform: "uppercase", background: "#2563a8", color: "#fff", padding: "2px 6px", borderRadius: "3px" }}>Swapped</span>
+                        )}
                       </div>
                       <div style={{ display: "flex", gap: "5px", flexWrap: "wrap" }}>
                         <span style={{ fontSize: "10px", background: cs.bg === "#1a1a1a" ? "#f0f0f0" : cs.bg + "18", color: cs.bg === "#1a1a1a" ? "#444" : cs.bg, padding: "2px 8px", borderRadius: "20px", fontWeight: "600" }}>{ex.sets} × {ex.reps}</span>
@@ -1029,6 +1041,11 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
                       {ex.category !== "Recovery" && ex.category !== "Mobility" && (
                         <button onClick={() => setShowLogger(p => ({ ...p, [ex.name]: !p[ex.name] }))} style={{ background: logOpen ? "#1a1a1a" : "transparent", color: logOpen ? "#fff" : "#555", border: "1px solid #d0d0d0", borderRadius: "5px", padding: "4px 8px", fontSize: "10px", cursor: "pointer", ...F }}>
                           {logOpen ? "Hide" : "Log"}
+                        </button>
+                      )}
+                      {getSwaps(ex.name).length > 0 && (
+                        <button onClick={() => setActiveSwapModal(ex)} title="Swap exercise" style={{ background: "none", border: "1px solid #e0e0e0", borderRadius: "5px", color: "#aaa", fontSize: "10px", cursor: "pointer", padding: "4px 7px", ...F }}>
+                          ⇄
                         </button>
                       )}
                       <button onClick={() => setExpandedEx(isOpen ? null : i)} style={{ background: "none", border: "none", color: "#ccc", fontSize: "12px", cursor: "pointer", padding: "4px 0", textAlign: "right" }}>
@@ -1538,6 +1555,17 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
           </>
           )}
         </>
+      )}
+
+      {/* Swap Modal */}
+      {activeSwapModal && (
+        <SwapModal
+          exercise={activeSwapModal}
+          clientId={clientData?.id}
+          sessionKey={sessionKey}
+          onSwap={(swap) => setSwappedExercises(prev => ({ ...prev, [activeSwapModal.name]: swap }))}
+          onClose={() => setActiveSwapModal(null)}
+        />
       )}
 
       {tab === "progress" && <NewProgressTab clientId={clientData?.id} bodyweight={clientData?.weight || 170} localLogs={logs} measurements={measurements} />}
