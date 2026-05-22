@@ -1370,27 +1370,30 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
             allLogs={logs}
           />
 
-          {/* Cool down stretch — at the end of the full workout */}
+          {/* Cool down — matches warm-up strip format */}
           {current.type !== "rest" && (
-            <div style={{ margin: "8px 16px 4px" }}>
-              <button
-                onClick={() => setShowStretches(true)}
-                style={{
-                  width: "100%", background: "#fff", border: "1px solid #e8e8e8",
-                  borderRadius: "10px", padding: "13px 16px", cursor: "pointer", ...F,
-                  display: "flex", justifyContent: "space-between", alignItems: "center",
-                  textAlign: "left",
-                }}
-              >
-                <div>
-                  <div style={{ fontSize: "9px", letterSpacing: "0.15em", textTransform: "uppercase", color: "#999", marginBottom: "3px" }}>
-                    After Your Workout
-                  </div>
-                  <div style={{ fontSize: "13px", color: "#1a1a1a", fontWeight: "500" }}>Cool Down & Stretch</div>
-                </div>
-                <span style={{ fontSize: "12px", color: "#ccc" }}>→</span>
-              </button>
-            </div>
+            <button
+              onClick={() => setShowStretches(true)}
+              style={{
+                width: "100%", display: "flex", alignItems: "center",
+                justifyContent: "space-between",
+                background: "rgba(29,111,168,0.06)",
+                border: "none",
+                borderTop: "1px solid rgba(29,111,168,0.12)",
+                padding: "10px 16px",
+                cursor: "pointer", textAlign: "left",
+              }}
+            >
+              <div>
+                <span style={{ fontSize: "10px", fontWeight: "700", letterSpacing: "0.15em", textTransform: "uppercase", color: "#1d6fa8" }}>
+                  Cool Down
+                </span>
+                <span style={{ fontSize: "10px", color: "rgba(29,111,168,0.6)", marginLeft: "8px" }}>
+                  5 min · stretch & recover
+                </span>
+              </div>
+              <span style={{ fontSize: "10px", color: "#1d6fa8", opacity: 0.7 }}>View →</span>
+            </button>
           )}
 
           {/* Daily check-in — single button, opens bottom sheet */}
