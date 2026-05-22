@@ -17,6 +17,7 @@ import WarmUp from "./components/WarmUp";
 import RestTimer, { parseRestSeconds } from "./components/RestTimer";
 import SessionSummary from "./components/SessionSummary";
 import RecoveryCard from "./components/RecoveryCard";
+import HealthTab from "./components/HealthTab";
 import HealthLogModal from "./components/HealthLogModal";
 import { getRecoveryAssessment } from "./lib/recoveryEngine";
 import { PRCelebration, OverloadSuggestions } from "./components/PRCelebration";
@@ -871,7 +872,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
   const trackableCount = current?.exercises?.filter(ex => ex.category !== "Recovery" && ex.category !== "Mobility").length || 0;
 
   const tabs = [
-    ["plan","Plan"], ["history","History"], ["progress","Progress"], ["body","Body"], ["photos","Photos"],
+    ["plan","Plan"], ["history","History"], ["progress","Progress"], ["body","Body"], ["health","Health"],
     ["nutrition","Nutrition"],
     ...(clientData?.sex === "female" ? [["cycle","Cycle"]] : []),
     ["tools","Tools"],
@@ -1006,13 +1007,6 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
               </button>
             ))}
           </div>
-
-          {/* Recovery assessment */}
-          <RecoveryCard
-            dailyHealth={dailyHealth}
-            todayKey={todayKey}
-            onLogHealth={() => setShowHealthLog(true)}
-          />
 
           {/* Session header */}
           <div style={{ background: "linear-gradient(135deg, #2c2c2e 0%, #1c1c1e 100%)", borderBottom: "1px solid #3a3a3c", padding: "14px 16px" }}>
@@ -1692,7 +1686,17 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
 
       {tab === "progress" && <NewProgressTab clientId={clientData?.id} bodyweight={clientData?.weight || 170} localLogs={logs} measurements={measurements} />}
       {tab === "body" && <BodyTab clientId={clientData?.id} />}
-      {tab === "photos" && <PhotosTab clientId={clientData?.id} />}
+      {tab === "health" && (
+        <HealthTab
+          dailyHealth={dailyHealth}
+          todayKey={todayKey}
+          onHealthUpdate={(updated) => {
+            setDailyHealth(updated);
+            localStorage.setItem("daily_health_v1", JSON.stringify(updated));
+          }}
+          clientId={clientData?.id}
+        />
+      )}
       {tab === "nutrition" && <NutritionTab clientId={clientData?.id} />}
       {tab === "cycle" && <CycleTracking clientId={clientData?.id} />}
       {tab === "tools" && (
