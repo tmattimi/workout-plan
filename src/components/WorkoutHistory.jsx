@@ -122,7 +122,6 @@ function SessionCard({ date, sets, clientId }) {
 
   const exercises = Object.keys(byExercise);
   const vol = totalVolume(sets);
-  const prs = sets.filter(s => s.is_pr);
   const hasNotes = sets.some(s => s.client_note);
   const totalSets = sets.length;
   const muscles = [...new Set(sets.map(s => s.exercises?.primary_muscle).filter(Boolean))];
@@ -158,15 +157,10 @@ function SessionCard({ date, sets, clientId }) {
               {exercises.slice(0, 2).join(", ")}
               {exercises.length > 2 && <span style={{ fontWeight: "normal", color: "#aaa" }}> +{exercises.length - 2} more</span>}
             </span>
-            {prs.length > 0 && (
-              <span style={{ fontSize: "9px", background: "#f59e0b", color: "#111", borderRadius: "4px", padding: "2px 6px", fontWeight: "700" }}>
-                {prs.length} PR{prs.length > 1 ? "s" : ""}
-              </span>
-            )}
+
           </div>
           <div style={{ fontSize: "11px", color: "#bbb" }}>
             {totalSets} sets
-            {vol > 0 && ` · ${Math.round(vol).toLocaleString()} lbs`}
             {muscles.length > 0 && ` · ${muscles.slice(0, 2).join(", ")}`}
             {hasNotes && " · 📝"}
           </div>
@@ -281,7 +275,8 @@ export default function WorkoutHistory({ clientId, localLogs }) {
       if (!val?.sets?.length) return;
 
       if (!byDate[date]) byDate[date] = [];
-      val.sets.forEach((s, i) => {
+      // Only include sets that were actually marked done
+      val.sets.filter(s => s.done).forEach((s, i) => {
         byDate[date].push({
           exercises: { name: exerciseName },
           exercise_name: exerciseName,
@@ -294,6 +289,8 @@ export default function WorkoutHistory({ clientId, localLogs }) {
         });
       });
     });
+    // Remove dates that ended up with no done sets
+    Object.keys(byDate).forEach(d => { if (!byDate[d].length) delete byDate[d]; });
     finalize(byDate);
   }
 
@@ -310,8 +307,10 @@ export default function WorkoutHistory({ clientId, localLogs }) {
       // Only add if not already in Supabase data
       const alreadyHas = byDate[date]?.some(r => (r.exercises?.name || r.exercise_name) === exerciseName);
       if (!alreadyHas) {
+        const doneSets = val.sets.filter(s => s.done);
+        if (!doneSets.length) return;
         if (!byDate[date]) byDate[date] = [];
-        val.sets.forEach((s, i) => {
+        doneSets.forEach((s, i) => {
           byDate[date].push({
             exercises: { name: exerciseName },
             exercise_name: exerciseName,
@@ -374,26 +373,35 @@ export default function WorkoutHistory({ clientId, localLogs }) {
     : null;
 
   const totalSessionCount = Object.keys(sessions).length;
-  const totalPRs = Object.values(sessions).flat().filter(s => s.is_pr).length;
-  const totalVol = Math.round(Object.values(sessions).flat().reduce((sum, s) => sum + ((parseFloat(s.weight_lbs) || 0) * (parseInt(s.reps) || 0)), 0));
+
+  // Sessions this calendar month
+  const thisMonthKey = new Date().toISOString().slice(0, 7);
+  const sessionsThisMonth = Object.keys(sessions).filter(d => d.startsWith(thisMonthKey)).length;
+
+  // Sessions last calendar month
+  const lastMonthDate = new Date();
+  lastMonthDate.setMonth(lastMonthDate.getMonth() - 1);
+  const lastMonthKey = lastMonthDate.toISOString().slice(0, 7);
+  const sessionsLastMonth = Object.keys(sessions).filter(d => d.startsWith(lastMonthKey)).length;
 
   return (
     <div style={{ padding: "16px 16px 80px", ...F }}>
 
-      {/* Summary stats */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "6px", marginBottom: "16px" }}>
-        {[
-          { label: "Sessions", value: totalSessionCount },
-          { label: "PRs hit", value: totalPRs },
-          { label: "Total volume", value: totalVol > 1000 ? `${Math.round(totalVol / 100) / 10}k` : totalVol, unit: "lbs" },
-        ].map(({ label, value, unit }) => (
-          <div key={label} style={{ background: "#f9f9f7", borderRadius: "9px", padding: "11px", textAlign: "center" }}>
-            <div style={{ fontSize: "20px", fontWeight: "700", color: "#111", lineHeight: 1 }}>
-              {value}{unit && <span style={{ fontSize: "10px", fontWeight: "normal", color: "#aaa" }}> {unit}</span>}
+      {/* Summary stats — only meaningful numbers */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "8px", marginBottom: "16px" }}>
+        <div style={{ background: "#f9f9f7", borderRadius: "9px", padding: "13px 12px", textAlign: "center" }}>
+          <div style={{ fontSize: "26px", fontWeight: "700", color: "#111", lineHeight: 1 }}>{sessionsThisMonth}</div>
+          <div style={{ fontSize: "9px", color: "#bbb", textTransform: "uppercase", letterSpacing: "0.1em", marginTop: "4px" }}>This month</div>
+        </div>
+        <div style={{ background: "#f9f9f7", borderRadius: "9px", padding: "13px 12px", textAlign: "center" }}>
+          <div style={{ fontSize: "26px", fontWeight: "700", color: "#111", lineHeight: 1 }}>{totalSessionCount}</div>
+          <div style={{ fontSize: "9px", color: "#bbb", textTransform: "uppercase", letterSpacing: "0.1em", marginTop: "4px" }}>Total sessions</div>
+          {sessionsLastMonth > 0 && (
+            <div style={{ fontSize: "9px", color: "#ccc", marginTop: "2px" }}>
+              {sessionsLastMonth} last month
             </div>
-            <div style={{ fontSize: "9px", color: "#bbb", textTransform: "uppercase", letterSpacing: "0.1em", marginTop: "3px" }}>{label}</div>
-          </div>
-        ))}
+          )}
+        </div>
       </div>
 
       {/* Search */}

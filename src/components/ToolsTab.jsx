@@ -221,19 +221,21 @@ function GuideSection({ principles, openEntryId }) {
   const [expandedPrinciple, setExpandedPrinciple] = useState(openEntryId || null);
   const [search, setSearch] = useState("");
 
-  // Auto-expand if a specific entry was requested (deep link from form cue)
-  useState(() => {
-    if (openEntryId) setExpandedPrinciple(openEntryId);
-  }, [openEntryId]);
+  if (openEntryId && expandedPrinciple !== openEntryId) setExpandedPrinciple(openEntryId);
 
   if (!principles || principles.length === 0) {
-    return <div style={{ color: "#bbb", fontSize: "12px", textAlign: "center", padding: "20px" }}>Loading...</div>;
+    return <div style={{ color: "#bbb", fontSize: "12px", textAlign: "center", padding: "20px" }}>No guide content available.</div>;
   }
+
+  // Normalize: handle both flat [{title,body}] and sectioned [{section, entries:[]}] formats
+  const normalized = Array.isArray(principles) && principles[0]?.entries
+    ? principles
+    : [{ section: "Training Principles", entries: principles.map((p, i) => ({ ...p, id: p.id || String(i), tags: p.tags || [] })) }];
 
   const q = search.toLowerCase().trim();
 
   // Flatten all entries for search
-  const allEntries = principles.flatMap((section, si) =>
+  const allEntries = normalized.flatMap((section, si) =>
     section.entries.map((p, i) => ({ ...p, section: section.section, si, i, key: p.id || `${si}-${i}` }))
   );
 
@@ -289,7 +291,7 @@ function GuideSection({ principles, openEntryId }) {
       )}
 
       {/* Browseable sections when not searching */}
-      {!filtered && principles.map((section, si) => (
+      {!filtered && normalized.map((section, si) => (
         <div key={si} style={{ marginBottom: "18px" }}>
           <div style={{ fontSize: "8px", fontWeight: "700", letterSpacing: "0.2em", textTransform: "uppercase", color: "#888", marginBottom: "7px", paddingBottom: "5px", borderBottom: "1px solid #ebebeb" }}>
             {section.section}

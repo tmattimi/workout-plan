@@ -1027,6 +1027,12 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
                   )}
                 </span>
               )}
+              <button
+                onClick={() => setTab("tools")}
+                style={{ fontSize: "10px", color: "#9a9a9e", background: "rgba(255,255,255,0.06)", border: "1px solid #3a3a3c", borderRadius: "20px", padding: "4px 10px", cursor: "pointer" }}
+              >
+                Exercise Library
+              </button>
               {clientData?.id && syncStatus !== "idle" && (
                 <span style={{
                   fontSize: "10px", padding: "4px 10px", borderRadius: "20px",
