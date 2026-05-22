@@ -14,6 +14,7 @@ import MeasurementsTracker from "./components/MeasurementsTracker";
 import MuscleScience from "./components/MuscleScience";
 import WarmUp from "./components/WarmUp";
 import RestTimer, { parseRestSeconds } from "./components/RestTimer";
+import SessionSummary from "./components/SessionSummary";
 import { PRCelebration, OverloadSuggestions } from "./components/PRCelebration";
 import MonthlyPrompt from "./components/MonthlyPrompt";
 import DailyScripture from "./components/DailyScripture";
@@ -23,6 +24,8 @@ import AlternativeExercises from "./components/AlternativeExercises";
 import { getClientByToken } from "./lib/supabase";
 import NewProgressTab from "./components/ProgressTab";
 import PhotosTab from "./components/PhotosTab";
+import WorkoutHistory from "./components/WorkoutHistory";
+import { ClientPhotoUpload } from "./components/ProgressPhotos";
 import TrackingTab from "./components/TrackingTab";
 import ActivityLog from "./components/ActivityLog";
 import CycleTracking from "./components/CycleTracking";
@@ -547,14 +550,25 @@ function CardioSwapCard({ sessionType, cardio, sessionKey, onLog }) {
 
 // ── Main App ───────────────────────────────────────────────────────────────────
 export default function App({ clientData, adaptedSchedule, onSignOut }) {
-  // Route to client-specific hardcoded schedule if no DB plan assigned yet
-  const clientName = clientData?.name?.toLowerCase() || "";
-  const defaultSchedule = clientName.includes("tara") ? taraSchedule : skylerSchedule;
-  const defaultPrinciples = clientName.includes("tara") ? taraPrinciples : skylerPrinciples;
+  // Client IDs are stable and set by the coach in Supabase
+  // Only these two clients have hardcoded programs — all others wait for a coach-built plan
+  const TARA_ID    = "fa2b1f9e-ed1e-4b7a-b2a3-def60932e2f5";
+  const SKYLER_ID  = "f1f04d99-76ec-477f-938f-ebfb456b1d88";
+  const clientId   = clientData?.id || "";
 
-  // Only use DB plan if assigned by coach, otherwise use client-specific default
+  const defaultSchedule =
+    clientId === TARA_ID   ? taraSchedule   :
+    clientId === SKYLER_ID ? skylerSchedule :
+    null; // all other clients: no program until coach assigns one
+
+  const defaultPrinciples =
+    clientId === TARA_ID   ? taraPrinciples   :
+    clientId === SKYLER_ID ? skylerPrinciples :
+    null;
+
+  // Use DB-assigned plan if present, then client-specific default, then nothing
   const activeSchedule = adaptedSchedule || defaultSchedule;
-  const hasPlan = true; // always show plan — each client has their own default
+  const hasPlan = !!activeSchedule;
   const principles = defaultPrinciples;
 
   const [activeDay, setActiveDay] = useState(() => {
@@ -578,6 +592,8 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
   const [showHealthLog, setShowHealthLog] = useState(false);
   const [showStretches, setShowStretches] = useState(false);
   const [sessionSkipped, setSessionSkipped] = useState({});  // { [sessionDate]: { reason, skipped } }
+  const [syncStatus, setSyncStatus] = useState("idle"); // idle | syncing | synced | failed
+  const [syncFailedSets, setSyncFailedSets] = useState([]); // sets that failed to save
   const [showActivityLog, setShowActivityLog] = useState(false);
   const [activityForm, setActivityForm] = useState({ type: 'class', description: '', duration: '' });
 
@@ -606,6 +622,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
 
   // Rest timer state
   const [restTimer, setRestTimer] = useState(null); // { seconds, exercise }
+  const [showSessionSummary, setShowSessionSummary] = useState(false);
 
   // PR celebration state
   const [prCelebration, setPRCelebration] = useState(null); // { exercise, weight, reps }
@@ -680,18 +697,21 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
         if (logsResult?.data?.length > 0) {
           const supabaseLogs = {};
           logsResult.data.forEach(row => {
-            const exName = row.exercises?.name;
+            const exName = row.exercises?.name || row.exercise_name;
             if (!exName || !row.session_date) return;
             const key = `HIST_${row.session_date}__${exName}`;
-            if (!supabaseLogs[key]) supabaseLogs[key] = { sets: [] };
+            if (!supabaseLogs[key]) supabaseLogs[key] = { sets: [], date: row.session_date };
             supabaseLogs[key].sets.push({
               weight: row.weight_lbs ? String(row.weight_lbs) : "",
               reps: row.reps ? String(row.reps) : "",
               done: true,
               type: "normal",
+              isPR: row.is_pr || false,
+              note: row.client_note || "",
+              supabaseId: row.id || null,
             });
           });
-          // Merge: localStorage (current session) takes priority
+          // Merge: localStorage (current session) takes priority over history
           setLogs(prev => ({ ...supabaseLogs, ...prev }));
         }
 
@@ -744,11 +764,12 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
     }
 
     // 2. Write to Supabase in the background if client is logged in
-    if (clientData && clientData.id) {
+    if (clientData && clientData.id && !cleared) {
+      setSyncStatus("syncing");
       try {
         const { logSet, upsertPR, getAllExercises } = await import("./lib/supabase");
         const exObj = current?.exercises && current.exercises.find(function(e) { return e.name === exercise; });
-        
+
         // Try to get exercise_id from the plan exercise first,
         // then fall back to looking it up by name in the exercises table
         let exId = exObj && exObj.exercise_id;
@@ -758,29 +779,72 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
           exId = found && found.id;
         }
 
-        if (exId) {
-          await logSet(clientData.id, {
-            exercise_id: exId,
-            plan_exercise_id: (exObj && exObj.plan_exercise_id) || null,
-            plan_day_id: current?.plan_day_id || null,
-            session_date: sessionDate,
-            set_number: setNumber || 1,
-            weight_lbs: weight,
-            reps: reps,
-            completed: true,
+        // Log the set — with or without an exercise_id
+        // We never silently drop a set just because the ID lookup failed
+        const { data: logRow } = await logSet(clientData.id, {
+          exercise_id: exId || null,
+          exercise_name: !exId ? exercise : null, // fallback name if no ID
+          plan_exercise_id: (exObj && exObj.plan_exercise_id) || null,
+          plan_day_id: current?.plan_day_id || null,
+          session_date: sessionDate,
+          set_number: setNumber || 1,
+          weight_lbs: bodyweight ? null : weight,
+          reps: reps,
+          completed: true,
+          is_pr: isPR && !bodyweight && !recalculate ? true : false,
+        });
+
+        // Store log row ID in local state so notes can be saved later
+        if (logRow?.id) {
+          const exKey = `${sessionKey}__${exercise}`;
+          setLogs(prev => {
+            const exLog = prev[exKey] || { sets: [] };
+            const setIdx = (setNumber || 1) - 1;
+            const updatedSets = exLog.sets.map((s, i) => i === setIdx ? { ...s, supabaseId: logRow.id } : s);
+            const updated = { ...prev, [exKey]: { ...exLog, sets: updatedSets } };
+            saveWorkoutLogs(updated);
+            return updated;
           });
-          if (isPR) {
-            await upsertPR(clientData.id, exId, weight, reps);
-          }
-        } else {
-          // Exercise not in library yet — log without exercise_id link
-          // This should not happen with a seeded library but handles edge cases
-          console.warn("Exercise not found in library:", exercise);
         }
+
+        if (isPR && exId && !bodyweight && !recalculate) {
+          await upsertPR(clientData.id, exId, weight, reps);
+        }
+        setSyncStatus("synced");
       } catch (err) {
-        console.warn("Supabase log failed:", err.message);
+        console.warn("Supabase log failed (set saved locally):", err.message);
+        setSyncStatus("failed");
+        setSyncFailedSets(prev => [...prev, { exercise, weight, reps, setNumber, sessionDate }]);
       }
     }
+  }
+
+  // Retry any sets that failed to save to Supabase
+  async function retrySyncFailed() {
+    if (!syncFailedSets.length || !clientData?.id) return;
+    setSyncStatus("syncing");
+    const { logSet, getAllExercises } = await import("./lib/supabase");
+    const { data: allEx } = await getAllExercises();
+    let allGood = true;
+    for (const s of syncFailedSets) {
+      try {
+        const found = allEx?.find(e => e.name === s.exercise);
+        await logSet(clientData.id, {
+          exercise_id: found?.id || null,
+          exercise_name: !found ? s.exercise : null,
+          session_date: s.sessionDate,
+          set_number: s.setNumber || 1,
+          weight_lbs: s.weight || null,
+          reps: s.reps,
+          completed: true,
+          is_pr: false,
+        });
+      } catch (e) {
+        allGood = false;
+      }
+    }
+    if (allGood) { setSyncFailedSets([]); setSyncStatus("synced"); }
+    else setSyncStatus("failed");
   }
 
   // When PR celebration closes, start the rest timer
@@ -805,7 +869,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
   const trackableCount = current?.exercises?.filter(ex => ex.category !== "Recovery" && ex.category !== "Mobility").length || 0;
 
   const tabs = [
-    ["plan","Plan"], ["progress","Progress"], ["body","Body"],
+    ["plan","Plan"], ["history","History"], ["progress","Progress"], ["body","Body"], ["photos","Photos"],
     ["nutrition","Nutrition"],
     ...(clientData?.sex === "female" ? [["cycle","Cycle"]] : []),
     ["tools","Tools"],
@@ -954,7 +1018,30 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
               {trackableCount > 0 && (
                 <span style={{ fontSize: "11px", color: completedExercises > 0 ? "#34c759" : "#6e6e73", background: completedExercises > 0 ? "rgba(52,199,89,0.12)" : "rgba(255,255,255,0.06)", padding: "4px 10px", borderRadius: "20px", border: `1px solid ${completedExercises > 0 ? "rgba(52,199,89,0.25)" : "transparent"}` }}>
                   {completedExercises}/{trackableCount} done
+                  {completedExercises > 0 && completedExercises === trackableCount && (
+                    <button
+                      onClick={() => setShowSessionSummary(true)}
+                      style={{ marginLeft: "8px", background: "#2d7a1e", color: "#fff", border: "none", borderRadius: "20px", padding: "3px 10px", fontSize: "10px", cursor: "pointer", fontWeight: "600" }}
+                    >
+                      Finish ✓
+                    </button>
+                  )}
                 </span>
+              )}
+              {clientData?.id && syncStatus !== "idle" && (
+                <span style={{
+                  fontSize: "10px", padding: "4px 10px", borderRadius: "20px",
+                  background: syncStatus === "synced" ? "rgba(52,199,89,0.12)" : syncStatus === "failed" ? "rgba(255,59,48,0.12)" : "rgba(255,255,255,0.06)",
+                  color: syncStatus === "synced" ? "#34c759" : syncStatus === "failed" ? "#ff3b30" : "#9a9a9e",
+                  border: `1px solid ${syncStatus === "synced" ? "rgba(52,199,89,0.25)" : syncStatus === "failed" ? "rgba(255,59,48,0.25)" : "transparent"}`,
+                }}>
+                  {syncStatus === "syncing" ? "Saving..." : syncStatus === "synced" ? "✓ Saved" : "⚠ Not saved"}
+                </span>
+              )}
+              {syncStatus === "failed" && (
+                <button onClick={retrySyncFailed} style={{ fontSize: "10px", padding: "4px 10px", borderRadius: "20px", background: "rgba(255,59,48,0.15)", color: "#ff3b30", border: "1px solid rgba(255,59,48,0.3)", cursor: "pointer", ...F }}>
+                  Retry save
+                </button>
               )}
               {current.type !== "rest" && (
                 <button onClick={() => setShowWarmup(true)} style={{ background: "rgba(196,122,10,0.15)", color: "#c47a0a", border: "1px solid rgba(196,122,10,0.25)", borderRadius: "20px", padding: "4px 12px", fontSize: "11px", cursor: "pointer", ...F, fontWeight: "600" }}>
@@ -1568,8 +1655,13 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
         />
       )}
 
+      {tab === "history" && (
+        <WorkoutHistory clientId={clientData?.id} localLogs={logs} />
+      )}
+
       {tab === "progress" && <NewProgressTab clientId={clientData?.id} bodyweight={clientData?.weight || 170} localLogs={logs} measurements={measurements} />}
       {tab === "body" && <BodyTab clientId={clientData?.id} />}
+      {tab === "photos" && <PhotosTab clientId={clientData?.id} />}
       {tab === "nutrition" && <NutritionTab clientId={clientData?.id} />}
       {tab === "cycle" && <CycleTracking clientId={clientData?.id} />}
       {tab === "tools" && (
@@ -1586,9 +1678,19 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
 
 
       {/* Rest Timer — fixed to bottom */}
+      {showSessionSummary && (
+        <SessionSummary
+          sessionKey={sessionKey}
+          logs={logs}
+          schedule={activeSchedule}
+          onDismiss={() => setShowSessionSummary(false)}
+        />
+      )}
+
       {restTimer && (
         <RestTimer
           seconds={restTimer.seconds}
+          nextExercise={restTimer.exercise || null}
           onDone={() => {}}
           onDismiss={() => setRestTimer(null)}
         />

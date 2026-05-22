@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { supabase } from "../lib/supabase";
 import {
   signInCoach, signOutCoach, getCoachSession, onAuthChange,
   getMyClients, createClient_db, updateClient_db, deleteClient_db,
@@ -11,6 +12,8 @@ import {
 import { formatDate } from "../storage";
 import AICoachPanel from "../components/AICoachPanel";
 import AIProgramBuilder from "../components/AIProgramBuilder";
+import ClientAnalytics from "../components/ClientAnalytics";
+import { CoachPhotoViewer } from "../components/ProgressPhotos";
 
 const F = { fontFamily: "'Georgia','Times New Roman',serif" };
 const DAYS = ["MON","TUE","WED","THU","FRI","SAT","SUN"];
@@ -612,7 +615,7 @@ function ClientDetail({ client, coachId, plans, onBack, onDelete, onAssignPlan }
 
       {/* Sub-nav */}
       <div style={{ display: "flex", gap: "5px", marginBottom: "16px", overflowX: "auto" }}>
-        {[["overview","Overview"],["workout_notes","Workout Notes"],["ai","AI Analysis"],["program","Build Program"],["intake","Intake Form"],["notes","Coach Notes"],["messages","Messages"],["assign","Assign Plan"],["edit","Edit Client"]].map(([v, label]) => (
+        {[["overview","Overview"],["analytics","Analytics"],["photos","Photos"],["workout_notes","Workout Notes"],["ai","AI Analysis"],["view_program","View Program"],["program","Build Program"],["intake","Intake Form"],["notes","Coach Notes"],["messages","Messages"],["assign","Assign Plan"],["edit","Edit Client"]].map(([v, label]) => (
           <button key={v} onClick={() => setView(v)} style={{ flex: "0 0 auto", background: view === v ? "#111" : "#fff", color: view === v ? "#fff" : "#555", border: "1px solid #e0e0e0", borderRadius: "20px", padding: "6px 14px", fontSize: "11px", cursor: "pointer", ...F, whiteSpace: "nowrap" }}>
             {label}{v === "messages" && overview?.unreadFromClient > 0 ? ` (${overview.unreadFromClient})` : ""}
           </button>
@@ -844,6 +847,14 @@ function ClientDetail({ client, coachId, plans, onBack, onDelete, onAssignPlan }
       })()}
 
       {/* AI Analysis */}
+      {view === "analytics" && (
+        <ClientAnalytics clientId={client.id} />
+      )}
+
+      {view === "photos" && (
+        <CoachPhotoViewer clientId={client.id} />
+      )}
+
       {view === "ai" && overview && (
         <AICoachPanel client={client} overview={overview} />
       )}
@@ -852,6 +863,10 @@ function ClientDetail({ client, coachId, plans, onBack, onDelete, onAssignPlan }
       )}
 
       {/* AI Program Builder */}
+      {view === "view_program" && (
+        <ClientProgramView client={selectedClient} />
+      )}
+
       {view === "program" && (
         <AIProgramBuilder
           client={client}
@@ -991,12 +1006,25 @@ function ClientDetail({ client, coachId, plans, onBack, onDelete, onAssignPlan }
             </div>
           ) : (
             <div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
                 <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.15em", color: "#999" }}>Client Intake Form</div>
                 <button onClick={handleSeedFromIntake} disabled={seeding} style={{ background: seeding ? "#ccc" : "#1a1a1a", color: "#f7f6f3", border: "none", borderRadius: "20px", padding: "6px 14px", fontSize: "11px", cursor: seeding ? "wait" : "pointer", ...F }}>
                   {seeding ? "Seeding..." : "Seed into app data"}
                 </button>
               </div>
+              <button
+                onClick={() => setView("program")}
+                style={{
+                  width: "100%", background: "#2563a8", color: "#fff",
+                  border: "none", borderRadius: "9px", padding: "13px",
+                  fontSize: "13px", fontWeight: "600", cursor: "pointer", ...F,
+                  marginBottom: "14px", display: "flex", alignItems: "center",
+                  justifyContent: "center", gap: "7px",
+                }}
+              >
+                <span>⚡</span>
+                Build Program from This Intake
+              </button>
 
               {seedResult && (
                 <div style={{ background: seedResult.errors.length > 0 ? "#fff5f5" : "#e8f5e9", border: `1px solid ${seedResult.errors.length > 0 ? "#f0b0b0" : "#a5d6a7"}`, borderRadius: "7px", padding: "10px 13px", marginBottom: "12px", fontSize: "11px", lineHeight: "1.6" }}>
@@ -1041,8 +1069,16 @@ function ClientDetail({ client, coachId, plans, onBack, onDelete, onAssignPlan }
                 { label: "Training Days/Week", value: intake.training_days_per_week },
                 { label: "Preferred Days", value: intake.preferred_days?.join(", ") },
                 { label: "Session Length", value: intake.session_length_minutes ? `${intake.session_length_minutes} min` : null },
+                { label: "Training Style", value: intake.training_style?.replace(/_/g, " ") },
                 { label: "Equipment", value: intake.equipment_available?.join(", ") },
-                { label: "Injuries", value: intake.injury_flags?.join(", ") || "None" },
+                { label: "── CARDIO ──", value: " " },
+                { label: "Cardio Types", value: intake.cardio_types?.filter(c => c !== "none").join(", ") || (intake.cardio_types?.includes("none") ? "None" : null) },
+                { label: "Cardio Days/Week", value: intake.cardio_days_per_week },
+                { label: "Cardio Duration", value: intake.cardio_duration_minutes ? `${intake.cardio_duration_minutes} min` : null },
+                { label: "Cardio Notes", value: intake.cardio_notes },
+                { label: "Fixed Commitments", value: intake.fixed_commitments?.length ? intake.fixed_commitments.map(c => `${c.day}: ${c.activity}`).join(", ") : "None" },
+                { label: "── INJURIES ──", value: " " },
+                { label: "Injury Flags", value: intake.injury_flags?.join(", ") || "None" },
                 { label: "Injury Notes", value: intake.injury_notes },
                 { label: "Mobility Limitations", value: intake.mobility_limitations },
                 { label: "── LIFESTYLE ──", value: " " },
@@ -1056,6 +1092,7 @@ function ClientDetail({ client, coachId, plans, onBack, onDelete, onAssignPlan }
                 { label: "Knows Progressive Overload", value: intake.knows_progressive_overload === true ? "Yes" : intake.knows_progressive_overload === false ? "No" : null },
                 { label: "Knows Form Basics", value: intake.knows_form_basics === true ? "Yes" : intake.knows_form_basics === false ? "No" : null },
                 { label: "Prior Coaching", value: intake.prior_coaching === true ? "Yes" : intake.prior_coaching === false ? "No" : null },
+                { label: "Prior Coaching Notes", value: intake.prior_coaching_notes },
                 { label: "Additional Notes", value: intake.additional_notes },
               ].filter(item => item.value).map(({ label, value }, i) => {
                 // Section dividers
@@ -1169,6 +1206,61 @@ function ClientDetail({ client, coachId, plans, onBack, onDelete, onAssignPlan }
 function ClientListView({ clients, loading, unreadCounts, onSelect, onNewClient }) {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("recent"); // recent | name | unread
+  const [listView, setListView] = useState("clients"); // clients | status
+  const [recentActivity, setRecentActivity] = useState([]);
+  const [showActivity, setShowActivity] = useState(true);
+
+  useEffect(() => {
+    // Fetch recent workout completions and swaps across all clients
+    async function loadActivity() {
+      if (!clients.length) return;
+      const clientIds = clients.map(c => c.id);
+      const since = new Date(Date.now() - 7 * 86400000).toISOString();
+
+      const [logsRes, swapsRes] = await Promise.all([
+        supabase
+          .from("workout_logs")
+          .select("client_id, session_date, logged_at, exercises(name)")
+          .in("client_id", clientIds)
+          .eq("completed", true)
+          .gte("logged_at", since)
+          .order("logged_at", { ascending: false })
+          .limit(50),
+        supabase
+          .from("exercise_swaps")
+          .select("client_id, original_exercise, swap_exercise, reason_category, swapped_at")
+          .in("client_id", clientIds)
+          .gte("swapped_at", since)
+          .order("swapped_at", { ascending: false })
+          .limit(20),
+      ]);
+
+      // Group logs by client+day to get "session completed" events
+      const sessionMap = {};
+      (logsRes.data || []).forEach(log => {
+        const key = `${log.client_id}__${log.session_date || log.logged_at?.slice(0,10)}`;
+        if (!sessionMap[key]) {
+          sessionMap[key] = {
+            type: "session",
+            client_id: log.client_id,
+            date: log.session_date || log.logged_at?.slice(0,10),
+            logged_at: log.logged_at,
+            exercises: [],
+          };
+        }
+        if (log.exercises?.name) sessionMap[key].exercises.push(log.exercises.name);
+      });
+
+      const swapEvents = (swapsRes.data || []).map(s => ({ type: "swap", ...s }));
+      const sessionEvents = Object.values(sessionMap);
+      const allEvents = [...sessionEvents, ...swapEvents]
+        .sort((a, b) => new Date(b.logged_at || b.swapped_at) - new Date(a.logged_at || a.swapped_at))
+        .slice(0, 15);
+
+      setRecentActivity(allEvents);
+    }
+    loadActivity();
+  }, [clients]);
 
   // Build activity summary from clients data
   function getLastActive(client) {
@@ -1204,8 +1296,86 @@ function ClientListView({ clients, loading, unreadCounts, onSelect, onNewClient 
     return days <= 7;
   });
 
+  function timeAgo(str) {
+    if (!str) return "";
+    const mins = Math.floor((Date.now() - new Date(str)) / 60000);
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    const days = Math.floor(hrs / 24);
+    if (days === 1) return "Yesterday";
+    return `${days}d ago`;
+  }
+
   return (
     <div style={{ padding: "16px 16px 60px" }}>
+
+      {/* Recent activity feed */}
+      {recentActivity.length > 0 && (
+        <div style={{ marginBottom: "16px" }}>
+          <button
+            onClick={() => setShowActivity(p => !p)}
+            style={{ width: "100%", background: "none", border: "none", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", padding: "0 0 8px 0", ...F }}
+          >
+            <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.15em", color: "#999", display: "flex", alignItems: "center", gap: "6px" }}>
+              This week
+              <span style={{ background: "#2563a8", color: "#fff", borderRadius: "20px", padding: "1px 6px", fontSize: "9px" }}>{recentActivity.length}</span>
+            </div>
+            <span style={{ fontSize: "10px", color: "#ccc" }}>{showActivity ? "▲" : "▼"}</span>
+          </button>
+
+          {showActivity && (
+            <div style={{ background: "#f9f9f7", borderRadius: "9px", overflow: "hidden" }}>
+              {recentActivity.map((event, i) => {
+                const clientName = clients.find(c => c.id === event.client_id)?.name || "Client";
+                const isLast = i === recentActivity.length - 1;
+                return (
+                  <button
+                    key={i}
+                    onClick={() => {
+                      const c = clients.find(cl => cl.id === event.client_id);
+                      if (c) onSelect(c);
+                    }}
+                    style={{
+                      width: "100%", background: "none", border: "none",
+                      borderBottom: isLast ? "none" : "1px solid #f0efec",
+                      padding: "10px 13px", cursor: "pointer", textAlign: "left", ...F,
+                      display: "flex", alignItems: "flex-start", gap: "8px",
+                    }}
+                  >
+                    <span style={{ fontSize: "13px", flexShrink: 0, marginTop: "1px" }}>
+                      {event.type === "swap" ? "⇄" : "✓"}
+                    </span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: "12px", color: "#222", marginBottom: "2px" }}>
+                        <span style={{ fontWeight: "600" }}>{clientName}</span>
+                        {event.type === "session" ? (
+                          <span style={{ color: "#555" }}>
+                            {" "}completed a session
+                            {event.exercises?.length > 0 && (
+                              <span style={{ color: "#999" }}> · {[...new Set(event.exercises)].slice(0, 3).join(", ")}{event.exercises.length > 3 ? "..." : ""}</span>
+                            )}
+                          </span>
+                        ) : (
+                          <span style={{ color: "#555" }}>
+                            {" "}swapped <span style={{ textDecoration: "line-through", color: "#bbb" }}>{event.original_exercise}</span>
+                            {" → "}<span style={{ color: "#2563a8" }}>{event.swap_exercise}</span>
+                            {event.reason_category && <span style={{ color: "#999" }}> · {event.reason_category}</span>}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <span style={{ fontSize: "10px", color: "#bbb", flexShrink: 0, marginTop: "2px" }}>
+                      {timeAgo(event.logged_at || event.swapped_at)}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
         <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.15em", color: "#999" }}>
           {clients.length} client{clients.length !== 1 ? "s" : ""}
@@ -1213,6 +1383,20 @@ function ClientListView({ clients, loading, unreadCounts, onSelect, onNewClient 
         <button onClick={onNewClient} style={{ background: "#111", color: "#fff", border: "none", borderRadius: "20px", padding: "7px 16px", fontSize: "12px", cursor: "pointer", ...F }}>
           + New Client
         </button>
+      </div>
+
+      {/* View toggle */}
+      <div style={{ display: "flex", gap: "6px", marginBottom: "12px" }}>
+        {[["clients", "Clients"], ["status", "Status"]].map(([v, label]) => (
+          <button key={v} onClick={() => setListView(v)} style={{
+            flex: 1, padding: "8px", borderRadius: "8px", fontSize: "11px", cursor: "pointer",
+            border: `1px solid ${listView === v ? "#111" : "#e0e0e0"}`,
+            background: listView === v ? "#111" : "transparent",
+            color: listView === v ? "#f7f6f3" : "#888", ...F,
+          }}>
+            {label}
+          </button>
+        ))}
       </div>
 
       {/* Search + sort */}
@@ -1238,34 +1422,40 @@ function ClientListView({ clients, loading, unreadCounts, onSelect, onNewClient 
         </div>
       )}
 
-      {/* Needs attention */}
-      {needsAttention.length > 0 && (
-        <div style={{ marginBottom: "14px" }}>
-          <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.15em", color: "#a02020", marginBottom: "8px", fontWeight: "700" }}>
-            Needs attention ({needsAttention.length})
-          </div>
-          {needsAttention.map(client => (
-            <ClientCard key={client.id} client={client} onSelect={onSelect}
-              unreadCount={unreadCounts[client.id] || 0}
-              lastActive={getLastActive(client)}
-              sessionCount={getSessionCount(client)} />
-          ))}
-        </div>
-      )}
-
-      {/* Active clients */}
-      {active.length > 0 && (
-        <div>
+      {listView === "status" ? (
+        <ClientStatusView clients={filtered} onSelectClient={onSelect} />
+      ) : (
+        <>
+          {/* Needs attention */}
           {needsAttention.length > 0 && (
-            <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.15em", color: "#999", marginBottom: "8px" }}>Active</div>
+            <div style={{ marginBottom: "14px" }}>
+              <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.15em", color: "#a02020", marginBottom: "8px", fontWeight: "700" }}>
+                Needs attention ({needsAttention.length})
+              </div>
+              {needsAttention.map(client => (
+                <ClientCard key={client.id} client={client} onSelect={onSelect}
+                  unreadCount={unreadCounts[client.id] || 0}
+                  lastActive={getLastActive(client)}
+                  sessionCount={getSessionCount(client)} />
+              ))}
+            </div>
           )}
-          {active.map(client => (
-            <ClientCard key={client.id} client={client} onSelect={onSelect}
-              unreadCount={unreadCounts[client.id] || 0}
-              lastActive={getLastActive(client)}
-              sessionCount={getSessionCount(client)} />
-          ))}
-        </div>
+
+          {/* Active clients */}
+          {active.length > 0 && (
+            <div>
+              {needsAttention.length > 0 && (
+                <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.15em", color: "#999", marginBottom: "8px" }}>Active</div>
+              )}
+              {active.map(client => (
+                <ClientCard key={client.id} client={client} onSelect={onSelect}
+                  unreadCount={unreadCounts[client.id] || 0}
+                  lastActive={getLastActive(client)}
+                  sessionCount={getSessionCount(client)} />
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );

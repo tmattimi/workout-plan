@@ -270,12 +270,19 @@ export async function getSessionLogs(clientId, sessionDate) {
 export async function getClientLogs(clientId, limit = 200) {
   const { data, error } = await supabase
     .from('workout_logs')
-    .select('*, exercises(name, primary_muscle)')
+    .select('id, session_date, set_number, weight_lbs, reps, completed, is_pr, client_note, logged_at, exercises(name, primary_muscle)')
     .eq('client_id', clientId)
     .eq('completed', true)
     .order('session_date', { ascending: false })
+    .order('logged_at', { ascending: true })
     .limit(limit);
   return { data: data || [], error };
+}
+
+// ── UPDATE LOG ENTRY ──────────────────────────────────────────────────────────
+export async function updateLogNote(logId, note) {
+  if (!supabase || !logId) return;
+  await supabase.from('workout_logs').update({ client_note: note }).eq('id', logId);
 }
 
 // ── PERSONAL RECORDS ──────────────────────────────────────────────────────────
@@ -857,4 +864,137 @@ export async function getBodyScans(clientId) {
     .eq('client_id', clientId)
     .order('scan_date', { ascending: false });
   return { data: data || [], error };
+}
+
+// ── COACH ANALYTICS ───────────────────────────────────────────────────────────
+
+export async function getClientWorkoutAnalytics(clientId, days = 28) {
+  const since = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
+  const [logs, swaps, checkins] = await Promise.all([
+    supabase
+      .from('workout_logs')
+      .select('*, exercises(name, primary_muscle)')
+      .eq('client_id', clientId)
+      .eq('completed', true)
+      .gte('session_date', since)
+      .order('session_date', { ascending: false }),
+    supabase
+      .from('exercise_swaps')
+      .select('*')
+      .eq('client_id', clientId)
+      .gte('swapped_at', new Date(Date.now() - days * 86400000).toISOString())
+      .order('swapped_at', { ascending: false }),
+    supabase
+      .from('checkins')
+      .select('*')
+      .eq('client_id', clientId)
+      .gte('checked_in_at', new Date(Date.now() - days * 86400000).toISOString())
+      .order('checked_in_at', { ascending: false }),
+  ]);
+
+  const allLogs = logs.data || [];
+  const allSwaps = swaps.data || [];
+  const allCheckins = checkins.data || [];
+
+  // Group logs by session date
+  const byDate = {};
+  allLogs.forEach(log => {
+    const d = log.session_date;
+    if (!byDate[d]) byDate[d] = { date: d, exercises: {}, totalSets: 0, totalVolume: 0, notes: log.session_note || '' };
+    const exName = log.exercises?.name || log.exercise_id;
+    if (!byDate[d].exercises[exName]) byDate[d].exercises[exName] = { name: exName, muscle: log.exercises?.primary_muscle, sets: [] };
+    byDate[d].exercises[exName].sets.push({ weight: log.weight_lbs, reps: log.reps, rpe: log.rpe });
+    byDate[d].totalSets++;
+    if (log.weight_lbs && log.reps) byDate[d].totalVolume += (parseFloat(log.weight_lbs) * parseInt(log.reps));
+  });
+
+  const sessions = Object.values(byDate).sort((a, b) => b.date.localeCompare(a.date));
+
+  // Attach swaps to sessions by date
+  allSwaps.forEach(swap => {
+    const d = swap.swapped_at?.slice(0, 10);
+    if (d && byDate[d]) {
+      if (!byDate[d].swaps) byDate[d].swaps = [];
+      byDate[d].swaps.push(swap);
+    }
+  });
+
+  // Week-by-week breakdown
+  const weeks = {};
+  sessions.forEach(s => {
+    const date = new Date(s.date);
+    const weekStart = new Date(date);
+    weekStart.setDate(date.getDate() - date.getDay());
+    const wk = weekStart.toISOString().slice(0, 10);
+    if (!weeks[wk]) weeks[wk] = { weekStart: wk, sessions: 0, totalVolume: 0, totalSets: 0, swapCount: 0 };
+    weeks[wk].sessions++;
+    weeks[wk].totalVolume += s.totalVolume;
+    weeks[wk].totalSets += s.totalSets;
+    weeks[wk].swapCount += (s.swaps?.length || 0);
+  });
+
+  const weeklyData = Object.values(weeks).sort((a, b) => b.weekStart.localeCompare(a.weekStart));
+
+  return {
+    sessions,
+    weeklyData,
+    allSwaps,
+    allCheckins,
+    totalSessions: sessions.length,
+    totalVolume: sessions.reduce((a, s) => a + s.totalVolume, 0),
+    avgSessionsPerWeek: weeklyData.length ? (sessions.length / weeklyData.length).toFixed(1) : 0,
+  };
+}
+
+export async function getRecentSwaps(clientId, limit = 20) {
+  const { data, error } = await supabase
+    .from('exercise_swaps')
+    .select('*')
+    .eq('client_id', clientId)
+    .order('swapped_at', { ascending: false })
+    .limit(limit);
+  return { data: data || [], error };
+}
+
+// ── PROGRESS PHOTOS ───────────────────────────────────────────────────────────
+
+export async function uploadProgressPhoto(clientId, file, tag = 'front') {
+  const ext = file.name.split('.').pop();
+  const path = `${clientId}/${Date.now()}_${tag}.${ext}`;
+  const { data, error } = await supabase.storage
+    .from('progress-photos')
+    .upload(path, file, { cacheControl: '3600', upsert: false });
+  if (error) return { data: null, error };
+
+  // Save record to DB
+  const { data: record, error: dbErr } = await supabase
+    .from('progress_photos')
+    .insert({ client_id: clientId, storage_path: path, tag, taken_at: new Date().toISOString().slice(0, 10) })
+    .select().single();
+
+  return { data: record, error: dbErr };
+}
+
+export async function getProgressPhotos(clientId) {
+  const { data, error } = await supabase
+    .from('progress_photos')
+    .select('*')
+    .eq('client_id', clientId)
+    .order('taken_at', { ascending: false });
+  if (!data || data.length === 0) return { data: [], error };
+
+  // Get signed URLs for each photo
+  const withUrls = await Promise.all(data.map(async photo => {
+    const { data: urlData } = await supabase.storage
+      .from('progress-photos')
+      .createSignedUrl(photo.storage_path, 3600);
+    return { ...photo, url: urlData?.signedUrl || null };
+  }));
+
+  return { data: withUrls, error };
+}
+
+export async function deleteProgressPhoto(photo) {
+  await supabase.storage.from('progress-photos').remove([photo.storage_path]);
+  await supabase.from('progress_photos').delete().eq('id', photo.id);
 }

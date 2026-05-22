@@ -124,13 +124,23 @@ STATS & BODY COMPOSITION
     prompt += `Age: ${age}\n`;
   }
 
+  const experienceLevel = intake?.experience_level || intake?.fitness_level || "intermediate";
+  const sessionLength = intake?.session_length_minutes || intake?.session_length || 60;
+  const trainingDays = intake?.training_days_per_week || client?.weekly_frequency || 4;
+  const preferredDays = intake?.preferred_days || [];
+
   prompt += `\n══════════════════════════════════════════
 TRAINING BACKGROUND
 ══════════════════════════════════════════
-Fitness level: ${intake?.fitness_level || "intermediate"}
-Training days available per week: ${intake?.training_days_per_week || client.weekly_frequency || 4}
-Preferred training days: ${intake?.preferred_days?.join(", ") || "flexible"}
-Session length preference: ${intake?.session_length || "60"} minutes
+Experience level: ${experienceLevel}
+Training days per week: ${trainingDays}
+Preferred days: ${preferredDays.length ? preferredDays.join(", ") : "flexible"}
+Session length: ${sessionLength} minutes
+Training style preference: ${intake?.training_style?.replace(/_/g, " ") || "no preference — coach decides"}
+Understands progressive overload: ${intake?.knows_progressive_overload === true ? "Yes" : intake?.knows_progressive_overload === false ? "No" : "Unknown"}
+Comfortable with basic lifting form: ${intake?.knows_form_basics === true ? "Yes" : intake?.knows_form_basics === false ? "No" : "Unknown"}
+Prior coaching experience: ${intake?.prior_coaching === true ? "Yes" : intake?.prior_coaching === false ? "No" : "Unknown"}
+${intake?.prior_coaching_notes ? `What worked/didn't with prior coaching: "${intake.prior_coaching_notes}"` : ""}
 `;
 
   const equipment = client.equipment || intake?.equipment_available || ["barbell", "dumbbell", "cable", "machine"];
@@ -141,9 +151,63 @@ Session length preference: ${intake?.session_length || "60"} minutes
     prompt += `\nINJURY FLAGS — STRICT CONTRAINDICATIONS:\n`;
     injuries.forEach(inj => prompt += `  - ${inj}: avoid all exercises loading this area\n`);
   }
+  if (intake?.injury_notes) {
+    prompt += `Detailed injury notes from client: "${intake.injury_notes}"\n`;
+  }
+  if (intake?.mobility_limitations) {
+    prompt += `Mobility limitations: "${intake.mobility_limitations}"\n`;
+  }
+
+  // Fixed weekly commitments — hard scheduling constraints
+  const fixedCommitments = intake?.fixed_commitments;
+  if (fixedCommitments?.length > 0) {
+    prompt += `\n══════════════════════════════════════════
+FIXED WEEKLY COMMITMENTS — HARD SCHEDULING CONSTRAINTS
+══════════════════════════════════════════
+The following days are ALREADY COMMITTED to non-lifting activities.
+Do NOT schedule lifting or strength training sessions on these days.
+These are immovable — schedule around them:\n`;
+    fixedCommitments.forEach(c => {
+      prompt += `  - ${c.day}: ${c.activity} (this day is UNAVAILABLE for lifting)\n`;
+    });
+    const blockedDays = fixedCommitments.map(c => c.day);
+    const availableDays = ["MON","TUE","WED","THU","FRI","SAT","SUN"].filter(d => !blockedDays.includes(d));
+    prompt += `Available days for lifting: ${availableDays.join(", ")}\n`;
+    prompt += `Preferred days from client (honour these, avoid blocked days): ${preferredDays.filter(d => !blockedDays.includes(d)).join(", ") || "any available day"}\n`;
+  }
+
+  // Cardio section
+  if (intake?.cardio_types?.length > 0 && !intake.cardio_types.includes("none")) {
+    prompt += `\n══════════════════════════════════════════
+CARDIO & CONDITIONING
+══════════════════════════════════════════
+Cardio preferences: ${intake.cardio_types.join(", ")}
+Cardio days per week: ${intake.cardio_days_per_week || "not specified"}
+Cardio duration: ${intake.cardio_duration_minutes || "not specified"} min per session
+${intake?.cardio_notes ? `Cardio notes: "${intake.cardio_notes}"` : ""}
+`;
+  }
+
+  // Lifestyle section
+  const hasLifestyleData = intake?.sleep_hours_per_night || intake?.stress_level || intake?.nutrition_approach;
+  if (hasLifestyleData) {
+    prompt += `\n══════════════════════════════════════════
+LIFESTYLE & RECOVERY
+══════════════════════════════════════════
+`;
+    if (intake?.sleep_hours_per_night) prompt += `Average sleep: ${intake.sleep_hours_per_night} hours/night\n`;
+    if (intake?.stress_level) prompt += `Stress level: ${intake.stress_level}/5\n`;
+    if (intake?.nutrition_approach) prompt += `Nutrition approach: ${intake.nutrition_approach.replace(/_/g, " ")}\n`;
+    if (intake?.daily_protein_grams) prompt += `Daily protein: ~${intake.daily_protein_grams}g\n`;
+    if (intake?.does_stretch === false) prompt += `Does NOT currently stretch or do mobility work\n`;
+  }
 
   if (intake?.additional_notes || client.notes) {
-    prompt += `\nAdditional notes from client: "${intake?.additional_notes || client.notes}"\n`;
+    prompt += `\n══════════════════════════════════════════
+ADDITIONAL NOTES FROM CLIENT
+══════════════════════════════════════════
+"${intake?.additional_notes || client.notes}"
+`;
   }
 
   if (prs?.length > 0) {
@@ -505,11 +569,19 @@ export default function AIProgramBuilder({ client, intake, overview }) {
     });
   }, []);
 
-  // Pre-fill from intake
+  // Pre-fill from intake — auto-select best program structure
   const daysPerWeek = intake?.training_days_per_week || client?.weekly_frequency || 4;
   const focusAreas = intake?.focus_areas || [];
-  const hasGluteFocus = focusAreas.includes("glutes") || focusAreas.includes("glute");
-  const defaultStyle = hasGluteFocus ? "Glute Focus" : daysPerWeek >= 5 ? "Push Pull Legs" : "Upper Lower";
+  const hasGluteFocus = focusAreas.some(f => ["glutes", "glute", "legs", "hamstrings"].includes(f.toLowerCase()));
+  const hasUpperFocus = focusAreas.some(f => ["upper_body", "back", "shoulders", "arms"].includes(f.toLowerCase()));
+  const trainingStyle = intake?.training_style || "";
+
+  const defaultStyle =
+    hasGluteFocus ? "Glute Focus" :
+    hasUpperFocus && !hasGluteFocus ? "Push Pull Legs" :
+    daysPerWeek <= 3 ? "Full Body" :
+    daysPerWeek >= 5 ? "Push Pull Legs" :
+    "Upper Lower";
 
   async function generateProgram() {
     if (!exercises.length) {
@@ -660,11 +732,18 @@ export default function AIProgramBuilder({ client, intake, overview }) {
             {[
               ["Goal", (client?.goal || intake?.primary_goal)?.replace(/_/g, " ")],
               ["Days/week", intake?.training_days_per_week || client?.weekly_frequency],
-              ["Level", intake?.fitness_level],
+              ["Session", (intake?.session_length_minutes || intake?.session_length) ? `${intake?.session_length_minutes || intake?.session_length} min` : null],
+              ["Level", intake?.experience_level || intake?.fitness_level],
+              ["Style", intake?.training_style?.replace(/_/g, " ")],
               ["Focus", intake?.focus_areas?.slice(0, 2).join(", ")],
-              ["Equipment", (client?.equipment || intake?.equipment_available)?.length + " items"],
+              ["Equipment", (client?.equipment || intake?.equipment_available)?.length ? `${(client?.equipment || intake?.equipment_available).length} items` : null],
               ["Injuries", (client?.injury_flags?.length || intake?.injury_flags?.length) ? (client?.injury_flags || intake?.injury_flags).join(", ") : "none"],
+              ["Cardio", intake?.cardio_types?.filter(c => c !== "none").length ? intake.cardio_types.filter(c => c !== "none").join(", ") : null],
+              ["Sleep", intake?.sleep_hours_per_night ? `${intake.sleep_hours_per_night}h/night` : null],
+              ["Stress", intake?.stress_level ? `${intake.stress_level}/5` : null],
+              ["Protein", intake?.daily_protein_grams ? `${intake.daily_protein_grams}g/day` : null],
               ["Sex", client?.sex],
+              ["Blocked days", intake?.fixed_commitments?.length ? intake.fixed_commitments.map(c => `${c.day}`).join(", ") : null],
             ].filter(([, v]) => v).map(([label, val]) => (
               <div key={label} style={{ background: "#fff", borderRadius: 20, padding: "3px 10px", border: "1px solid #e0e0e0" }}>
                 <span style={{ fontSize: 9, color: "#bbb" }}>{label}: </span>
@@ -675,6 +754,21 @@ export default function AIProgramBuilder({ client, intake, overview }) {
           {(intake?.goal_notes || client?.notes) && (
             <div style={{ fontSize: 11, color: "#555", marginTop: 8, fontStyle: "italic", lineHeight: 1.5, ...F }}>
               "{intake?.goal_notes || client?.notes}"
+            </div>
+          )}
+          {intake?.injury_notes && (
+            <div style={{ fontSize: 11, color: "#a02020", marginTop: 6, lineHeight: 1.5, background: "#fff8f8", borderRadius: 6, padding: "6px 10px" }}>
+              ⚠️ {intake.injury_notes}
+            </div>
+          )}
+          {intake?.fixed_commitments?.length > 0 && (
+            <div style={{ fontSize: 11, color: "#7a5010", marginTop: 6, lineHeight: 1.5, background: "#fffbea", borderRadius: 6, padding: "6px 10px" }}>
+              📅 Blocked days: {intake.fixed_commitments.map(c => `${c.day} (${c.activity})`).join(", ")}
+            </div>
+          )}
+          {!intake && (
+            <div style={{ fontSize: 11, color: "#b7791f", marginTop: 6, lineHeight: 1.5 }}>
+              No intake form on file — results will be based on profile data only
             </div>
           )}
         </div>
@@ -689,8 +783,8 @@ export default function AIProgramBuilder({ client, intake, overview }) {
           </button>
           {loading && (
             <div style={{ textAlign: "center", padding: "8px 0", fontSize: 11, color: "#aaa", lineHeight: 1.6 }}>
-              Reading {client?.name?.split(" ")[0]}'s intake data and building a science-backed program.
-              <br />This takes about 15–20 seconds.
+              Reading {client?.name?.split(" ")[0]}'s intake form, injury flags, and goals — building a personalised program.
+              <br />This takes about 20–30 seconds.
             </div>
           )}
         </>
