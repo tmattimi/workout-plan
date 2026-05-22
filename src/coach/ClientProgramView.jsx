@@ -188,7 +188,7 @@ function CardioBlock({ cardio, accentColor }) {
       >
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: "7px", marginBottom: "3px" }}>
-            <span style={{ fontSize: "13px" }}>🏃</span>
+            <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#4a8fff", flexShrink: 0 }} />
             <span style={{ fontSize: "13px", fontWeight: "600", color: "#1a4a8a" }}>{cardio.name}</span>
           </div>
           <div style={{ fontSize: "11px", color: "#4a7abf" }}>{cardio.protocol}</div>
@@ -283,7 +283,7 @@ function DayView({ day }) {
       {/* Rest day */}
       {allExercises.length === 0 && !day.cardio && (
         <div style={{ textAlign: "center", padding: "40px 20px", color: "#bbb" }}>
-          <div style={{ fontSize: "28px", marginBottom: "8px", opacity: 0.4 }}>💤</div>
+          
           <div style={{ fontSize: "14px" }}>Rest Day</div>
         </div>
       )}
@@ -309,7 +309,7 @@ export default function ClientProgramView({ client }) {
   if (!schedule || schedule.length === 0) {
     return (
       <div style={{ textAlign: "center", padding: "40px 20px", ...F }}>
-        <div style={{ fontSize: "28px", marginBottom: "12px", opacity: 0.3 }}>📋</div>
+        
         <div style={{ fontSize: "14px", color: "#333", marginBottom: "7px", fontWeight: "600" }}>
           No program assigned yet
         </div>

@@ -758,12 +758,12 @@ export default function AIProgramBuilder({ client, intake, overview }) {
           )}
           {intake?.injury_notes && (
             <div style={{ fontSize: 11, color: "#a02020", marginTop: 6, lineHeight: 1.5, background: "#fff8f8", borderRadius: 6, padding: "6px 10px" }}>
-              ⚠️ {intake.injury_notes}
+              Injury notes: {intake.injury_notes}
             </div>
           )}
           {intake?.fixed_commitments?.length > 0 && (
             <div style={{ fontSize: 11, color: "#7a5010", marginTop: 6, lineHeight: 1.5, background: "#fffbea", borderRadius: 6, padding: "6px 10px" }}>
-              📅 Blocked days: {intake.fixed_commitments.map(c => `${c.day} (${c.activity})`).join(", ")}
+              Blocked days: {intake.fixed_commitments.map(c => `${c.day} (${c.activity})`).join(", ")}
             </div>
           )}
           {!intake && (

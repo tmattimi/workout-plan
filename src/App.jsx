@@ -293,7 +293,7 @@ function SetLogger({ exercise, sessionKey, logs, onLogsChange, accent = '#555', 
 
       {weightCtx?.note && (
         <div style={{ padding: "4px 12px 2px", fontSize: "9px", color: weightCtx.isSmith ? "#c47a0a" : "#bbb", lineHeight: "1.6", background: weightCtx.isSmith ? "#fffbea" : "transparent" }}>
-          {weightCtx.isSmith && "⚠️ "}{weightCtx.note}
+          {weightCtx.isSmith && "Note: "}{weightCtx.note}
         </div>
       )}
 
@@ -917,7 +917,9 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
   const trackableCount = current?.exercises?.filter(ex => ex.category !== "Recovery" && ex.category !== "Mobility").length || 0;
 
   const tabs = [
-    ["plan","Plan"], ["history","History"], ["progress","Progress"], ["body","Body"], ["health","Health"],
+    ["plan","Plan"],
+    ["progress","Progress"],
+    ["body","Body"],
     ["nutrition","Nutrition"],
     ...(clientData?.sex === "female" ? [["cycle","Cycle"]] : []),
     ["tools","Tools"],
@@ -1014,7 +1016,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
           {/* No plan assigned yet */}
           {!hasPlan && (
             <div style={{ padding: "60px 24px", textAlign: "center" }}>
-              <div style={{ fontSize: "36px", marginBottom: "16px" }}>📋</div>
+              
               <div style={{ fontSize: "20px", fontWeight: "normal", ...F, color: "#111", marginBottom: "10px" }}>
                 Your plan is on its way
               </div>
@@ -1055,50 +1057,65 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
 
           {/* Session header */}
           <div style={{ background: "linear-gradient(135deg, #2c2c2e 0%, #1c1c1e 100%)", borderBottom: "1px solid #3a3a3c", padding: "14px 16px" }}>
-            <div style={{ fontSize: "9px", letterSpacing: "0.18em", textTransform: "uppercase", color: "#6e6e73", marginBottom: "3px" }}>
-              {current.day} · {current.muscles.join(", ") || "Recovery"}
-            </div>
-            <div style={{ fontSize: "17px", color: "#f5f5f7", marginBottom: "11px", fontWeight: "normal" }}>{current.focus}</div>
-
-            <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
-              <input type="date" value={sessionDate} onChange={e => setSessionDate(e.target.value)}
-                style={{ padding: "5px 8px", borderRadius: "6px", border: "1px solid #3a3a3c", fontSize: "11px", background: "rgba(255,255,255,0.06)", color: "#9a9a9e", ...F }} />
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: "9px", letterSpacing: "0.18em", textTransform: "uppercase", color: "#6e6e73", marginBottom: "3px" }}>
+                  {current.day} · {current.muscles.join(", ") || "Recovery"}
+                </div>
+                <div style={{ fontSize: "17px", color: "#f5f5f7", fontWeight: "normal" }}>{current.focus}</div>
+              </div>
               {trackableCount > 0 && (
-                <span style={{ fontSize: "11px", color: completedExercises > 0 ? "#34c759" : "#6e6e73", background: completedExercises > 0 ? "rgba(52,199,89,0.12)" : "rgba(255,255,255,0.06)", padding: "4px 10px", borderRadius: "20px", border: `1px solid ${completedExercises > 0 ? "rgba(52,199,89,0.25)" : "transparent"}` }}>
-                  {completedExercises}/{trackableCount} done
-                  {completedExercises > 0 && completedExercises === trackableCount && (
-                    <button
-                      onClick={() => setShowSessionSummary(true)}
-                      style={{ marginLeft: "8px", background: "#2d7a1e", color: "#fff", border: "none", borderRadius: "20px", padding: "3px 10px", fontSize: "10px", cursor: "pointer", fontWeight: "600" }}
-                    >
-                      Finish ✓
+                <div style={{ flexShrink: 0, marginLeft: "12px", textAlign: "right" }}>
+                  {completedExercises === trackableCount && completedExercises > 0 ? (
+                    <button onClick={() => setShowSessionSummary(true)} style={{ background: "#2d7a1e", color: "#fff", border: "none", borderRadius: "7px", padding: "7px 14px", fontSize: "11px", cursor: "pointer", fontWeight: "600" }}>
+                      Finish
                     </button>
+                  ) : (
+                    <div>
+                      <div style={{ fontSize: "18px", fontWeight: "700", color: completedExercises > 0 ? "#34c759" : "#555", lineHeight: 1 }}>{completedExercises}/{trackableCount}</div>
+                      <div style={{ fontSize: "8px", color: "#555", textTransform: "uppercase", letterSpacing: "0.1em" }}>done</div>
+                    </div>
                   )}
-                </span>
+                </div>
               )}
-              {clientData?.id && syncStatus !== "idle" && (
-                <span style={{
-                  fontSize: "10px", padding: "4px 10px", borderRadius: "20px",
-                  background: syncStatus === "synced" ? "rgba(52,199,89,0.12)" : syncStatus === "failed" ? "rgba(255,59,48,0.12)" : "rgba(255,255,255,0.06)",
-                  color: syncStatus === "synced" ? "#34c759" : syncStatus === "failed" ? "#ff3b30" : "#9a9a9e",
-                  border: `1px solid ${syncStatus === "synced" ? "rgba(52,199,89,0.25)" : syncStatus === "failed" ? "rgba(255,59,48,0.25)" : "transparent"}`,
-                }}>
-                  {syncStatus === "syncing" ? "Saving..." : syncStatus === "synced" ? "✓ Saved" : "⚠ Not saved"}
-                </span>
-              )}
+            </div>
+            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+              <input type="date" value={sessionDate} onChange={e => setSessionDate(e.target.value)}
+                style={{ padding: "4px 8px", borderRadius: "5px", border: "1px solid #3a3a3c", fontSize: "10px", background: "rgba(255,255,255,0.04)", color: "#6e6e73", ...F }} />
+              {clientData?.id && syncStatus === "syncing" && <span style={{ fontSize: "9px", color: "#6e6e73" }}>Saving...</span>}
               {syncStatus === "failed" && (
-                <button onClick={retrySyncFailed} style={{ fontSize: "10px", padding: "4px 10px", borderRadius: "20px", background: "rgba(255,59,48,0.15)", color: "#ff3b30", border: "1px solid rgba(255,59,48,0.3)", cursor: "pointer", ...F }}>
+                <button onClick={retrySyncFailed} style={{ fontSize: "9px", padding: "3px 8px", borderRadius: "5px", background: "rgba(255,59,48,0.12)", color: "#ff3b30", border: "1px solid rgba(255,59,48,0.25)", cursor: "pointer" }}>
                   Retry save
                 </button>
               )}
-              {current.type !== "rest" && (
-                <button onClick={() => setShowWarmup(true)} style={{ background: "rgba(196,122,10,0.15)", color: "#c47a0a", border: "1px solid rgba(196,122,10,0.25)", borderRadius: "20px", padding: "4px 12px", fontSize: "11px", cursor: "pointer", ...F, fontWeight: "600" }}>
-                  Warm-Up
-                </button>
-              )}
-
             </div>
           </div>
+
+          {/* Warm-up strip — sits above exercises, visible and tappable */}
+          {current.type !== "rest" && (
+            <button
+              onClick={() => setShowWarmup(true)}
+              style={{
+                width: "100%", display: "flex", alignItems: "center",
+                justifyContent: "space-between",
+                background: "rgba(196,122,10,0.08)",
+                border: "none",
+                borderBottom: "1px solid rgba(196,122,10,0.15)",
+                padding: "10px 16px",
+                cursor: "pointer", textAlign: "left",
+              }}
+            >
+              <div>
+                <span style={{ fontSize: "10px", fontWeight: "700", letterSpacing: "0.15em", textTransform: "uppercase", color: "#c47a0a" }}>
+                  Warm-Up
+                </span>
+                <span style={{ fontSize: "10px", color: "rgba(196,122,10,0.6)", marginLeft: "8px" }}>
+                  5–8 min · start here
+                </span>
+              </div>
+              <span style={{ fontSize: "10px", color: "#c47a0a", opacity: 0.7 }}>View →</span>
+            </button>
+          )}
 
           {/* Exercises */}
           <div style={{ position: "relative" }}>
@@ -1723,10 +1740,6 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
           onSwap={(swap) => setSwappedExercises(prev => ({ ...prev, [activeSwapModal.name]: swap }))}
           onClose={() => setActiveSwapModal(null)}
         />
-      )}
-
-      {tab === "history" && (
-        <WorkoutHistory clientId={clientData?.id} localLogs={logs} />
       )}
 
       {tab === "progress" && <NewProgressTab clientId={clientData?.id} bodyweight={clientData?.weight || 170} localLogs={logs} measurements={measurements} />}

@@ -142,7 +142,7 @@ function CreateClientModal({ onSave, onCancel, coachId }) {
     return (
       <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}>
         <div style={{ background: "#fff", borderRadius: "12px", padding: "24px", maxWidth: "380px", width: "100%" }}>
-          <div style={{ fontSize: "28px", marginBottom: "10px", textAlign: "center" }}>✅</div>
+          
           <div style={{ fontSize: "16px", fontWeight: "600", marginBottom: "6px", textAlign: "center" }}>Client Created</div>
           <div style={{ fontSize: "12px", color: "#555", marginBottom: "16px", textAlign: "center" }}>Send this link to {created.name}:</div>
           <div style={{ background: "#f5f5f3", borderRadius: "7px", padding: "10px 12px", fontSize: "11px", color: "#333", wordBreak: "break-all", marginBottom: "12px", fontFamily: "monospace" }}>
@@ -702,7 +702,7 @@ function ClientDetail({ client, coachId, plans, onBack, onDelete, onAssignPlan }
               if (totalSessions > 0 && totalSessions % 16 >= 12) {
                 return (
                   <div style={{ background: "#fffbea", border: "1px solid #fcd34d", borderRadius: "8px", padding: "10px 14px", marginBottom: "10px", display: "flex", alignItems: "center", gap: "10px" }}>
-                    <span style={{ fontSize: "16px" }}>🔄</span>
+                    <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#f59e0b", flexShrink: 0 }} />
                     <div>
                       <div style={{ fontSize: "11px", fontWeight: "600", color: "#92400e" }}>Deload week recommended</div>
                       <div style={{ fontSize: "10px", color: "#b45309", lineHeight: "1.5", marginTop: "2px" }}>
@@ -892,7 +892,7 @@ function ClientDetail({ client, coachId, plans, onBack, onDelete, onAssignPlan }
 
       {view === "photos" && (
         <div style={{ textAlign: "center", padding: "40px 20px", color: "#bbb" }}>
-          <div style={{ fontSize: "28px", marginBottom: "10px", opacity: 0.3 }}>📸</div>
+          
           <div style={{ fontSize: "13px", marginBottom: "6px" }}>Progress photos</div>
           <div style={{ fontSize: "11px", lineHeight: "1.6" }}>
             Photo viewing from the coach dashboard is coming soon.
@@ -1067,7 +1067,7 @@ function ClientDetail({ client, coachId, plans, onBack, onDelete, onAssignPlan }
                   justifyContent: "center", gap: "7px",
                 }}
               >
-                <span>⚡</span>
+                
                 Build Program from This Intake
               </button>
 

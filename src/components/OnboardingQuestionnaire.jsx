@@ -818,7 +818,7 @@ export default function OnboardingQuestionnaire({ client, onComplete }) {
                   <div style={{ padding: "0 16px 16px", borderTop: "1px solid #f5f5f3" }}>
                     <div style={{ fontSize: "12px", color: "#444", lineHeight: "1.7", margin: "11px 0 7px" }}>{guide.description}</div>
                     <div style={{ fontSize: "11px", color: "#2563a8", background: "#e9f0fb", borderRadius: "6px", padding: "7px 10px", marginBottom: "11px", lineHeight: "1.5" }}>
-                      💡 {guide.tip}
+                      {guide.tip}
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: "9px" }}>
                       <input

@@ -175,7 +175,7 @@ function SessionCard({ date, logs, swapsOnDay, expanded, onToggle }) {
                       <span key={i}>
                         {i > 0 && " · "}
                         {l.weight_lbs ? `${l.weight_lbs}×${l.reps}` : l.reps ? `${l.reps} reps` : "—"}
-                        {l.is_pr && " 🏆"}
+                        {l.is_pr && " PR"}
                       </span>
                     ))}
                   </div>
@@ -271,7 +271,7 @@ function WeekRow({ weekKey, weekData, swaps, expanded, onToggle, expandedDay, on
               </span>
             )}
             {hasNotes && (
-              <span style={{ fontSize: "11px", color: "#b7791f" }}>📝 notes</span>
+              <span style={{ fontSize: "11px", color: "#b7791f" }}>notes</span>
             )}
           </div>
         </div>

@@ -5,7 +5,7 @@ export const muscleGroups = [
   {
     id: "glutes",
     name: "Glutes",
-    emoji: "🍑",
+    
     color: "#fce8e8",
     accent: "#a02a2a",
     summary: "The glutes are three muscles that form the largest muscle group in the body. They control hip extension, abduction, and rotation — and are the primary driver of most lower body power.",
@@ -35,7 +35,7 @@ export const muscleGroups = [
   {
     id: "hamstrings",
     name: "Hamstrings",
-    emoji: "🦵",
+    
     color: "#fef3e4",
     accent: "#c47a0a",
     summary: "The hamstrings are a group of three muscles running down the back of the thigh. They work in two ways: knee flexion (curling the leg) and hip extension (extending at the hip). Most exercises only train one function — complete hamstring development requires training both.",
@@ -59,7 +59,7 @@ export const muscleGroups = [
   {
     id: "quads",
     name: "Quadriceps",
-    emoji: "🦵",
+    
     color: "#fef3e4",
     accent: "#c47a0a",
     summary: "Four muscles on the front of the thigh. Their primary job is extending the knee. They're also active in hip flexion (rectus femoris only). The quads are the largest muscle group in the legs and respond well to both heavy compound loading and direct isolation work.",
@@ -119,7 +119,7 @@ export const muscleGroups = [
   {
     id: "back",
     name: "Back (Lats and Mid-Back)",
-    emoji: "🔙",
+    
     color: "#ebf5e6",
     accent: "#2d7a1e",
     summary: "The back is the most complex muscle group — it contains multiple muscles with different attachment points, fiber directions, and functions. Training it fully requires both vertical pulling (for lat width) and horizontal pulling (for mid-back thickness).",
@@ -155,7 +155,7 @@ export const muscleGroups = [
   {
     id: "shoulders",
     name: "Shoulders (Deltoids)",
-    emoji: "🏋️",
+    
     color: "#f3eafa",
     accent: "#7a3aa0",
     summary: "The deltoid has three distinct heads that require different exercises to fully develop. Most pressing movements hit the front delt heavily but neglect the side and rear. A complete shoulder program needs direct work for all three.",
@@ -245,7 +245,7 @@ export const muscleGroups = [
   {
     id: "core",
     name: "Core",
-    emoji: "🧱",
+    
     color: "#e5f7f0",
     accent: "#147a50",
     summary: "The core is not just the visible abdominal muscles — it's a system of deep stabilizing muscles that control spinal position under load. Training the visible abs without the deep core is like building walls without a foundation. This program trains them in the correct order.",
@@ -281,7 +281,7 @@ export const muscleGroups = [
   {
     id: "calves",
     name: "Calves",
-    emoji: "🦵",
+    
     color: "#fef3e4",
     accent: "#c47a0a",
     summary: "The calves are two separate muscles — the gastrocnemius and the soleus — that require different training positions to fully develop. Both need a genuine full stretch at the bottom of each rep to grow, since they are conditioned by daily walking to handle shortened-range movement.",

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import HealthTab from "./HealthTab";
 
 const F = { fontFamily: "'Georgia','Times New Roman',serif" };
 
@@ -636,6 +637,7 @@ export default function BodyTab({ clientId }) {
 
   const SECTIONS = [
     { id: "measurements", label: "Measurements" },
+    { id: "health", label: "Health" },
     { id: "photos", label: "Photos" },
     { id: "scans", label: "Scans" },
   ];
@@ -655,6 +657,14 @@ export default function BodyTab({ clientId }) {
 
       {section === "measurements" && <MeasurementsSection clientId={clientId} />}
       {section === "photos" && <PhotosSection />}
+      {section === "health" && (
+        <HealthTab
+          dailyHealth={(() => { try { return JSON.parse(localStorage.getItem("daily_health_v1") || "{}"); } catch { return {}; } })()}
+          todayKey={new Date().toISOString().slice(0, 10)}
+          onHealthUpdate={(updated) => { try { localStorage.setItem("daily_health_v1", JSON.stringify(updated)); } catch {} }}
+          clientId={clientId}
+        />
+      )}
       {section === "scans" && <BodyScanSection />}
       {/* Health history summary — data logged from Plan tab */}
       {section === "measurements" && (() => {

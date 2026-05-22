@@ -37,7 +37,7 @@ export default function MonthlyPrompt({ photos, onSave, onDismiss }) {
   if (step === "saved") {
     return (
       <div style={{ padding: "28px 20px", textAlign: "center" }}>
-        <div style={{ fontSize: "44px", marginBottom: "10px" }}>📸</div>
+        
         <div style={{ fontSize: "18px", fontWeight: "normal", marginBottom: "6px" }}>Progress photo saved</div>
         <div style={{ fontSize: "12px", color: "#777", marginBottom: "20px", lineHeight: "1.6" }}>
           Check back next month to see how far you've come. The changes show up in photos long before the mirror catches up.
@@ -93,7 +93,7 @@ export default function MonthlyPrompt({ photos, onSave, onDismiss }) {
       <div style={{ fontSize: "9px", letterSpacing: "0.2em", textTransform: "uppercase", color: "#999", marginBottom: "10px" }}>
         Monthly Check-In
       </div>
-      <div style={{ fontSize: "36px", marginBottom: "10px" }}>📸</div>
+      
       <div style={{ fontSize: "18px", fontWeight: "normal", marginBottom: "8px" }}>
         Time for your progress photo
       </div>
@@ -112,7 +112,7 @@ export default function MonthlyPrompt({ photos, onSave, onDismiss }) {
       </div>
 
       <label style={{ display: "block", width: "100%", background: "#111", color: "#fff", borderRadius: "8px", padding: "14px", fontSize: "14px", cursor: "pointer", textAlign: "center", ...F, marginBottom: "10px" }}>
-        📷 Take or Upload Photo
+        Take or Upload Photo
         <input type="file" accept="image/*" capture="user" onChange={handleFileSelect} style={{ display: "none" }} />
       </label>
 

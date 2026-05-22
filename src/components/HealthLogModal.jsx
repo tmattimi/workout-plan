@@ -37,11 +37,11 @@ export default function HealthLogModal({ todayKey, dailyHealth, onSave, onDismis
 
   const SLEEP_OPTIONS = ["4", "4.5", "5", "5.5", "6", "6.5", "7", "7.5", "8", "8.5", "9", "9+"];
   const ENERGY_OPTIONS = [
-    { val: "1", label: "Very low", emoji: "😴" },
-    { val: "2", label: "Low",      emoji: "😕" },
-    { val: "3", label: "Okay",     emoji: "😐" },
-    { val: "4", label: "Good",     emoji: "🙂" },
-    { val: "5", label: "Great",    emoji: "💪" },
+    { val: "1", label: "Very low" },
+    { val: "2", label: "Low" },
+    { val: "3", label: "Okay" },
+    { val: "4", label: "Good" },
+    { val: "5", label: "Great" },
   ];
 
   return (
@@ -116,7 +116,7 @@ export default function HealthLogModal({ todayKey, dailyHealth, onSave, onDismis
                     display: "flex", flexDirection: "column", alignItems: "center", gap: "4px",
                   }}
                 >
-                  <span style={{ fontSize: "18px" }}>{e.emoji}</span>
+                  
                   <span style={{ fontSize: "8px", color: form.energy_level === e.val ? "#f5f5f7" : "#666", letterSpacing: "0.04em" }}>{e.label}</span>
                 </button>
               ))}

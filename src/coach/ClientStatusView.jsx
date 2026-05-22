@@ -206,7 +206,7 @@ export default function ClientStatusView({ clients, onSelectClient }) {
                 )}
                 {d?.streak > 2 && (
                   <span style={{ fontSize: "10px", color: "#f59e0b" }}>
-                    🔥 {d.streak}
+                    {d.streak}-day streak
                   </span>
                 )}
               </div>

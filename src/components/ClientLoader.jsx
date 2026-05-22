@@ -165,7 +165,7 @@ export default function ClientLoader({ children }) {
     return (
       <div style={{ minHeight: "100vh", background: "#111", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
         <div style={{ textAlign: "center", color: "#f7f6f3", maxWidth: 320 }}>
-          <div style={{ fontSize: "36px", marginBottom: "12px" }}>🔗</div>
+          
           <div style={{ fontSize: "16px", marginBottom: "8px", fontFamily: "'Georgia',serif" }}>Account not linked</div>
           <div style={{ fontSize: "12px", color: "#666", lineHeight: "1.7", marginBottom: "20px" }}>
             Your account isn't connected to a client profile yet. This can happen if you signed up before your coach sent the invite link.

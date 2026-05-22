@@ -42,7 +42,7 @@ export default function RecoveryCard({ dailyHealth, todayKey, onLogHealth }) {
           cursor: "pointer", textAlign: "left", marginBottom: "12px",
         }}
       >
-        <div style={{ fontSize: "20px", opacity: 0.4 }}>💤</div>
+        <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "rgba(255,255,255,0.15)" }} />
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: "12px", color: "rgba(255,255,255,0.5)", ...F }}>
             Log sleep and recovery to get a daily readiness assessment
@@ -61,7 +61,7 @@ export default function RecoveryCard({ dailyHealth, todayKey, onLogHealth }) {
         borderRadius: "10px", padding: "12px 16px", marginBottom: "12px",
         display: "flex", alignItems: "center", gap: "12px",
       }}>
-        <div style={{ fontSize: "18px", opacity: 0.5 }}>📊</div>
+        
         <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.45)", ...F }}>
           Log a few more days of sleep and heart rate to unlock your recovery score
         </div>

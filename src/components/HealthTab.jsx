@@ -5,11 +5,11 @@ const F = { fontFamily: "'Georgia','Times New Roman',serif" };
 
 const SLEEP_OPTIONS = ["4","4.5","5","5.5","6","6.5","7","7.5","8","8.5","9","9+"];
 const ENERGY_OPTIONS = [
-  { val:"1", label:"Very low", emoji:"😴" },
-  { val:"2", label:"Low",      emoji:"😕" },
-  { val:"3", label:"Okay",     emoji:"😐" },
-  { val:"4", label:"Good",     emoji:"🙂" },
-  { val:"5", label:"Great",    emoji:"💪" },
+  { val:"1", label:"Very low" },
+  { val:"2", label:"Low" },
+  { val:"3", label:"Okay" },
+  { val:"4", label:"Good" },
+  { val:"5", label:"Great" },
 ];
 
 function ScoreRing({ score, color, size = 64 }) {
@@ -156,7 +156,7 @@ function DailyLogForm({ todayKey, dailyHealth, onUpdate }) {
               border: `1px solid ${form.energy_level === e.val ? "#111" : "#e4e0db"}`,
               display: "flex", flexDirection: "column", alignItems: "center", gap: "4px",
             }}>
-              <span style={{ fontSize: "18px" }}>{e.emoji}</span>
+              
               <span style={{ fontSize: "8px", color: form.energy_level === e.val ? "#111" : "#aaa", letterSpacing: "0.04em" }}>{e.label}</span>
             </button>
           ))}
@@ -199,17 +199,17 @@ function HistoryRow({ date, data }) {
       <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", flex: 1 }}>
         {data.sleep_hours && (
           <span style={{ fontSize: "10px", background: "#f0f4ff", color: "#2563a8", padding: "2px 7px", borderRadius: "20px" }}>
-            💤 {data.sleep_hours}h
+            {data.sleep_hours}h sleep
           </span>
         )}
         {data.energy_level && (
           <span style={{ fontSize: "10px", background: "#f0fdf4", color: "#2d7a1e", padding: "2px 7px", borderRadius: "20px" }}>
-            {ENERGY_OPTIONS.find(e => e.val === String(data.energy_level))?.emoji} {data.energy_level}/5
+            {data.energy_level}/5
           </span>
         )}
         {data.resting_hr && (
           <span style={{ fontSize: "10px", background: "#fef3e4", color: "#c47a0a", padding: "2px 7px", borderRadius: "20px" }}>
-            ♥ {data.resting_hr} bpm
+            {data.resting_hr} bpm
           </span>
         )}
         {data.hrv && (
@@ -290,7 +290,7 @@ export default function HealthTab({ dailyHealth, todayKey, onHealthUpdate, clien
           {[
             {
               name: "Apple Health",
-              icon: "♥",
+              icon: "",
               color: "#ff2d55",
               status: "coming_soon",
               statusLabel: "Coming soon",
@@ -298,7 +298,7 @@ export default function HealthTab({ dailyHealth, todayKey, onHealthUpdate, clien
             },
             {
               name: "Apple Watch",
-              icon: "⌚",
+              icon: "",
               color: "#1c1c1e",
               status: "coming_soon",
               statusLabel: "Coming soon",
@@ -306,7 +306,7 @@ export default function HealthTab({ dailyHealth, todayKey, onHealthUpdate, clien
             },
             {
               name: "Oura Ring",
-              icon: "◎",
+              icon: "",
               color: "#7a3aa0",
               status: "planned",
               statusLabel: "Planned",
@@ -314,7 +314,7 @@ export default function HealthTab({ dailyHealth, todayKey, onHealthUpdate, clien
             },
             {
               name: "Garmin",
-              icon: "◉",
+              icon: "",
               color: "#007dc5",
               status: "planned",
               statusLabel: "Planned",
@@ -322,7 +322,7 @@ export default function HealthTab({ dailyHealth, todayKey, onHealthUpdate, clien
             },
             {
               name: "Whoop",
-              icon: "⬡",
+              icon: "",
               color: "#00c4a1",
               status: "planned",
               statusLabel: "Planned",

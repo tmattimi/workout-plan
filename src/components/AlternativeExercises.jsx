@@ -304,7 +304,7 @@ export default function AlternativeExercises({ clientEquipment, clientInjuries, 
         {activeInjuryGuidance.length > 0 && (
           <div style={{ background: "#fff3e0", border: "1px solid #f0c060", borderRadius: "8px", padding: "12px 14px", marginBottom: "14px" }}>
             <div style={{ fontSize: "10px", fontWeight: "700", color: "#c47a0a", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.08em" }}>
-              ⚠️ Injury Awareness
+              Injury Awareness
             </div>
             {activeInjuryGuidance.map((g, i) => (
               <div key={i} style={{ marginBottom: "8px" }}>
@@ -445,7 +445,7 @@ export default function AlternativeExercises({ clientEquipment, clientInjuries, 
                   <div style={{ fontSize: "13px", fontWeight: selected ? "600" : "400", color: selected ? "#7a5010" : "#333" }}>{inj.label}</div>
                   <div style={{ fontSize: "10px", color: "#aaa" }}>{inj.description}</div>
                 </div>
-                {selected && <span style={{ color: "#c47a0a", fontSize: "16px" }}>⚠️</span>}
+                {selected && <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#c47a0a", flexShrink: 0 }} />}
               </button>
             );
           })}
@@ -517,7 +517,7 @@ export default function AlternativeExercises({ clientEquipment, clientInjuries, 
       {/* Injury warning banner */}
       {injuries.length > 0 && (
         <div style={{ background: "#fff3e0", border: "1px solid #f0c060", borderRadius: "7px", padding: "9px 12px", marginBottom: "12px", fontSize: "11px", color: "#7a5010" }}>
-          ⚠️ Showing safe alternatives for: <strong>{injuries.join(", ")}</strong>
+          Showing injury-safe alternatives for: <strong>{injuries.join(", ")}</strong>
         </div>
       )}
 
@@ -555,7 +555,7 @@ export default function AlternativeExercises({ clientEquipment, clientInjuries, 
           }}>
             <div>
               <div style={{ fontSize: "13px", fontWeight: "500", color: injuryConflict ? "#a02a2a" : "#1a1a1a", display: "flex", alignItems: "center", gap: "5px" }}>
-                {injuryConflict && <span style={{ fontSize: "11px" }}>⚠️</span>}
+                {injuryConflict && <div style={{ width: "5px", height: "5px", borderRadius: "50%", background: "#c47a0a" }} />}
                 {ex.name}
               </div>
               <div style={{ fontSize: "10px", color: "#aaa", marginTop: "2px", textTransform: "capitalize" }}>

@@ -54,7 +54,7 @@ export default function ClientAuth({ onAuthenticated }) {
     return (
       <div style={{ minHeight: "100vh", background: "#111", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
         <div style={{ background: "#1a1a1a", borderRadius: "12px", padding: "32px 28px", width: "100%", maxWidth: "360px", textAlign: "center" }}>
-          <div style={{ fontSize: "40px", marginBottom: "14px" }}>📬</div>
+          
           <div style={{ fontSize: "16px", fontWeight: "normal", color: "#f7f6f3", marginBottom: "8px", ...F }}>Check your email</div>
           <div style={{ fontSize: "12px", color: "#666", lineHeight: "1.6", marginBottom: "20px" }}>{message}</div>
           <button onClick={() => { setScreen("login"); setError(""); }} style={{ background: "transparent", color: "#aaa", border: "1px solid #333", borderRadius: "7px", padding: "10px 20px", fontSize: "12px", cursor: "pointer", ...F }}>

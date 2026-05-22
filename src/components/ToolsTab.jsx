@@ -344,9 +344,9 @@ function ExLibCard({ ex, expanded, setExpanded, equipIcons }) {
         <div style={{ display: "flex", gap: "4px", alignItems: "center", flexShrink: 0, marginLeft: "8px" }}>
           <div style={{ display: "flex", gap: "2px" }}>
             {(ex.equipment || []).slice(0,3).map(eq => (
-              <span key={eq} title={eq} style={{ fontSize: "11px" }}>{equipIcons[eq] || "🔧"}</span>
+              <span key={eq} style={{ fontSize: "8px", background: "#f0f0f0", color: "#777", padding: "1px 4px", borderRadius: "3px", letterSpacing: "0.03em" }}>{equipIcons[eq] || eq}</span>
             ))}
-            {ex.bodyweight && ex.equipment?.length === 0 && <span style={{ fontSize: "11px" }}>✊</span>}
+            {ex.bodyweight && ex.equipment?.length === 0 && <span style={{ fontSize: "9px", color: "#aaa" }}>BW</span>}
           </div>
           <span style={{ color: "#ccc", fontSize: "11px", marginLeft: "4px" }}>{isOpen ? "▲" : "▼"}</span>
         </div>

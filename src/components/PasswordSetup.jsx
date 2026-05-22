@@ -85,7 +85,7 @@ export default function PasswordSetup({ onComplete }) {
     return (
       <div style={{ minHeight: "100vh", background: "#111", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
         <div style={{ background: "#1a1a1a", borderRadius: "12px", padding: "32px 28px", width: "100%", maxWidth: "360px", textAlign: "center" }}>
-          <div style={{ fontSize: "36px", marginBottom: "12px" }}>🔗</div>
+          
           <div style={{ fontSize: "16px", color: "#f7f6f3", marginBottom: "8px", ...F }}>Link expired</div>
           <div style={{ fontSize: "12px", color: "#666", lineHeight: "1.6", marginBottom: "20px" }}>
             This setup link has expired or already been used. Contact your coach for a new invite.
@@ -105,7 +105,7 @@ export default function PasswordSetup({ onComplete }) {
     return (
       <div style={{ minHeight: "100vh", background: "#111", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
         <div style={{ background: "#1a1a1a", borderRadius: "12px", padding: "32px 28px", width: "100%", maxWidth: "360px", textAlign: "center" }}>
-          <div style={{ fontSize: "40px", marginBottom: "14px" }}>✅</div>
+          
           <div style={{ fontSize: "18px", color: "#f7f6f3", marginBottom: "8px", ...F }}>
             {isInvite ? "Account ready!" : "Password updated!"}
           </div>

@@ -288,7 +288,7 @@ export default function PhotosTab({ clientId }) {
         <>
           {!hasAnyPhotos ? (
             <div style={{ textAlign: "center", padding: "40px 20px", color: "#bbb" }}>
-              <div style={{ fontSize: "32px", marginBottom: "10px", opacity: 0.3 }}>📸</div>
+              
               <div style={{ fontSize: "13px", marginBottom: "6px" }}>No photos yet</div>
               <div style={{ fontSize: "11px" }}>Add your first set from the Add Photos tab.</div>
             </div>

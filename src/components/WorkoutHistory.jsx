@@ -78,7 +78,7 @@ function SetDetail({ sets, clientId }) {
               style={{ marginLeft: "auto", background: "none", border: "none", fontSize: "10px", color: notes[i] ? "#b7791f" : "#ddd", cursor: "pointer", padding: "2px 4px" }}
               title="Add note"
             >
-              {notes[i] ? "📝" : "+note"}
+              {notes[i] ? "Note ✓" : "+ note"}
             </button>
           </div>
           {notes[i] && editingNote !== i && (
@@ -162,7 +162,7 @@ function SessionCard({ date, sets, clientId }) {
           <div style={{ fontSize: "11px", color: "#bbb" }}>
             {totalSets} sets
             {muscles.length > 0 && ` · ${muscles.slice(0, 2).join(", ")}`}
-            {hasNotes && " · 📝"}
+            {hasNotes && " · note"}
           </div>
         </div>
 
@@ -346,7 +346,7 @@ export default function WorkoutHistory({ clientId, localLogs }) {
   if (!sessions || Object.keys(sessions).length === 0) {
     return (
       <div style={{ padding: "40px 20px", textAlign: "center", ...F }}>
-        <div style={{ fontSize: "32px", marginBottom: "12px", opacity: 0.3 }}>🏋️</div>
+        
         <div style={{ fontSize: "15px", color: "#333", marginBottom: "6px" }}>No workouts logged yet</div>
         <div style={{ fontSize: "12px", color: "#aaa", lineHeight: "1.6" }}>
           Completed sessions will show up here. Mark sets as done during your workout to start building your history.

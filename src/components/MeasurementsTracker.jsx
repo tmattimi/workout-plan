@@ -3,13 +3,13 @@ import { formatDate, formatShortDate, today } from "../storage";
 
 const METRICS = [
   { key: "weight", label: "Body Weight", unit: "lbs", color: "#2563a8", icon: "wt", group: "weight" },
-  { key: "waist", label: "Waist", unit: "in", color: "#a02a2a", icon: "📏", group: "measurements" },
-  { key: "chest", label: "Chest", unit: "in", color: "#2d7a1e", icon: "📏", group: "measurements" },
-  { key: "hips", label: "Hips", unit: "in", color: "#7a3aa0", icon: "📏", group: "measurements" },
-  { key: "rightThigh", label: "Right Thigh", unit: "in", color: "#c47a0a", icon: "📏", group: "measurements" },
-  { key: "leftThigh", label: "Left Thigh", unit: "in", color: "#c47a0a", icon: "📏", group: "measurements", watchDiff: "rightThigh" },
-  { key: "rightArm", label: "Right Arm", unit: "in", color: "#147a50", icon: "📏", group: "measurements" },
-  { key: "leftArm", label: "Left Arm", unit: "in", color: "#147a50", icon: "📏", group: "measurements", watchDiff: "rightArm" },
+  { key: "waist", label: "Waist", unit: "in", color: "#a02a2a",  group: "measurements" },
+  { key: "chest", label: "Chest", unit: "in", color: "#2d7a1e",  group: "measurements" },
+  { key: "hips", label: "Hips", unit: "in", color: "#7a3aa0",  group: "measurements" },
+  { key: "rightThigh", label: "Right Thigh", unit: "in", color: "#c47a0a",  group: "measurements" },
+  { key: "leftThigh", label: "Left Thigh", unit: "in", color: "#c47a0a",  group: "measurements", watchDiff: "rightThigh" },
+  { key: "rightArm", label: "Right Arm", unit: "in", color: "#147a50",  group: "measurements" },
+  { key: "leftArm", label: "Left Arm", unit: "in", color: "#147a50",  group: "measurements", watchDiff: "rightArm" },
 ];
 
 // Baselines from intake
@@ -312,7 +312,7 @@ export default function MeasurementsTracker({ measurements, onSave }) {
 
       {!hasData && (
         <div style={{ padding: "40px 20px", textAlign: "center", background: "#fff", borderRadius: "8px", border: "1px solid #e8e8e8" }}>
-          <div style={{ fontSize: "36px", marginBottom: "10px" }}>📏</div>
+          
           <div style={{ fontSize: "14px", color: "#555", marginBottom: "6px" }}>No measurements logged yet</div>
           <div style={{ fontSize: "12px", color: "#aaa", lineHeight: "1.6" }}>
             Log monthly to track your recomp progress. The symmetry tracking will show the arm and thigh gaps closing over time.

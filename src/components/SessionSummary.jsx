@@ -161,7 +161,7 @@ export default function SessionSummary({ sessionKey, logs, schedule, onDismiss }
         {prs.length > 0 && (
           <div style={{ padding: "16px 22px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
             <div style={{ fontSize: "9px", letterSpacing: "0.2em", textTransform: "uppercase", color: "#f59e0b", marginBottom: "10px" }}>
-              🏆 Personal records
+              Personal records
             </div>
             {prs.map((pr, i) => (
               <div key={i} style={{
