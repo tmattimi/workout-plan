@@ -25,7 +25,6 @@ import { getClientByToken } from "./lib/supabase";
 import NewProgressTab from "./components/ProgressTab";
 import PhotosTab from "./components/PhotosTab";
 import WorkoutHistory from "./components/WorkoutHistory";
-import { ClientPhotoUpload } from "./components/ProgressPhotos";
 import TrackingTab from "./components/TrackingTab";
 import ActivityLog from "./components/ActivityLog";
 import CycleTracking from "./components/CycleTracking";
