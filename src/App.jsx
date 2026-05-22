@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import SwapModal from "./components/SwapModal";
 import { getSwaps } from "./data/swaps";
-import { schedule as skylerSchedule, principles as skylerPrinciples } from "./data";
-import { schedule as taraSchedule, principles as taraPrinciples } from "./tara-data";
+import { schedule as skylerSchedule } from "./data";
+import { schedule as taraSchedule } from "./tara-data";
+import { principles as taraPrinciples } from "./data/guide";
 import { getAllNames } from "./data/exercises";
 import {
   loadWorkoutLogs, saveWorkoutLogs, loadMeasurements, saveMeasurements,
@@ -560,10 +561,8 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
     clientId === SKYLER_ID ? skylerSchedule :
     null; // all other clients: no program until coach assigns one
 
-  const defaultPrinciples =
-    clientId === TARA_ID   ? taraPrinciples   :
-    clientId === SKYLER_ID ? skylerPrinciples :
-    null;
+  // All clients use the shared training guide
+  const defaultPrinciples = taraPrinciples;
 
   // Use DB-assigned plan if present, then client-specific default, then nothing
   const activeSchedule = adaptedSchedule || defaultSchedule;
