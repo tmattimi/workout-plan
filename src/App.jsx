@@ -1146,7 +1146,9 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
               const supersetLabel = ex.superset_group ? `SS-${ex.superset_group}` : null;
               const totalLogged = exLog?.sets?.length || 0;
               const isStarted = totalLogged > 0;
-              const hasPR = !!prs[ex.name];
+              // PR badge only shows if a done set in this session is marked as a PR
+              // Never shows from stale all-time PR store — that would persist after log deletion
+              const hasPR = exLog?.sets?.some(s => s.done && s.isPR) || false;
 
               return (
                 <div key={i} style={{ borderBottom: "1px solid #ebebeb", background: "#fff", borderLeft: `3px solid ${doneSets > 0 ? "#34c759" : cs.bg === "#1a1a1a" ? "#e0e0e0" : cs.bg}` }}>
