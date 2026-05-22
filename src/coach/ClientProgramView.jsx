@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { schedule as taraSchedule } from "../tara-data";
-import { schedule as skylerSchedule } from "../data";
+import { schedule as skylerSchedule } from "../data.js";
 
 const F = { fontFamily: "'Georgia','Times New Roman',serif" };
 
