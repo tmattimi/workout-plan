@@ -491,6 +491,11 @@ function DailyHealthSection({ clientId }) {
     const updated = { ...healthData, [key]: { ...(healthData[key] || {}), weight_lbs: parsed } };
     setHealthData(updated);
     try { localStorage.setItem("daily_health_v1", JSON.stringify(updated)); } catch {}
+    if (clientId) {
+      import("../lib/supabase").then(({ upsertHealthLog }) => {
+        upsertHealthLog(clientId, key, { weight_lbs: parsed });
+      });
+    }
     setShowWeightInput(false);
     setWeightInput("");
   }
@@ -661,7 +666,21 @@ export default function BodyTab({ clientId }) {
         <HealthTab
           dailyHealth={(() => { try { return JSON.parse(localStorage.getItem("daily_health_v1") || "{}"); } catch { return {}; } })()}
           todayKey={new Date().toISOString().slice(0, 10)}
-          onHealthUpdate={(updated) => { try { localStorage.setItem("daily_health_v1", JSON.stringify(updated)); } catch {} }}
+          onHealthUpdate={async (updated) => {
+            try { localStorage.setItem("daily_health_v1", JSON.stringify(updated)); } catch {}
+            if (clientId) {
+              const todayKey = new Date().toISOString().slice(0, 10);
+              const todayData = updated[todayKey] || {};
+              const { upsertHealthLog } = await import("../lib/supabase");
+              await upsertHealthLog(clientId, todayKey, {
+                sleep_hours: todayData.sleep_hours ? parseFloat(todayData.sleep_hours) : null,
+                hrv_ms: todayData.hrv ? parseFloat(todayData.hrv) : null,
+                resting_hr: todayData.resting_hr ? parseFloat(todayData.resting_hr) : null,
+                weight_lbs: todayData.weight_lbs ? parseFloat(todayData.weight_lbs) : null,
+                energy_level: todayData.energy_level ? parseInt(todayData.energy_level) : null,
+              });
+            }
+          }}
           clientId={clientId}
         />
       )}

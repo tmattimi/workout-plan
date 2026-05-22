@@ -1748,9 +1748,23 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
         <HealthTab
           dailyHealth={dailyHealth}
           todayKey={todayKey}
-          onHealthUpdate={(updated) => {
+          onHealthUpdate={async (updated) => {
             setDailyHealth(updated);
             localStorage.setItem("daily_health_v1", JSON.stringify(updated));
+            // Sync to Supabase if logged in
+            if (clientData?.id) {
+              const { upsertHealthLog } = await import("./lib/supabase");
+              const todayData = updated[todayKey] || {};
+              await upsertHealthLog(clientData.id, todayKey, {
+                sleep_hours: todayData.sleep_hours ? parseFloat(todayData.sleep_hours) : null,
+                sleep_quality: todayData.sleep_quality ? parseFloat(todayData.sleep_quality) : null,
+                hrv_ms: todayData.hrv ? parseFloat(todayData.hrv) : null,
+                resting_hr: todayData.resting_hr ? parseFloat(todayData.resting_hr) : null,
+                weight_lbs: todayData.weight_lbs ? parseFloat(todayData.weight_lbs) : null,
+                energy_level: todayData.energy_level ? parseInt(todayData.energy_level) : null,
+                steps: todayData.steps ? parseInt(todayData.steps) : null,
+              });
+            }
           }}
           clientId={clientData?.id}
         />

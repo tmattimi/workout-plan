@@ -521,7 +521,8 @@ export default function OnboardingQuestionnaire({ client, onComplete }) {
         knows_progressive_overload: form.knows_progressive_overload,
         knows_form_basics: form.knows_form_basics,
         prior_coaching: form.prior_coaching,
-        additional_notes: [form.prior_coaching_notes, form.additional_notes].filter(Boolean).join(" | ") || null,
+        prior_coaching_notes: form.prior_coaching_notes || null,
+        additional_notes: form.additional_notes || null,
       };
 
       const { data: intake, error: intakeError } = await supabase
@@ -542,7 +543,7 @@ export default function OnboardingQuestionnaire({ client, onComplete }) {
       const measData = {};
       Object.entries(measFields).forEach(([k, v]) => { if (v) measData[k] = parseFloat(v); });
       if (Object.keys(measData).length > 0) {
-        await supabase.from("body_measurements").insert({ client_id: client.id, measured_at: new Date().toISOString().slice(0, 10), source: "intake", ...measData });
+        await supabase.from("measurements").insert({ client_id: client.id, measured_at: new Date().toISOString().slice(0, 10), source: "intake", ...measData });
       }
 
       // Seed strength PRs
