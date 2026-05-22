@@ -12,7 +12,7 @@ import {
 import { formatDate } from "../storage";
 import AICoachPanel from "../components/AICoachPanel";
 import AIProgramBuilder from "../components/AIProgramBuilder";
-import ClientAnalytics from "../components/ClientAnalytics";
+import ClientAnalytics from "./ClientAnalytics";
 import { CoachPhotoViewer } from "../components/ProgressPhotos";
 
 const F = { fontFamily: "'Georgia','Times New Roman',serif" };
