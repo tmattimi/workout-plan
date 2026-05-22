@@ -72,8 +72,45 @@ function MiniChart({ data, color }) {
 
 // ── Set Logger ─────────────────────────────────────────────────────────────────
 // set.type: "normal" | "dropset" | "warmup"
+// Detect equipment context from exercise name/data
+function getWeightContext(exercise) {
+  const name = (exercise.name || "").toLowerCase();
+  const equip = (exercise.equipment || []).map(e => e.toLowerCase());
+
+  if (exercise.bodyweight) return null; // no weight field
+
+  // Smith Machine — always logs plates added only
+  if (name.includes("smith machine") || name.includes("smith")) {
+    return { label: "plates added", note: "Log the weight you added to the bar — do not include the bar itself. Smith machine bars vary by gym (typically 15–25 lbs) and are not comparable to free weight barbell data.", isSmith: true };
+  }
+
+  // Barbell exercises — log total bar + plates
+  if (equip.includes("barbell") || name.includes("barbell") || name.includes("rdl") || name.includes("deadlift") || name.includes("bench press") || name.includes("squat") || name.includes("row") && equip.includes("barbell")) {
+    return { label: "lbs (bar + plates)", note: "Log the total weight including the bar. Standard barbell = 45 lbs.", isSmith: false };
+  }
+
+  // Dumbbell exercises — log per dumbbell
+  if (equip.includes("dumbbell") || name.includes("dumbbell") || name.includes("db ") || name.startsWith("db ") || name.includes(" db ")) {
+    return { label: "lbs per dumbbell", note: "Log the weight of one dumbbell, not the combined total. If you used 25s, log 25.", isSmith: false };
+  }
+
+  // Cable exercises — log the stack weight
+  if (equip.includes("cable") || name.includes("cable") || name.includes("pulldown") || name.includes("pushdown")) {
+    return { label: "lbs (stack)", note: "Log the stack weight shown on the cable machine.", isSmith: false };
+  }
+
+  // Machine exercises — log the pin weight
+  if (equip.includes("machine") || name.includes("machine") || name.includes("leg press") || name.includes("leg curl") || name.includes("leg extension") || name.includes("hip thrust machine") || name.includes("hip abduction")) {
+    return { label: "lbs (pin weight)", note: "Log the weight shown on the machine plate selector.", isSmith: false };
+  }
+
+  // Default — just lbs
+  return { label: "lbs", note: null, isSmith: false };
+}
+
 function SetLogger({ exercise, sessionKey, logs, onLogsChange, accent = '#555', color = '#f5f5f3', onSetDone, prs }) {
   const exKey = `${sessionKey}__${exercise.name}`;
+  const weightCtx = getWeightContext(exercise);
   const exLog = logs[exKey] || { sets: [], notes: "" };
 
   function updateLog(updated) { onLogsChange({ ...logs, [exKey]: updated }); }
@@ -130,6 +167,8 @@ function SetLogger({ exercise, sessionKey, logs, onLogsChange, accent = '#555', 
   // ── Progressive overload target — pulled from previous session logs ──────────
   const overloadTarget = (() => {
     if (exercise.bodyweight || exercise.category === "Recovery") return null;
+    // Smith Machine data is not comparable to free weight — skip 1RM-based suggestions
+    if (weightCtx?.isSmith) return null;
     const repRange = exercise.reps || "8-12";
     const rangeParts = repRange.split(/[–\-]/);
     const rangeMax = parseInt(rangeParts[1]) || parseInt(rangeParts[0]) || 12;
@@ -201,7 +240,7 @@ function SetLogger({ exercise, sessionKey, logs, onLogsChange, accent = '#555', 
         <div style={{ display: "grid", gridTemplateColumns: exercise.bodyweight ? "20px 20px 1fr 34px 20px" : "20px 20px 1fr 1fr 34px 20px", gap: "4px", padding: "5px 12px 2px" }}>
           {(exercise.bodyweight
             ? ["", "", "Reps", "✓", ""]
-            : ["", "", "Weight", "Reps", "✓", ""]
+            : ["", "", weightCtx?.label || "Weight", "Reps", "✓", ""]
           ).map((h, i) => (
             <span key={i} style={{ fontSize: "9px", color: "#bbb", textTransform: "uppercase", letterSpacing: "0.1em", textAlign: "center" }}>{h}</span>
           ))}
@@ -235,7 +274,7 @@ function SetLogger({ exercise, sessionKey, logs, onLogsChange, accent = '#555', 
             </button>
 
             {!exercise.bodyweight && (
-              <input type="number" inputMode="decimal" placeholder={isWarmup ? "warm" : "lbs"} value={set.weight}
+              <input type="number" inputMode="decimal" placeholder={isWarmup ? "warm" : (weightCtx?.isSmith ? "plates" : "lbs")} value={set.weight}
                 onChange={e => updateSet(i, "weight", e.target.value)}
                 style={{ width: "100%", padding: "6px", borderRadius: "5px", border: "1px solid " + (isWarmup ? "#e8e8c0" : isDrop ? "#e0d0f0" : "#ddd"), fontSize: "13px", textAlign: "center", background: set.done ? "rgba(45,122,30,0.08)" : "#fff", color: "#1a1a1a", ...F, opacity: isWarmup ? 0.7 : 1 }} />
             )}
@@ -250,6 +289,12 @@ function SetLogger({ exercise, sessionKey, logs, onLogsChange, accent = '#555', 
 
       {exLog.sets.length === 0 && (
         <div style={{ padding: "12px", textAlign: "center", color: "#bbb", fontSize: "11px" }}>Tap "+ Set" to start logging · "W" for a warm-up set</div>
+      )}
+
+      {weightCtx?.note && (
+        <div style={{ padding: "4px 12px 2px", fontSize: "9px", color: weightCtx.isSmith ? "#c47a0a" : "#bbb", lineHeight: "1.6", background: weightCtx.isSmith ? "#fffbea" : "transparent" }}>
+          {weightCtx.isSmith && "⚠️ "}{weightCtx.note}
+        </div>
       )}
 
       <div style={{ padding: "8px 12px" }}>
