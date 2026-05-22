@@ -869,7 +869,7 @@ function ClientDetail({ client, coachId, plans, onBack, onDelete, onAssignPlan }
 
       {/* AI Program Builder */}
       {view === "view_program" && (
-        <ClientProgramView client={selectedClient} />
+        <ClientProgramView client={client} />
       )}
 
       {view === "program" && (
