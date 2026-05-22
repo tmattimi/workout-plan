@@ -13,7 +13,6 @@ import { formatDate } from "../storage";
 import AICoachPanel from "../components/AICoachPanel";
 import AIProgramBuilder from "../components/AIProgramBuilder";
 import ClientAnalytics from "./ClientAnalytics";
-import { CoachPhotoViewer } from "../components/ProgressPhotos";
 
 const F = { fontFamily: "'Georgia','Times New Roman',serif" };
 const DAYS = ["MON","TUE","WED","THU","FRI","SAT","SUN"];
@@ -852,7 +851,13 @@ function ClientDetail({ client, coachId, plans, onBack, onDelete, onAssignPlan }
       )}
 
       {view === "photos" && (
-        <CoachPhotoViewer clientId={client.id} />
+        <div style={{ textAlign: "center", padding: "40px 20px", color: "#bbb" }}>
+          <div style={{ fontSize: "28px", marginBottom: "10px", opacity: 0.3 }}>📸</div>
+          <div style={{ fontSize: "13px", marginBottom: "6px" }}>Progress photos</div>
+          <div style={{ fontSize: "11px", lineHeight: "1.6" }}>
+            Photo viewing from the coach dashboard is coming soon.
+          </div>
+        </div>
       )}
 
       {view === "ai" && overview && (
