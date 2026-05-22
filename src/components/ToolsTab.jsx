@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { EXERCISE_DB } from "../data/exercises";
 import MuscleScience from "./MuscleScience";
 import AlternativeExercises from "./AlternativeExercises";
 import GoalTracker from "./GoalTracker";
@@ -216,6 +217,185 @@ function GoalsSection({ clientId }) {
   );
 }
 
+
+// ── Exercise Library ──────────────────────────────────────────────────────────
+const MUSCLE_GROUPS = ["All", "Chest", "Back", "Lats", "Shoulders", "Triceps", "Biceps", "Glutes", "Hamstrings", "Quads", "Core", "Cardio"];
+const CATEGORIES = ["All", "Compound Bilateral", "Compound Unilateral", "Isolation Bilateral", "Isolation Unilateral"];
+
+function ExerciseLibrary({ onGoToAlternatives }) {
+  const [search, setSearch] = useState("");
+  const [muscle, setMuscle] = useState("All");
+  const [category, setCategory] = useState("All");
+  const [expanded, setExpanded] = useState(null);
+
+  const q = search.toLowerCase().trim();
+
+  const filtered = EXERCISE_DB.filter(ex => {
+    const matchMuscle = muscle === "All" ||
+      ex.primaryMuscle?.toLowerCase().includes(muscle.toLowerCase()) ||
+      ex.secondaryMuscles?.some(m => m.toLowerCase().includes(muscle.toLowerCase()));
+    const matchCat = category === "All" || ex.category === category;
+    const matchSearch = !q ||
+      ex.name.toLowerCase().includes(q) ||
+      ex.primaryMuscle?.toLowerCase().includes(q) ||
+      ex.secondaryMuscles?.some(m => m.toLowerCase().includes(q)) ||
+      ex.cues?.some(c => c.toLowerCase().includes(q));
+    return matchMuscle && matchCat && matchSearch;
+  });
+
+  // Group by primary muscle
+  const grouped = {};
+  filtered.forEach(ex => {
+    const key = ex.primaryMuscle || "Other";
+    if (!grouped[key]) grouped[key] = [];
+    grouped[key].push(ex);
+  });
+
+  const equipIcons = { dumbbell: "🏋️", barbell: "⚡", cable: "🔗", machine: "⚙️", bench: "🪑", band: "🔴", pull_up_bar: "⬆️" };
+
+  return (
+    <div>
+      {/* Search */}
+      <input
+        value={search}
+        onChange={e => setSearch(e.target.value)}
+        placeholder="Search exercises, muscles, or cues..."
+        style={{ width: "100%", padding: "9px 12px", border: "1px solid #e0e0e0", borderRadius: "7px", fontSize: "12px", boxSizing: "border-box", marginBottom: "10px", ...F }}
+      />
+
+      {/* Muscle filter */}
+      <div style={{ display: "flex", gap: "5px", overflowX: "auto", marginBottom: "8px", paddingBottom: "4px", msOverflowStyle: "none", scrollbarWidth: "none" }}>
+        {MUSCLE_GROUPS.map(m => (
+          <button key={m} onClick={() => setMuscle(m)} style={{
+            flexShrink: 0, padding: "5px 11px", borderRadius: "20px", fontSize: "10px", cursor: "pointer",
+            background: muscle === m ? "#111" : "#f5f5f3",
+            color: muscle === m ? "#fff" : "#777",
+            border: `1px solid ${muscle === m ? "#111" : "#e0e0e0"}`, ...F,
+          }}>{m}</button>
+        ))}
+      </div>
+
+      {/* Category filter */}
+      <div style={{ display: "flex", gap: "5px", overflowX: "auto", marginBottom: "14px", paddingBottom: "4px", msOverflowStyle: "none", scrollbarWidth: "none" }}>
+        {CATEGORIES.map(c => (
+          <button key={c} onClick={() => setCategory(c)} style={{
+            flexShrink: 0, padding: "4px 10px", borderRadius: "20px", fontSize: "9px", cursor: "pointer",
+            background: category === c ? "#555" : "transparent",
+            color: category === c ? "#fff" : "#aaa",
+            border: `1px solid ${category === c ? "#555" : "#e8e8e8"}`, ...F,
+          }}>{c}</button>
+        ))}
+      </div>
+
+      {/* Results count */}
+      <div style={{ fontSize: "9px", color: "#bbb", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "10px" }}>
+        {filtered.length} exercise{filtered.length !== 1 ? "s" : ""}
+      </div>
+
+      {/* Grouped results */}
+      {(search || muscle !== "All" || category !== "All") ? (
+        // Flat list when filtering
+        filtered.map(ex => <ExLibCard key={ex.id} ex={ex} expanded={expanded} setExpanded={setExpanded} equipIcons={equipIcons} />)
+      ) : (
+        // Grouped by muscle when browsing
+        Object.entries(grouped).map(([muscleGroup, exercises]) => (
+          <div key={muscleGroup} style={{ marginBottom: "18px" }}>
+            <div style={{ fontSize: "8px", fontWeight: "700", letterSpacing: "0.2em", textTransform: "uppercase", color: "#888", marginBottom: "7px", paddingBottom: "5px", borderBottom: "1px solid #ebebeb" }}>
+              {muscleGroup}
+            </div>
+            {exercises.map(ex => <ExLibCard key={ex.id} ex={ex} expanded={expanded} setExpanded={setExpanded} equipIcons={equipIcons} />)}
+          </div>
+        ))
+      )}
+
+      {filtered.length === 0 && (
+        <div style={{ textAlign: "center", padding: "20px", color: "#bbb", fontSize: "12px" }}>
+          No exercises found. Try a different search or filter.
+        </div>
+      )}
+
+      {/* Link back to Alternatives */}
+      <div style={{ marginTop: "20px", paddingTop: "14px", borderTop: "1px solid #f0f0f0", textAlign: "center" }}>
+        <button onClick={onGoToAlternatives} style={{ fontSize: "11px", color: "#888", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>
+          Looking for exercise swaps? → Alternatives
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ExLibCard({ ex, expanded, setExpanded, equipIcons }) {
+  const isOpen = expanded === ex.id;
+  return (
+    <div style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "8px", marginBottom: "6px", overflow: "hidden" }}>
+      <button
+        onClick={() => setExpanded(isOpen ? null : ex.id)}
+        style={{ width: "100%", background: "none", border: "none", padding: "11px 13px", cursor: "pointer", textAlign: "left", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}
+      >
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: "13px", fontWeight: "600", color: "#111", marginBottom: "3px" }}>{ex.name}</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
+            <span style={{ fontSize: "9px", background: "#f0f0f0", color: "#666", padding: "2px 7px", borderRadius: "20px" }}>{ex.primaryMuscle}</span>
+            {(ex.secondaryMuscles || []).slice(0,2).map(m => (
+              <span key={m} style={{ fontSize: "9px", background: "#f9f9f7", color: "#aaa", padding: "2px 7px", borderRadius: "20px" }}>{m}</span>
+            ))}
+            {ex.bodyweight && <span style={{ fontSize: "9px", background: "#f0fff0", color: "#2d7a1e", padding: "2px 7px", borderRadius: "20px" }}>Bodyweight</span>}
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: "4px", alignItems: "center", flexShrink: 0, marginLeft: "8px" }}>
+          <div style={{ display: "flex", gap: "2px" }}>
+            {(ex.equipment || []).slice(0,3).map(eq => (
+              <span key={eq} title={eq} style={{ fontSize: "11px" }}>{equipIcons[eq] || "🔧"}</span>
+            ))}
+            {ex.bodyweight && ex.equipment?.length === 0 && <span style={{ fontSize: "11px" }}>✊</span>}
+          </div>
+          <span style={{ color: "#ccc", fontSize: "11px", marginLeft: "4px" }}>{isOpen ? "▲" : "▼"}</span>
+        </div>
+      </button>
+
+      {isOpen && (
+        <div style={{ borderTop: "1px solid #f5f5f3", padding: "11px 13px" }}>
+          {/* Category badge */}
+          <div style={{ fontSize: "9px", color: "#aaa", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "10px" }}>
+            {ex.category}
+          </div>
+
+          {/* Cues */}
+          {ex.cues?.length > 0 && (
+            <div style={{ marginBottom: "10px" }}>
+              <div style={{ fontSize: "9px", fontWeight: "700", letterSpacing: "0.12em", textTransform: "uppercase", color: "#bbb", marginBottom: "6px" }}>Form Cues</div>
+              {ex.cues.map((cue, i) => (
+                <div key={i} style={{ display: "flex", gap: "8px", marginBottom: "6px", paddingBottom: "6px", borderBottom: i < ex.cues.length - 1 ? "1px solid #f5f5f3" : "none" }}>
+                  <span style={{ flexShrink: 0, width: "16px", height: "16px", background: "#111", color: "#fff", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "9px", fontWeight: "700", marginTop: "1px" }}>{i+1}</span>
+                  <span style={{ fontSize: "11px", color: "#555", lineHeight: "1.65", ...F }}>{cue}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Watch for */}
+          {ex.watchFor && (
+            <div style={{ background: "#fff8f0", borderRadius: "6px", padding: "8px 10px", marginBottom: "8px" }}>
+              <div style={{ fontSize: "9px", fontWeight: "700", letterSpacing: "0.1em", textTransform: "uppercase", color: "#c47a0a", marginBottom: "4px" }}>Watch for</div>
+              <div style={{ fontSize: "11px", color: "#8a5500", lineHeight: "1.65", ...F }}>{ex.watchFor}</div>
+            </div>
+          )}
+
+          {/* Contraindications */}
+          {ex.contraindications?.length > 0 && (
+            <div style={{ display: "flex", gap: "5px", flexWrap: "wrap" }}>
+              <span style={{ fontSize: "9px", color: "#aaa" }}>Avoid if:</span>
+              {ex.contraindications.map(c => (
+                <span key={c} style={{ fontSize: "9px", background: "#fff0f0", color: "#c0392b", padding: "2px 7px", borderRadius: "20px" }}>{c.replace(/_/g," ")}</span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Guide section ─────────────────────────────────────────────────────────────
 function GuideSection({ principles, openEntryId }) {
   const [expandedPrinciple, setExpandedPrinciple] = useState(openEntryId || null);
@@ -332,6 +512,7 @@ export default function ToolsTab({ principles, clientEquipment, clientInjuries, 
 
   const SECTIONS = [
     { id: "alternatives", label: "Alternatives" },
+    { id: "library", label: "Exercise Library" },
     { id: "goals", label: "Goals" },
     { id: "muscles", label: "Muscles" },
     { id: "guide", label: "Guide" },
@@ -351,12 +532,20 @@ export default function ToolsTab({ principles, clientEquipment, clientInjuries, 
       </div>
 
       {section === "alternatives" && (
+        <>
         <AlternativeExercises
           clientEquipment={clientEquipment}
           clientInjuries={clientInjuries}
           onEquipmentChange={onEquipmentChange}
           onInjuryChange={onInjuryChange}
         />
+        <button
+          onClick={() => setSection("library")}
+          style={{ display: "block", width: "100%", marginTop: "14px", padding: "12px", background: "#f9f9f7", border: "1px solid #e4e0db", borderRadius: "9px", fontSize: "12px", color: "#555", cursor: "pointer", textAlign: "center" }}
+        >
+          Browse the full Exercise Library →
+        </button>
+        </>
       )}
 
       {section === "goals" && <GoalTracker clientId={clientId} />}
@@ -367,6 +556,7 @@ export default function ToolsTab({ principles, clientEquipment, clientInjuries, 
         </div>
       )}
 
+      {section === "library" && <ExerciseLibrary onGoToAlternatives={() => setSection("alternatives")} />}
       {section === "guide" && <GuideSection principles={principles} />}
     </div>
   );
