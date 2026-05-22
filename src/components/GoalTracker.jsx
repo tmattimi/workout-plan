@@ -9,6 +9,7 @@ const GOAL_TYPES = [
   { id: "reps",         label: "Reps",           unit: "reps",  metric: null,            examples: "e.g. 10 pull-ups unassisted",    hasTarget: true,  tracked: true  },
   { id: "measurement",  label: "Measurement",    unit: "in",    metric: null,            examples: "e.g. Waist under 28 inches",     hasTarget: true,  tracked: true  },
   { id: "body_fat",     label: "Body Fat %",     unit: "%",     metric: "body_fat_pct",  examples: "e.g. Reach 20% body fat",        hasTarget: true,  tracked: true  },
+  { id: "steps",        label: "Daily Steps",   unit: "steps", metric: "steps",         examples: "e.g. Avg 10,000 steps/day",      hasTarget: true,  tracked: true  },
   { id: "habit",        label: "Habit",          unit: "weeks", metric: null,            examples: "e.g. Train 4x/week for 8 weeks", hasTarget: true,  tracked: false },
   { id: "custom",       label: "Custom",         unit: "",      metric: null,            examples: "e.g. Run a 5K",                  hasTarget: false, tracked: false },
 ];
@@ -264,7 +265,7 @@ function AddGoalForm({ onAdd, onCancel }) {
 
       {gt?.tracked && (
         <div style={{ fontSize: "11px", color: "#2563a8", background: "rgba(37,99,168,0.06)", borderRadius: "6px", padding: "8px 12px", marginBottom: "12px", lineHeight: 1.5 }}>
-          This goal type is automatically tracked — your logged data will be overlaid on charts in the Progress tab.
+          Auto-tracked — your logged data updates this goal automatically. A goal line will appear on your Progress charts.
         </div>
       )}
 
@@ -281,6 +282,7 @@ export default function GoalTracker({ clientId }) {
   const [adding, setAdding] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState("all"); // all | strength | body | habit
 
   useEffect(() => { loadGoals(); }, [clientId]);
 

@@ -471,9 +471,106 @@ function DailyHealthSection({ clientId }) {
 
   const stepsToday = healthData[today()]?.steps;
   const sleepLastNight = healthData[today()]?.sleep_hours;
+  const weightToday = healthData[today()]?.weight_lbs;
+
+  // Get last 8 weight entries for mini sparkline
+  const weightHistory = Object.entries(healthData)
+    .filter(([, d]) => d.weight_lbs)
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .slice(-8)
+    .map(([date, d]) => ({ date, value: parseFloat(d.weight_lbs) }));
+
+  const [showWeightInput, setShowWeightInput] = useState(false);
+  const [weightInput, setWeightInput] = useState("");
+
+  function saveWeight(val) {
+    const parsed = parseFloat(val);
+    if (isNaN(parsed) || parsed < 50 || parsed > 600) return;
+    const key = today();
+    const updated = { ...healthData, [key]: { ...(healthData[key] || {}), weight_lbs: parsed } };
+    setHealthData(updated);
+    try { localStorage.setItem("daily_health_v1", JSON.stringify(updated)); } catch {}
+    setShowWeightInput(false);
+    setWeightInput("");
+  }
 
   return (
     <div>
+      {/* Weight — top of Body tab, most prominent */}
+      <div style={{ background: "#fff", border: "1px solid #ede9e4", borderRadius: "10px", padding: "14px 16px", marginBottom: "12px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <div>
+            <div style={{ fontSize: "9px", letterSpacing: "0.15em", textTransform: "uppercase", color: "#bbb", marginBottom: "4px" }}>Body Weight</div>
+            {weightToday ? (
+              <div style={{ fontSize: "26px", fontWeight: "700", color: "#111", lineHeight: 1 }}>
+                {weightToday}
+                <span style={{ fontSize: "12px", fontWeight: "normal", color: "#aaa", marginLeft: "4px" }}>lbs</span>
+              </div>
+            ) : (
+              <div style={{ fontSize: "13px", color: "#aaa", marginTop: "4px" }}>Not logged today</div>
+            )}
+            {weightHistory.length >= 2 && (() => {
+              const first = weightHistory[0].value;
+              const last = weightHistory[weightHistory.length - 1].value;
+              const diff = (last - first).toFixed(1);
+              const label = weightHistory.length <= 2 ? "since start" : `last ${weightHistory.length} entries`;
+              return (
+                <div style={{ fontSize: "10px", color: diff < 0 ? "#2d7a1e" : diff > 0 ? "#a02020" : "#aaa", marginTop: "4px" }}>
+                  {diff > 0 ? "+" : ""}{diff} lbs {label}
+                </div>
+              );
+            })()}
+          </div>
+          <button
+            onClick={() => { setShowWeightInput(p => !p); setWeightInput(weightToday ? String(weightToday) : ""); }}
+            style={{ background: "#f9f9f7", border: "1px solid #e4e0db", borderRadius: "7px", padding: "7px 13px", fontSize: "11px", cursor: "pointer", color: "#555" }}
+          >
+            {weightToday ? "Update" : "Log weight"}
+          </button>
+        </div>
+
+        {showWeightInput && (
+          <div style={{ marginTop: "12px", display: "flex", gap: "8px", alignItems: "center" }}>
+            <input
+              type="number" inputMode="decimal"
+              value={weightInput}
+              onChange={e => setWeightInput(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && saveWeight(weightInput)}
+              placeholder="e.g. 148.5"
+              autoFocus
+              style={{ flex: 1, padding: "9px 12px", borderRadius: "7px", border: "1px solid #e4e0db", fontSize: "14px", color: "#111" }}
+            />
+            <span style={{ fontSize: "12px", color: "#aaa" }}>lbs</span>
+            <button onClick={() => saveWeight(weightInput)} style={{ background: "#111", color: "#fff", border: "none", borderRadius: "7px", padding: "9px 16px", fontSize: "12px", cursor: "pointer" }}>
+              Save
+            </button>
+          </div>
+        )}
+
+        {/* Mini sparkline */}
+        {weightHistory.length >= 3 && (
+          <div style={{ marginTop: "12px", height: "30px" }}>
+            {(() => {
+              const vals = weightHistory.map(d => d.value);
+              const min = Math.min(...vals); const max = Math.max(...vals);
+              const range = max - min || 1;
+              const W = 100; const H = 30;
+              const pts = vals.map((v, i) => `${(i/(vals.length-1))*W},${H - ((v-min)/range)*(H-6) - 3}`).join(" ");
+              return (
+                <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} preserveAspectRatio="none">
+                  <polyline points={pts} fill="none" stroke="#1d6fa8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  {vals.map((v, i) => {
+                    const x = (i/(vals.length-1))*W;
+                    const y = H - ((v-min)/range)*(H-6) - 3;
+                    return <circle key={i} cx={x} cy={y} r={i===vals.length-1?"2.5":"1.5"} fill="#1d6fa8" />;
+                  })}
+                </svg>
+              );
+            })()}
+          </div>
+        )}
+      </div>
+
       <div style={{ fontSize: "9px", letterSpacing: "0.18em", textTransform: "uppercase", color: "#999", marginBottom: "10px" }}>Daily Health Log</div>
 
       {/* Quick summary */}

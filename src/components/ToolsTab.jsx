@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { EXERCISE_DB } from "../data/exercises";
 import MuscleScience from "./MuscleScience";
 import AlternativeExercises from "./AlternativeExercises";
-import GoalTracker from "./GoalTracker";
 
 const F = { fontFamily: "'Georgia','Times New Roman',serif" };
 
@@ -513,7 +512,6 @@ export default function ToolsTab({ principles, clientEquipment, clientInjuries, 
   const SECTIONS = [
     { id: "alternatives", label: "Alternatives" },
     { id: "library", label: "Exercise Library" },
-    { id: "goals", label: "Goals" },
     { id: "muscles", label: "Muscles" },
     { id: "guide", label: "Guide" },
   ];
@@ -547,8 +545,6 @@ export default function ToolsTab({ principles, clientEquipment, clientInjuries, 
         </button>
         </>
       )}
-
-      {section === "goals" && <GoalTracker clientId={clientId} />}
 
       {section === "muscles" && (
         <div style={{ margin: "0 -16px" }}>

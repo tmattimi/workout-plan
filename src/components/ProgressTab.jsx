@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import GoalTracker from './GoalTracker';
 import { supabase } from '../lib/supabase';
 import {
   MUSCLE_GROUPS, BENCHMARK_LIFTS, RELATIVE_STRENGTH_STANDARDS,
@@ -632,6 +633,7 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
     { id: 'overview', label: 'Overview' },
     { id: 'strength', label: 'Strength' },
     { id: 'body', label: 'Body' },
+    { id: 'goals', label: 'Goals' },
     { id: 'health', label: 'Health' },
     { id: 'analytics', label: 'Analytics' },
   ];
@@ -1073,6 +1075,12 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
       )}
 
       {/* ── HEALTH TAB ── */}
+      {activeTab === 'goals' && (
+        <div style={{ padding: '16px 16px 60px' }}>
+          <GoalTracker clientId={clientId} />
+        </div>
+      )}
+
       {activeTab === 'health' && (
         <div style={{ padding: '16px 16px 60px' }}>
           {healthLogs.length === 0 ? (
