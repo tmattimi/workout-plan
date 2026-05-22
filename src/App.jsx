@@ -1123,18 +1123,18 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
                         </div>
                       )}
                     </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "4px", flexShrink: 0 }}>
+                    <div style={{ display: "flex", flexDirection: "row", gap: "5px", flexShrink: 0, alignItems: "center" }}>
                       {ex.category !== "Recovery" && ex.category !== "Mobility" && (
-                        <button onClick={() => setShowLogger(p => ({ ...p, [ex.name]: !p[ex.name] }))} style={{ background: logOpen ? "#1a1a1a" : "transparent", color: logOpen ? "#fff" : "#555", border: "1px solid #d0d0d0", borderRadius: "5px", padding: "4px 8px", fontSize: "10px", cursor: "pointer", ...F }}>
+                        <button onClick={() => setShowLogger(p => ({ ...p, [ex.name]: !p[ex.name] }))} style={{ background: logOpen ? "#1a1a1a" : "transparent", color: logOpen ? "#fff" : "#555", border: "1px solid #d0d0d0", borderRadius: "5px", padding: "5px 10px", fontSize: "10px", cursor: "pointer", ...F }}>
                           {logOpen ? "Hide" : "Log"}
                         </button>
                       )}
                       {getSwaps(ex.name).length > 0 && (
-                        <button onClick={() => setActiveSwapModal(ex)} title="Swap exercise" style={{ background: "none", border: "1px solid #e0e0e0", borderRadius: "5px", color: "#aaa", fontSize: "10px", cursor: "pointer", padding: "4px 7px", ...F }}>
+                        <button onClick={() => setActiveSwapModal(ex)} title="Swap exercise" style={{ background: "none", border: "1px solid #e0e0e0", borderRadius: "5px", color: "#aaa", fontSize: "12px", cursor: "pointer", padding: "5px 7px", lineHeight: 1 }}>
                           ⇄
                         </button>
                       )}
-                      <button onClick={() => setExpandedEx(isOpen ? null : i)} style={{ background: "none", border: "none", color: "#ccc", fontSize: "12px", cursor: "pointer", padding: "4px 0", textAlign: "right" }}>
+                      <button onClick={() => setExpandedEx(isOpen ? null : i)} style={{ background: "none", border: "none", color: "#ccc", fontSize: "12px", cursor: "pointer", padding: "4px 2px", lineHeight: 1 }}>
                         {isOpen ? "▲" : "▼"}
                       </button>
                     </div>
