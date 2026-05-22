@@ -696,6 +696,46 @@ function ClientDetail({ client, coachId, plans, onBack, onDelete, onAssignPlan }
               );
             })()}
 
+            {/* Deload flag — every 4th week */}
+            {(() => {
+              const totalSessions = sessions.length;
+              if (totalSessions > 0 && totalSessions % 16 >= 12) {
+                return (
+                  <div style={{ background: "#fffbea", border: "1px solid #fcd34d", borderRadius: "8px", padding: "10px 14px", marginBottom: "10px", display: "flex", alignItems: "center", gap: "10px" }}>
+                    <span style={{ fontSize: "16px" }}>🔄</span>
+                    <div>
+                      <div style={{ fontSize: "11px", fontWeight: "600", color: "#92400e" }}>Deload week recommended</div>
+                      <div style={{ fontSize: "10px", color: "#b45309", lineHeight: "1.5", marginTop: "2px" }}>
+                        {client.name?.split(" ")[0]} is approaching a natural deload point. Consider reducing volume by 40% this week to allow full recovery before the next training block.
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+              return null;
+            })()}
+
+            {/* Week-in-review summary */}
+            {(() => {
+              const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+              const thisWeekSessions = sessions.filter(([date]) => date >= weekAgo);
+              const lastWeekStart = new Date(Date.now() - 14 * 86400000).toISOString().slice(0, 10);
+              const lastWeekSessions = sessions.filter(([date]) => date >= lastWeekStart && date < weekAgo);
+              if (thisWeekSessions.length === 0) return null;
+              const trend = thisWeekSessions.length > lastWeekSessions.length ? "up" : thisWeekSessions.length < lastWeekSessions.length ? "down" : "same";
+              return (
+                <div style={{ background: "#f0f7ff", border: "1px solid #bfdbfe", borderRadius: "8px", padding: "10px 14px", marginBottom: "10px" }}>
+                  <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.12em", color: "#2563a8", marginBottom: "5px" }}>This week</div>
+                  <div style={{ fontSize: "12px", color: "#1e3a5f" }}>
+                    <strong>{thisWeekSessions.length}</strong> session{thisWeekSessions.length !== 1 ? "s" : ""}
+                    {trend === "up" && <span style={{ color: "#2d7a1e", fontSize: "10px", marginLeft: "6px" }}>↑ more than last week</span>}
+                    {trend === "down" && <span style={{ color: "#a02020", fontSize: "10px", marginLeft: "6px" }}>↓ fewer than last week</span>}
+                    {trend === "same" && <span style={{ color: "#666", fontSize: "10px", marginLeft: "6px" }}>same as last week</span>}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Recent sessions grouped by date */}
             {sessions.length > 0 && (
               <div style={{ marginBottom: "16px" }}>

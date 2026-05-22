@@ -16,6 +16,9 @@ import MuscleScience from "./components/MuscleScience";
 import WarmUp from "./components/WarmUp";
 import RestTimer, { parseRestSeconds } from "./components/RestTimer";
 import SessionSummary from "./components/SessionSummary";
+import RecoveryCard from "./components/RecoveryCard";
+import HealthLogModal from "./components/HealthLogModal";
+import { getRecoveryAssessment } from "./lib/recoveryEngine";
 import { PRCelebration, OverloadSuggestions } from "./components/PRCelebration";
 import MonthlyPrompt from "./components/MonthlyPrompt";
 import DailyScripture from "./components/DailyScripture";
@@ -634,6 +637,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
 
   const current = activeSchedule ? activeSchedule[activeDay] : null;
   const sessionKey = current ? makeSessionKey(current.day, sessionDate) : "";
+  const todayKey = new Date().toISOString().slice(0, 10);
   const warmup = current ? getWarmupForDay(current.type) : [];
 
   const handleLogsChange = useCallback((newLogs) => {
@@ -1002,6 +1006,13 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
               </button>
             ))}
           </div>
+
+          {/* Recovery assessment */}
+          <RecoveryCard
+            dailyHealth={dailyHealth}
+            todayKey={todayKey}
+            onLogHealth={() => setShowHealthLog(true)}
+          />
 
           {/* Session header */}
           <div style={{ background: "linear-gradient(135deg, #2c2c2e 0%, #1c1c1e 100%)", borderBottom: "1px solid #3a3a3c", padding: "14px 16px" }}>
@@ -1704,6 +1715,15 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
           logs={logs}
           schedule={activeSchedule}
           onDismiss={() => setShowSessionSummary(false)}
+        />
+      )}
+
+      {showHealthLog && (
+        <HealthLogModal
+          todayKey={todayKey}
+          dailyHealth={dailyHealth}
+          onSave={(updated) => { setDailyHealth(updated); localStorage.setItem("daily_health_v1", JSON.stringify(updated)); setShowHealthLog(false); }}
+          onDismiss={() => setShowHealthLog(false)}
         />
       )}
 
