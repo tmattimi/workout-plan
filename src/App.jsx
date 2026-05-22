@@ -993,7 +993,36 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
             </button>
           )}
         </div>
-        <div style={{ fontSize: "9px", letterSpacing: "0.22em", textTransform: "uppercase", color: "#555", marginBottom: "10px" }}>Push Pull Legs · 6 Days</div>
+        <div style={{ fontSize: "9px", letterSpacing: "0.22em", textTransform: "uppercase", color: "#555", marginBottom: "10px" }}>
+          {(() => {
+            // Goal label — mapped from clientData.goal or intake primary_goal
+            const goalMap = {
+              weight_loss:        "Weight Loss",
+              fat_loss:           "Fat Loss",
+              muscle_gain:        "Muscle & Strength",
+              body_recomposition: "Body Recomposition",
+              recomp:             "Body Recomposition",
+              strength:           "Strength",
+              endurance:          "Endurance",
+              general_fitness:    "General Fitness",
+              maintenance:        "Maintenance",
+            };
+            const rawGoal = clientData?.goal || "";
+            const goalLabel = goalMap[rawGoal.toLowerCase().replace(/ /g,"_")] || rawGoal.replace(/_/g," ") || null;
+
+            // Training days — count non-rest days in active schedule
+            const trainingDays = activeSchedule
+              ? activeSchedule.filter(d => d.type !== "rest" && d.exercises?.length > 0).length
+              : null;
+
+            const parts = [
+              goalLabel,
+              trainingDays ? `${trainingDays} day${trainingDays !== 1 ? "s" : ""}/week` : null,
+            ].filter(Boolean);
+
+            return parts.length > 0 ? parts.join(" · ") : "Tara Mattimiro Fitness";
+          })()}
+        </div>
         {/* Scripture — inline in header */}
         <DailyScripture accent="#c47a0a" inHeader />
         <div style={{ display: "flex", gap: "3px", overflowX: "auto", paddingBottom: "1px", msOverflowStyle: "none", scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}>
