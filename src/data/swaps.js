@@ -648,6 +648,387 @@ export const SWAP_MAP = {
       researchNote: "Standing calf raise with knee straight maximally activates the gastrocnemius. The soleus gets less work because the gastrocnemius dominates force production in this position."
     },
   ],
+// ── CORE ───────────────────────────────────────────────────────────────────
+
+  "Dead Bug": [
+    {
+      name: "Bird Dog",
+      equipment: [],
+      tradeoff: "Same anti-extension core demand in a quadruped position rather than supine. Easier to learn, slightly less challenge for the lower abs. Good swap if the dead bug feels uncoordinated.",
+      position: "same",
+      researchNote: "Both movements train anti-extension stability of the lumbar spine. Bird dog emphasizes contralateral coordination; dead bug emphasizes lower ab control against gravity."
+    },
+    {
+      name: "Plank",
+      equipment: [],
+      tradeoff: "Simpler movement, still high anti-extension demand. Lower coordination requirement. Use if you are learning core control or short on time.",
+      position: "same",
+      researchNote: "McGill (2010): plank trains the same anti-extension pattern as dead bug with lower coordination demand — appropriate for beginners or as a regression."
+    },
+  ],
+
+  "Bird Dog": [
+    {
+      name: "Dead Bug",
+      equipment: [],
+      tradeoff: "Supine version of the same anti-extension demand. Higher lower ab engagement. More challenge for people who find the quadruped position easy.",
+      position: "same",
+      researchNote: "Both movements train contralateral limb coordination and lumbar anti-extension. Dead bug adds gravity-driven challenge to the lower abdominals."
+    },
+    {
+      name: "Plank",
+      equipment: [],
+      tradeoff: "No limb movement required. Still trains anti-extension. Use as a regression if bird dog coordination is difficult.",
+      position: "same",
+      researchNote: "McGill (2010): plank is the foundational anti-extension movement from which bird dog and dead bug progress."
+    },
+  ],
+
+  "Banded Clamshell": [
+    {
+      name: "Cable Hip Abduction (Standing)",
+      equipment: ["cable"],
+      tradeoff: "Standing version loads the glute medius through a larger range with constant cable tension. More challenging and better for progressive overload.",
+      position: "mid",
+      researchNote: "Distefano et al. (2009): both clamshell and standing abduction produce high glute medius activation. Standing version allows greater loading."
+    },
+    {
+      name: "Side-Lying Hip Abduction",
+      equipment: [],
+      tradeoff: "No band or cable required. Bodyweight only. Same glute medius activation as the clamshell but through a longer lever arm. Slightly more challenging.",
+      position: "mid",
+      researchNote: "Glute medius activation is comparable between clamshell and side-lying abduction. Side-lying version uses longer lever — harder with bodyweight."
+    },
+    {
+      name: "Hip Thrust (Barbell or Machine)",
+      equipment: ["bench"],
+      tradeoff: "Shifts from glute medius isolation to glute max compound. Different muscle emphasis. Use when equipment is truly limited and you want to maintain glute volume.",
+      position: "shortened",
+      researchNote: "Not a direct substitute — different movement and muscle. Best used when no hip abduction option exists and overall glute volume needs to be maintained."
+    },
+  ],
+
+  "Bicycle Crunch": [
+    {
+      name: "Cable Crunch",
+      equipment: ["cable"],
+      tradeoff: "Loaded version of abdominal flexion. Higher resistance and better progressive overload than bodyweight bicycle crunch. Less rotational component.",
+      position: "shortened",
+      researchNote: "Escamilla et al. (2010): cable crunch produces high rectus abdominis activation comparable to crunches with added resistance for progressive overload."
+    },
+    {
+      name: "Dead Bug",
+      equipment: [],
+      tradeoff: "Anti-extension instead of flexion. Different core demand — more spinal stability, less rectus abdominis. Better for people with lower back sensitivity to crunching.",
+      position: "same",
+      researchNote: "McGill (2010): for clients with lower back issues, anti-extension movements like dead bug are preferred over spinal flexion movements like crunches."
+    },
+    {
+      name: "Hanging Knee Raise",
+      equipment: ["pull_up_bar"],
+      tradeoff: "Higher difficulty — requires grip strength and shoulder stability. Greater lower ab demand due to hip flexion against gravity. Better progressive overload path.",
+      position: "lengthened",
+      researchNote: "Escamilla et al. (2010): hanging leg raise produces the highest lower abdominal activation of core exercises measured — a significant upgrade from bicycle crunch."
+    },
+  ],
+
+  "Hanging Knee Raise": [
+    {
+      name: "Bicycle Crunch",
+      equipment: [],
+      tradeoff: "No bar required. Regression from hanging raise — lower ab demand is reduced. Use when grip or shoulder stability is a limiting factor.",
+      position: "same",
+      researchNote: "Bicycle crunch maintains rotational abdominal stimulus without the grip and shoulder demand of the hanging version."
+    },
+    {
+      name: "Captain's Chair Knee Raise",
+      equipment: ["machine"],
+      tradeoff: "Same movement, arms supported. Removes grip and shoulder as limiters. Direct equivalent for people whose arms fatigue before the abs.",
+      position: "same",
+      researchNote: "Escamilla et al. (2010): captain's chair knee raise produces identical lower abdominal activation to the hanging version with arms supported."
+    },
+    {
+      name: "Cable Crunch",
+      equipment: ["cable"],
+      tradeoff: "Seated/kneeling version. No grip required. High rectus abdominis load with resistance — good for progressive overload if the hanging version is not available.",
+      position: "shortened",
+      researchNote: "Different movement pattern but maintains high abdominal loading with progressive resistance — appropriate when no pull-up bar is available."
+    },
+  ],
+
+  // ── CARDIO ─────────────────────────────────────────────────────────────────
+
+  "StairMaster": [
+    {
+      name: "Incline Treadmill Walk",
+      equipment: [],
+      tradeoff: "High incline (10-15%) at moderate speed closely mimics the glute and hamstring demand of the StairMaster. Slightly lower caloric output but very similar posterior chain stimulus.",
+      position: "same",
+      researchNote: "Incline walking at 10-15% activates glutes and hamstrings at levels comparable to stair climbing. Zone 2 heart rate is easily maintained."
+    },
+    {
+      name: "Cycling (Stationary Bike)",
+      equipment: [],
+      tradeoff: "Low impact. Joint-friendly alternative for days with knee or hip discomfort. Seat position shifts load away from glutes compared to stair climbing.",
+      position: "same",
+      researchNote: "Stationary cycling maintains cardiovascular stimulus with minimal joint stress — appropriate substitute when impact or joint loading needs to be reduced."
+    },
+    {
+      name: "Elliptical",
+      equipment: [],
+      tradeoff: "Low impact, similar cardiovascular demand. Less glute activation than the StairMaster — the posterior chain is less involved. Use for recovery days or joint-sensitive sessions.",
+      position: "same",
+      researchNote: "Elliptical provides cardiovascular training at Zone 2 intensity with lower musculoskeletal stress than stair climbing or running."
+    },
+    {
+      name: "Rowing Machine",
+      equipment: [],
+      tradeoff: "Full-body cardiovascular option. High caloric output. Different muscle emphasis — more back and arms involved. Excellent cross-training option.",
+      position: "same",
+      researchNote: "Rowing at moderate intensity maintains Zone 2 heart rate with high total body muscle recruitment — more upper body involvement than the StairMaster."
+    },
+  ],
+
+  "StairMaster (Optional)": [
+    {
+      name: "Incline Treadmill Walk",
+      equipment: [],
+      tradeoff: "High incline at moderate speed closely mimics the glute and hamstring demand of the StairMaster. Slightly lower caloric output but very similar posterior chain stimulus.",
+      position: "same",
+      researchNote: "Incline walking at 10-15% activates glutes and hamstrings at levels comparable to stair climbing."
+    },
+    {
+      name: "Cycling (Stationary Bike)",
+      equipment: [],
+      tradeoff: "Low impact. Joint-friendly alternative for days with knee or hip discomfort.",
+      position: "same",
+      researchNote: "Stationary cycling maintains cardiovascular stimulus with minimal joint stress."
+    },
+    {
+      name: "Rest",
+      equipment: [],
+      tradeoff: "This session is optional — if you are fatigued or your legs are sore from the week, skipping it and resting is the right call. Recovery is part of the program.",
+      position: "same",
+      researchNote: "Optional sessions exist precisely so recovery takes priority when needed. Skipping one optional session has no meaningful impact on weekly volume."
+    },
+  ],
+
+  "StairMaster (Warm-Up)": [
+    {
+      name: "Incline Treadmill Walk",
+      equipment: [],
+      tradeoff: "5 minutes at 10% incline provides the same warm-up stimulus. Gets blood to the glutes and hamstrings before lifting.",
+      position: "same",
+      researchNote: "Low-intensity incline walking as a warm-up elevates heart rate and activates the posterior chain in preparation for the training session."
+    },
+    {
+      name: "Cycling (Stationary Bike)",
+      equipment: [],
+      tradeoff: "5 minutes at easy resistance. Low impact warm-up that elevates heart rate without pre-fatiguing the legs.",
+      position: "same",
+      researchNote: "Light cycling as a warm-up increases blood flow to working muscles without meaningful energy depletion before the main session."
+    },
+    {
+      name: "Banded Glute Walk",
+      equipment: ["band"],
+      tradeoff: "Swaps cardiovascular warm-up for a glute activation warm-up. Less heart rate elevation but more targeted glute medius activation before lifting.",
+      position: "same",
+      researchNote: "Glute activation drills before lifting improve motor unit recruitment during subsequent compound movements — different warm-up goal but appropriate substitute."
+    },
+  ],
+
+  "Cycle Class": [
+    {
+      name: "Cycling (Stationary Bike)",
+      equipment: [],
+      tradeoff: "Solo session instead of a class. Same cardiovascular stimulus. Maintain the same duration and effort — Zone 2 to Zone 3 depending on the day.",
+      position: "same",
+      researchNote: "Indoor cycling at matched intensity produces identical cardiovascular adaptation regardless of group class or individual session format."
+    },
+    {
+      name: "Rowing Machine",
+      equipment: [],
+      tradeoff: "Full-body alternative. Similar cardiovascular output with additional upper body involvement. Good cross-training option.",
+      position: "same",
+      researchNote: "Rowing at matched RPE maintains the cardiovascular training stimulus with higher upper body muscle recruitment."
+    },
+    {
+      name: "Running (Treadmill)",
+      equipment: [],
+      tradeoff: "Higher impact. Greater caloric output at the same perceived effort. Only if joints tolerate running.",
+      position: "same",
+      researchNote: "Running produces higher VO2 demand than cycling at the same RPE due to greater muscle mass involvement and impact loading."
+    },
+  ],
+
+  // ── ADDITIONAL TRICEP SWAPS ─────────────────────────────────────────────────
+  // Note on Overhead Tricep Extension + Rope Pushdown pairing:
+  // These two are intentionally programmed together. The overhead extension
+  // loads the tricep long head in a LENGTHENED position (stretch-mediated hypertrophy).
+  // The rope pushdown loads all three heads in a SHORTENED/contracted position.
+  // Together they cover the full length-tension curve of the tricep.
+  // This is evidence-based programming, not redundancy.
+
+  "Overhead Tricep Extension (Cable)": [
+    {
+      name: "DB Overhead Tricep Extension",
+      equipment: ["dumbbell"],
+      tradeoff: "Hold one dumbbell overhead with both hands. Same stretched-position loading of the long head. Slightly less constant tension than cable at the top but identical mechanical advantage.",
+      position: "lengthened",
+      researchNote: "Pedrosa et al. (2022): overhead position loads the tricep long head at full stretch — the position that produces superior hypertrophy. Dumbbell version maintains this."
+    },
+    {
+      name: "Lying Tricep Extension (Skullcrusher)",
+      equipment: ["barbell", "bench"],
+      tradeoff: "Lie on a bench and lower a barbell or dumbbells toward the forehead. Still loads the long head in a lengthened position. High absolute load possible. Different angle.",
+      position: "lengthened",
+      researchNote: "Schoenfeld et al. (2021): skullcrusher and overhead extension both train the tricep long head in a lengthened position — functionally equivalent stimuli."
+    },
+    {
+      name: "Tricep Dip (Parallel Bars or Bench)",
+      equipment: ["bench"],
+      tradeoff: "Compound movement — adds chest and front delt involvement. Less isolated than the extension but high tricep load. Avoid if shoulder discomfort exists at the bottom.",
+      position: "mid",
+      researchNote: "Tricep dip produces high overall tricep activation across all three heads. Not a direct substitute for lengthened-position loading but maintains tricep volume."
+    },
+    {
+      name: "Close-Grip Bench Press",
+      equipment: ["barbell", "bench"],
+      tradeoff: "Compound pressing movement. High tricep load with chest involvement. Use when cable is unavailable and you want to maintain pushing volume.",
+      position: "mid",
+      researchNote: "Close-grip bench press is one of the highest-loading tricep exercises available. Loses the isolated lengthened-position stimulus but maintains overall tricep volume."
+    },
+  ],
+
+  // ── ADDITIONAL SHOULDER SWAPS ──────────────────────────────────────────────
+
+  "Rear Delt Fly (Machine or Cable)": [
+    {
+      name: "Face Pull (Cable)",
+      equipment: ["cable"],
+      tradeoff: "Adds external rotation to the rear delt work. Hits rear delt, lower trap, and rotator cuff together. More complete posterior shoulder stimulus.",
+      position: "same",
+      researchNote: "Face pulls train rear delts and external rotators simultaneously — more comprehensive posterior shoulder work than isolated rear delt fly."
+    },
+    {
+      name: "Bent-Over Dumbbell Reverse Fly",
+      equipment: ["dumbbell"],
+      tradeoff: "No machine or cable required. Bent-over position with dumbbells. Same rear delt and mid-trap activation. Requires more stability from the lower back.",
+      position: "same",
+      researchNote: "Rear delt activation is equivalent between machine and free-weight reverse fly. Position requires more postural control with dumbbells."
+    },
+    {
+      name: "Band Pull-Apart",
+      equipment: ["band"],
+      tradeoff: "No machine or cable required. Band held in front and pulled apart. Primarily rear delt and mid-trap. Lower peak load — increase reps to 20-25.",
+      position: "same",
+      researchNote: "Band pull-apart activates rear delts and scapular retractors effectively at light to moderate loads — appropriate as a swap when no cable or machine is available."
+    },
+  ],
+
+  // ── ADDITIONAL BACK SWAPS ──────────────────────────────────────────────────
+
+  "Chest-Supported Row (Machine or Dumbbell)": [
+    {
+      name: "Seated Cable Row (Neutral Grip)",
+      equipment: ["cable"],
+      tradeoff: "Cable provides constant tension. No chest support — requires more postural stability. Same mid-back and rhomboid activation.",
+      position: "same",
+      researchNote: "Mid-back activation is equivalent between supported and unsupported rows at matched loads. Unsupported version adds postural demand."
+    },
+    {
+      name: "Single-Arm Dumbbell Row",
+      equipment: ["dumbbell", "bench"],
+      tradeoff: "Unilateral. Knee on bench for support — reduces the postural demand of the chest-supported version. High load possible. Ensures left-right balance.",
+      position: "same",
+      researchNote: "Unilateral dumbbell row produces equivalent lat and mid-back activation to bilateral cable rows while identifying and correcting side-to-side strength imbalances."
+    },
+  ],
+
+  "Pull-Up (or Assisted)": [
+    {
+      name: "Lat Pulldown (Wide Overhand)",
+      equipment: ["cable"],
+      tradeoff: "Exact mechanical substitute. Same lat emphasis, same wide grip. Allows precise load selection — more appropriate for progressing toward unassisted pull-ups.",
+      position: "lengthened",
+      researchNote: "Lat pulldown and pull-up produce nearly identical lat activation patterns. Lat pulldown is the standard regression when bodyweight pull-ups are not yet achievable."
+    },
+    {
+      name: "Assisted Pull-Up Machine",
+      equipment: ["machine"],
+      tradeoff: "Same movement with counterweight assistance. Maintains the pull-up motor pattern while reducing the load. Best progression tool toward unassisted pull-ups.",
+      position: "lengthened",
+      researchNote: "Assisted pull-up maintains the exact pull-up movement pattern with adjustable assistance — superior to lat pulldown for developing pull-up strength specifically."
+    },
+    {
+      name: "Single-Arm Dumbbell Row",
+      equipment: ["dumbbell", "bench"],
+      tradeoff: "Different position but equivalent lat loading. Use when no pull-up bar or lat pulldown is available.",
+      position: "same",
+      researchNote: "Unilateral rowing produces high lat activation comparable to vertical pulling — appropriate substitute when vertical pulling equipment is unavailable."
+    },
+  ],
+
+  // ── ADDITIONAL LEG SWAPS ───────────────────────────────────────────────────
+
+  "Sumo Squat (Dumbbell or Barbell)": [
+    {
+      name: "Bulgarian Split Squat (Dumbbell)",
+      equipment: ["dumbbell", "bench"],
+      tradeoff: "Unilateral version. Higher glute and VMO demand per side. Eliminates bilateral compensation. More challenging — reduce load significantly.",
+      position: "lengthened",
+      researchNote: "Bulgarian split squat produces higher unilateral glute and quad activation than bilateral squat variations due to greater hip flexion depth and single-leg demand."
+    },
+    {
+      name: "Leg Press",
+      equipment: ["machine"],
+      tradeoff: "Seated compound push. Same quad and glute loading without spinal compression. Use when barbell squat feels uncomfortable or is contraindicated.",
+      position: "same",
+      researchNote: "Leg press produces equivalent quad and glute activation to squats at matched loads. Removes spinal loading — appropriate for lower back sensitive clients."
+    },
+    {
+      name: "Goblet Squat",
+      equipment: ["dumbbell"],
+      tradeoff: "Dumbbell held at chest. Easier to maintain upright torso. Lower absolute load than barbell sumo but identical movement pattern and muscle activation.",
+      position: "same",
+      researchNote: "Goblet squat maintains quad and glute activation of the squat pattern while front-loading the weight encourages more upright torso position."
+    },
+  ],
+
+  "Nordic Hamstring Curl": [
+    {
+      name: "Lying Leg Curl (Machine)",
+      equipment: ["machine"],
+      tradeoff: "Machine version. Loads hamstrings in a shortened position rather than the lengthened eccentric of the Nordic. Less effective for hamstring hypertrophy but much easier.",
+      position: "shortened",
+      researchNote: "Bourne et al. (2017): Nordic curl produces significantly greater hamstring hypertrophy than leg curl due to high eccentric load in a lengthened position."
+    },
+    {
+      name: "Romanian Deadlift (Dumbbell)",
+      equipment: ["dumbbell"],
+      tradeoff: "Hip hinge pattern. Loads hamstrings in a lengthened position like the Nordic. More practical — can be loaded progressively with dumbbells.",
+      position: "lengthened",
+      researchNote: "RDL loads hamstrings in a lengthened position similar to the Nordic curl. Both are stretch-mediated loading patterns — comparable hypertrophy stimulus."
+    },
+  ],
+
+  "Hip Abduction (Machine)": [
+    {
+      name: "Cable Hip Abduction (Standing)",
+      equipment: ["cable"],
+      tradeoff: "Cable version in standing position. Same glute medius loading with constant tension. Adds stability demand from standing.",
+      position: "mid",
+      researchNote: "Distefano et al. (2009): standing cable abduction produces high glute medius activation comparable to machine abduction."
+    },
+    {
+      name: "Banded Clamshell",
+      equipment: ["band"],
+      tradeoff: "Lying version with band resistance. No machine or cable required. Effective glute medius activation at lighter loads.",
+      position: "mid",
+      researchNote: "Clamshell with band activates the glute medius effectively as an isolation exercise — appropriate when hip abduction machine is unavailable."
+    },
+  ],
+
 };
 
 // ── Helper ─────────────────────────────────────────────────────────────────────

@@ -1216,11 +1216,16 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
                         </div>
                         {ex.muscles && <div style={{ fontSize: "10px", color: "#bbb", marginTop: "4px" }}>{ex.muscles.join(" · ")}</div>}
                       </div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: "4px", flexShrink: 0 }}>
-                        <button onClick={() => setShowLogger(p => ({ ...p, [`cf-${ex.name}`]: !p[`cf-${ex.name}`] }))} style={{ background: logOpen ? "#1a1a1a" : "transparent", color: logOpen ? "#fff" : "#555", border: "1px solid #d0d0d0", borderRadius: "5px", padding: "4px 8px", fontSize: "10px", cursor: "pointer", ...F }}>
+                      <div style={{ display: "flex", flexDirection: "row", gap: "5px", flexShrink: 0, alignItems: "center" }}>
+                        <button onClick={() => setShowLogger(p => ({ ...p, [`cf-${ex.name}`]: !p[`cf-${ex.name}`] }))} style={{ background: logOpen ? "#1a1a1a" : "transparent", color: logOpen ? "#fff" : "#555", border: "1px solid #d0d0d0", borderRadius: "5px", padding: "5px 10px", fontSize: "10px", cursor: "pointer", ...F }}>
                           {logOpen ? "Hide" : "Log"}
                         </button>
-                        <button onClick={() => setExpandedEx(isOpen ? null : `cf-${i}`)} style={{ background: "none", border: "none", color: "#ccc", fontSize: "12px", cursor: "pointer", padding: "4px 0", textAlign: "right" }}>
+                        {getSwaps(ex.name).length > 0 && (
+                          <button onClick={() => setActiveSwapModal(ex)} title="Swap exercise" style={{ background: "none", border: "1px solid #e0e0e0", borderRadius: "5px", color: "#aaa", fontSize: "12px", cursor: "pointer", padding: "5px 7px", lineHeight: 1 }}>
+                            ⇄
+                          </button>
+                        )}
+                        <button onClick={() => setExpandedEx(isOpen ? null : `cf-${i}`)} style={{ background: "none", border: "none", color: "#ccc", fontSize: "12px", cursor: "pointer", padding: "4px 2px", lineHeight: 1 }}>
                           {isOpen ? "▲" : "▼"}
                         </button>
                       </div>
@@ -1250,29 +1255,46 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
             </div>
           )}
 
-          {/* Post-lift cardio — swappable */}
-          {current.cardio && current.type !== "rest" && (
-            <div style={{ marginTop: "12px" }}>
-            <div style={{ padding: "6px 16px 4px", display: "flex", alignItems: "center", gap: "8px" }}>
-              <div style={{ height: "1px", flex: 1, background: "#e8e8e8" }} />
-              <span style={{ fontSize: "8px", fontWeight: "700", letterSpacing: "0.2em", textTransform: "uppercase", color: "#999" }}>Cardio</span>
-              <div style={{ height: "1px", flex: 1, background: "#e8e8e8" }} />
-            </div>
-            <CardioSwapCard
-              sessionType={current.type}
-              cardio={current.cardio}
-              sessionKey={sessionKey}
-              onLog={(activity) => {
-                // auto-log to activity log
-                try {
-                  const existing = JSON.parse(localStorage.getItem("activity_log_v1") || "[]");
-                  const entry = { id: Date.now(), type: activity.type, duration: activity.duration, date: sessionDate, intensity: "moderate", notes: `${current?.focus} — post-lift cardio`, autoLogged: true };
-                  localStorage.setItem("activity_log_v1", JSON.stringify([entry, ...existing]));
-                } catch(e) {}
-              }}
-            />
-            </div>
-          )}
+          {/* Post-lift cardio — same card format as exercises */}
+          {current.cardio && current.type !== "rest" && (() => {
+            const cardio = current.cardio;
+            const cardioEx = { name: cardio.name, sets: "1", reps: cardio.protocol, rest: "—", bodyweight: true, muscles: ["Cardio"], category: "Cardio" };
+            const cardioKey = `cf-${cardio.name}`;
+            const logOpen = showLogger[cardioKey];
+            const isOpen = expandedEx === `cardio-0`;
+            const cardioSwaps = getSwaps(cardio.name);
+            return (
+              <div style={{ marginTop: "4px" }}>
+                <div style={{ padding: "6px 16px 4px", display: "flex", alignItems: "center", gap: "8px" }}>
+                  <div style={{ height: "1px", flex: 1, background: "#e8e8e8" }} />
+                  <span style={{ fontSize: "8px", fontWeight: "700", letterSpacing: "0.2em", textTransform: "uppercase", color: "#999" }}>Cardio</span>
+                  <div style={{ height: "1px", flex: 1, background: "#e8e8e8" }} />
+                </div>
+                <div style={{ borderBottom: "1px solid #ebebeb", background: "#fff" }}>
+                  <div style={{ padding: "11px 16px", display: "flex", gap: "11px", alignItems: "flex-start" }}>
+                    <div style={{ width: "24px", height: "24px", borderRadius: "50%", background: "#4a8fff22", color: "#4a8fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "13px", flexShrink: 0, marginTop: "1px" }}>
+                      🏃
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: "13px", fontWeight: "600", marginBottom: "4px" }}>{cardio.name}</div>
+                      <div style={{ display: "flex", gap: "5px", flexWrap: "wrap" }}>
+                        <span style={{ fontSize: "10px", background: "#eff6ff", color: "#2563a8", padding: "2px 8px", borderRadius: "20px", fontWeight: "600" }}>{cardio.protocol}</span>
+                        {cardio.zone && <span style={{ fontSize: "9px", color: "#999", padding: "2px 7px", background: "#f0f0f0", borderRadius: "20px" }}>{cardio.zone}</span>}
+                      </div>
+                      {cardio.feel && <div style={{ fontSize: "11px", color: "#777", marginTop: "5px", lineHeight: "1.5", fontStyle: "italic" }}>"{cardio.feel}"</div>}
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "row", gap: "5px", flexShrink: 0, alignItems: "center" }}>
+                      {cardioSwaps.length > 0 && (
+                        <button onClick={() => setActiveSwapModal(cardioEx)} title="Swap cardio" style={{ background: "none", border: "1px solid #e0e0e0", borderRadius: "5px", color: "#aaa", fontSize: "12px", cursor: "pointer", padding: "5px 7px", lineHeight: 1 }}>
+                          ⇄
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Overload suggestions */}
           <OverloadSuggestions
