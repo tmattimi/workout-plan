@@ -652,161 +652,164 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
       </div>
 
       {/* ── OVERVIEW TAB ── */}
-      {activeTab === 'overview' && (
-        <div style={{ padding: '16px 16px 60px' }}>
-          {!hasData ? (
-            <div style={{ textAlign: 'center', padding: '60px 20px', color: '#aaa' }}>
-              <div style={{ fontSize: 11, letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>No data yet</div>
-              <div style={{ fontSize: 14, ...F, lineHeight: 1.7 }}>Log your first session to see your analytics here.</div>
-            </div>
-          ) : (
-            <>
-              {/* Goals summary */}
-          {activeGoals.length > 0 && (
-            <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.18em', color: '#999', marginBottom: 10 }}>Active Goals</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {activeGoals.slice(0, 5).map((goal, i) => {
-                  const currentVal = goal.current_value ?? goal.currentValue ?? 0;
-                  const targetVal = goal.target_value ?? goal.targetValue;
-                  const lowerIsBetter = goal.type === 'bodyweight' || goal.type === 'body_fat' || goal.type === 'measurement';
-                  const startVal = goal.start_value || currentVal;
-                  let pct = null;
-                  if (targetVal && startVal !== undefined) {
-                    if (lowerIsBetter && startVal > targetVal) {
-                      pct = Math.min(100, Math.max(0, Math.round(((startVal - currentVal) / (startVal - targetVal)) * 100)));
-                    } else if (!lowerIsBetter) {
-                      pct = Math.min(100, Math.round((currentVal / targetVal) * 100));
-                    }
-                  }
-                  const accentColor = pct >= 100 ? '#16a34a' : pct >= 50 ? '#2563a8' : '#c47a0a';
-                  return (
-                    <div key={goal.id || i} style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: 9, padding: '12px 14px', borderLeft: `3px solid ${accentColor}` }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: targetVal ? 8 : 0 }}>
-                        <div>
-                          <div style={{ fontSize: 12, fontWeight: 600, color: '#111' }}>{goal.name}</div>
-                          {goal.target_date && <div style={{ fontSize: 10, color: '#bbb', marginTop: 2 }}>By {goal.target_date}</div>}
+      {activeTab === 'overview' && (() => {
+        // Current streak
+        let streak = 0;
+        const today = new Date().toISOString().slice(0,10);
+        for (let i = 0; i < 60; i++) {
+          const d = new Date(); d.setDate(d.getDate() - i);
+          const key = d.toISOString().slice(0,10);
+          if (sessionDates.includes(key)) { streak++; }
+          else if (i > 0) break;
+        }
+
+        // Sessions this month vs last month
+        const thisMonth = new Date().toISOString().slice(0,7);
+        const lastMonthDate = new Date(); lastMonthDate.setMonth(lastMonthDate.getMonth()-1);
+        const lastMonth = lastMonthDate.toISOString().slice(0,7);
+        const sessionsThisMonth = sessionDates.filter(d => d.startsWith(thisMonth)).length;
+        const sessionsLastMonth = sessionDates.filter(d => d.startsWith(lastMonth)).length;
+        const monthDiff = sessionsThisMonth - sessionsLastMonth;
+
+        return (
+          <div style={{ background: '#111', minHeight: '100%', padding: '16px 16px 80px' }}>
+
+            {!hasData ? (
+              <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+                <div style={{ fontSize: 11, letterSpacing: '.2em', textTransform: 'uppercase', color: '#555', marginBottom: 12 }}>No sessions logged yet</div>
+                <div style={{ fontSize: 14, color: '#666', lineHeight: 1.7, ...F }}>Complete your first session to see your progress here.</div>
+              </div>
+            ) : (
+              <>
+                {/* ── CONSISTENCY ─────────────────────────────────── */}
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: '8px', letterSpacing: '.22em', textTransform: 'uppercase', color: '#444', marginBottom: 12 }}>Consistency</div>
+
+                  {/* Stats row */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 14 }}>
+                    {[
+                      { label: 'Streak', value: streak, unit: streak === 1 ? 'day' : 'days' },
+                      { label: 'This month', value: sessionsThisMonth, unit: 'sessions', note: monthDiff !== 0 ? `${monthDiff > 0 ? '+' : ''}${monthDiff} vs last` : null, up: monthDiff > 0 },
+                      { label: 'Total', value: sessionDates.length, unit: 'sessions' },
+                    ].map(({ label, value, unit, note, up }) => (
+                      <div key={label} style={{ background: '#1c1c1e', borderRadius: 10, padding: '14px 12px' }}>
+                        <div style={{ fontSize: 26, fontWeight: 700, color: '#f5f5f7', lineHeight: 1, marginBottom: 3 }}>{value}</div>
+                        <div style={{ fontSize: 9, color: '#555', textTransform: 'uppercase', letterSpacing: '.1em' }}>{unit}</div>
+                        <div style={{ fontSize: 8, color: '#444', marginTop: 2, letterSpacing: '.06em' }}>{label}</div>
+                        {note && <div style={{ fontSize: 8, color: up ? '#34c759' : '#ff453a', marginTop: 4 }}>{note}</div>}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* 30-day dot grid */}
+                  <div style={{ background: '#1c1c1e', borderRadius: 10, padding: '14px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(10,1fr)', gap: 4, marginBottom: 8 }}>
+                      {Array.from({ length: 30 }, (_, i) => {
+                        const d = new Date(); d.setDate(d.getDate() - (29 - i));
+                        const key = d.toISOString().slice(0,10);
+                        const active = sessionDates.includes(key);
+                        const isToday = key === today;
+                        return (
+                          <div key={i} title={key} style={{
+                            aspectRatio: '1', borderRadius: 3,
+                            background: active ? '#f5f5f7' : '#2c2c2e',
+                            outline: isToday ? '1px solid #555' : 'none',
+                          }} />
+                        );
+                      })}
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: 8, color: '#444' }}>30 days ago</span>
+                      <span style={{ fontSize: 8, color: '#444' }}>Today</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── KEY NUMBERS ─────────────────────────────────── */}
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: '8px', letterSpacing: '.22em', textTransform: 'uppercase', color: '#444', marginBottom: 12 }}>Key numbers</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: latestWeight ? '1fr 1fr' : '1fr', gap: 8 }}>
+                    {/* Sessions this week */}
+                    <div style={{ background: '#1c1c1e', borderRadius: 10, padding: '14px 12px' }}>
+                      <div style={{ fontSize: 9, color: '#555', textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 6 }}>This week</div>
+                      <div style={{ fontSize: 30, fontWeight: 700, color: '#f5f5f7', lineHeight: 1 }}>{sessionsPerWeek}</div>
+                      <div style={{ fontSize: 9, color: '#444', marginTop: 3 }}>sessions / week avg</div>
+                    </div>
+
+                    {/* Body weight */}
+                    {latestWeight && (
+                      <div style={{ background: '#1c1c1e', borderRadius: 10, padding: '14px 12px' }}>
+                        <div style={{ fontSize: 9, color: '#555', textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 6 }}>Weight</div>
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                          <div style={{ fontSize: 30, fontWeight: 700, color: '#f5f5f7', lineHeight: 1 }}>{latestWeight}</div>
+                          <div style={{ fontSize: 11, color: '#555' }}>lbs</div>
                         </div>
-                        {targetVal && pct !== null && (
-                          <div style={{ fontSize: 13, fontWeight: 700, color: accentColor }}>{pct}%</div>
+                        {weightChange && (
+                          <div style={{ fontSize: 9, marginTop: 3, color: parseFloat(weightChange) < 0 ? '#34c759' : parseFloat(weightChange) > 0 ? '#ff453a' : '#555' }}>
+                            {parseFloat(weightChange) > 0 ? '+' : ''}{weightChange} lbs since start
+                          </div>
                         )}
                       </div>
-                      {targetVal && pct !== null && (
-                        <>
-                          <div style={{ height: 6, background: '#f0f0f0', borderRadius: 3, overflow: 'hidden', marginBottom: 4 }}>
-                            <div style={{ height: '100%', width: `${pct}%`, background: accentColor, borderRadius: 3, transition: 'width 0.6s ease' }} />
+                    )}
+                  </div>
+                </div>
+
+                {/* ── GOALS ───────────────────────────────────────── */}
+                <div>
+                  <div style={{ fontSize: '8px', letterSpacing: '.22em', textTransform: 'uppercase', color: '#444', marginBottom: 12 }}>Goals</div>
+                  {activeGoals.length === 0 ? (
+                    <div style={{ background: '#1c1c1e', borderRadius: 10, padding: '20px 16px', textAlign: 'center' }}>
+                      <div style={{ fontSize: 11, color: '#555', lineHeight: 1.7, ...F }}>No active goals set. Add one in the Goals tab to track progress here.</div>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {activeGoals.slice(0,4).map((goal, i) => {
+                        const currentVal = goal.current_value ?? goal.currentValue ?? 0;
+                        const targetVal = goal.target_value ?? goal.targetValue;
+                        const lowerIsBetter = goal.type === 'bodyweight' || goal.type === 'body_fat' || goal.type === 'measurement';
+                        const startVal = goal.start_value || currentVal;
+                        let pct = null;
+                        if (targetVal && startVal !== undefined) {
+                          if (lowerIsBetter && startVal > targetVal) {
+                            pct = Math.min(100, Math.max(0, Math.round(((startVal - currentVal) / (startVal - targetVal)) * 100)));
+                          } else if (!lowerIsBetter) {
+                            pct = Math.min(100, Math.round((currentVal / targetVal) * 100));
+                          }
+                        }
+                        const barColor = pct >= 100 ? '#34c759' : pct >= 50 ? '#f5f5f7' : '#636366';
+                        return (
+                          <div key={goal.id || i} style={{ background: '#1c1c1e', borderRadius: 10, padding: '14px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: targetVal ? 10 : 0 }}>
+                              <div>
+                                <div style={{ fontSize: 13, fontWeight: 600, color: '#f5f5f7', marginBottom: 2 }}>{goal.name}</div>
+                                {goal.target_date && <div style={{ fontSize: 9, color: '#555' }}>By {goal.target_date}</div>}
+                              </div>
+                              {pct !== null && (
+                                <div style={{ fontSize: 14, fontWeight: 700, color: barColor }}>{pct}%</div>
+                              )}
+                            </div>
+                            {targetVal && pct !== null && (
+                              <>
+                                <div style={{ height: 4, background: '#2c2c2e', borderRadius: 2, overflow: 'hidden', marginBottom: 6 }}>
+                                  <div style={{ height: '100%', width: `${pct}%`, background: barColor, borderRadius: 2, transition: 'width 0.6s ease' }} />
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: '#555' }}>
+                                  <span>{currentVal} {goal.unit}</span>
+                                  <span>Target: {targetVal} {goal.unit}</span>
+                                </div>
+                              </>
+                            )}
                           </div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#aaa' }}>
-                            <span>Current: {currentVal} {goal.unit}</span>
-                            <span>Target: {targetVal} {goal.unit}</span>
-                          </div>
-                        </>
-                      )}
+                        );
+                      })}
                     </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Key stats row */}
-              <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.18em', color: '#999', marginBottom: 10 }}>At a Glance</div>
-              <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-                <StatCard label="Sessions / wk" value={sessionsPerWeek} sub="last 8 weeks" />
-                <StatCard label="Weight" value={latestWeight ? `${latestWeight}` : '—'} sub={weightChange ? `${weightChange > 0 ? '+' : ''}${weightChange} lbs total` : 'lbs'} trend={weightChange ? parseFloat(weightChange) : undefined} />
-                <StatCard label="PRs logged" value={prs.length} sub="all time" />
-              </div>
-
-              {/* Weekly volume trend */}
-              {weeklyVolume.length >= 3 && (
-                <div style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: 10, padding: '14px', marginBottom: 16 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-                    <div>
-                      <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.14em', color: '#aaa', marginBottom: 2 }}>Weekly Training Volume</div>
-                      <div style={{ fontSize: 11, color: '#888' }}>Total weight lifted per week (lbs)</div>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 18, fontWeight: 700, ...F }}>{weeklyVolume[weeklyVolume.length - 1]?.value.toLocaleString()}</div>
-                      <div style={{ fontSize: 10, color: '#aaa' }}>this week</div>
-                    </div>
-                  </div>
-                  <Sparkline data={weeklyVolume} color="#2563a8" height={55} fillArea />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-                    <span style={{ fontSize: 9, color: '#bbb' }}>{weeklyVolume[0]?.label}</span>
-                    <span style={{ fontSize: 9, color: '#bbb' }}>{weeklyVolume[weeklyVolume.length - 1]?.label}</span>
-                  </div>
+                  )}
                 </div>
-              )}
-
-              {/* Muscle volume breakdown */}
-              {muscleVolumeBreakdown.length > 0 && (
-                <div style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: 10, padding: '14px', marginBottom: 16 }}>
-                  <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.14em', color: '#aaa', marginBottom: 4 }}>Training Distribution</div>
-                  <div style={{ fontSize: 11, color: '#888', marginBottom: 12 }}>Where your volume is going by muscle group</div>
-                  {muscleVolumeBreakdown.map(m => (
-                    <HBar key={m.group} label={m.label} value={m.vol} max={muscleVolumeBreakdown[0].vol} color={m.color} sublabel={`${m.pct}%`} />
-                  ))}
-                </div>
-              )}
-
-              {/* Session streak */}
-              {sessionDates.length > 0 && (
-                <div style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: 10, padding: '14px', marginBottom: 16 }}>
-                  <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.14em', color: '#aaa', marginBottom: 10 }}>Last 30 Days</div>
-                  <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                    {Array.from({ length: 30 }, (_, i) => {
-                      const d = new Date();
-                      d.setDate(d.getDate() - (29 - i));
-                      const key = d.toISOString().slice(0, 10);
-                      const hasSession = sessionDates.includes(key);
-                      return (
-                        <div key={i} title={key} style={{ width: 'calc((100% - 116px) / 30)', minWidth: 8, aspectRatio: '1', borderRadius: 2, background: hasSession ? '#111' : '#f0f0f0' }} />
-                      );
-                    })}
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
-                    <span style={{ fontSize: 9, color: '#bbb' }}>30 days ago</span>
-                    <span style={{ fontSize: 9, color: '#bbb' }}>{sessionDates.filter(d => { const diff = (new Date() - new Date(d)) / (1000*60*60*24); return diff <= 30; }).length} sessions</span>
-                    <span style={{ fontSize: 9, color: '#bbb' }}>Today</span>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-
-          {/* Recovery score */}
-          {recoveryScore && (
-            <div style={{ marginTop: 16, paddingBottom: 8 }}>
-              <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.18em', color: '#999', marginBottom: 10 }}>Today's Readiness</div>
-              <div style={{ background: '#fff', borderLeft: `4px solid ${recoveryScore.color}`, border: '1px solid #e8e8e8', borderRadius: 10, padding: '16px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: '#111' }}>Recovery Score</div>
-                    <div style={{ fontSize: 11, color: '#888', marginTop: 2 }}>{recoveryScore.dataPoints} indicator{recoveryScore.dataPoints !== 1 ? 's' : ''} logged today</div>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: 38, fontWeight: 700, color: recoveryScore.color, ...F, lineHeight: 1 }}>{recoveryScore.score}</div>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: recoveryScore.color }}>{recoveryScore.label}</div>
-                  </div>
-                </div>
-                <div style={{ height: 8, background: '#f0f0f0', borderRadius: 4, overflow: 'hidden', marginBottom: 10 }}>
-                  <div style={{ height: '100%', width: `${recoveryScore.score}%`, background: recoveryScore.color, borderRadius: 4, transition: 'width 0.8s ease' }} />
-                </div>
-                <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
-                  {recoveryScore.factors.map((f, i) => (
-                    <div key={i} style={{ background: f.status === 'good' ? 'rgba(22,163,74,0.08)' : f.status === 'ok' ? 'rgba(37,99,168,0.08)' : 'rgba(185,28,28,0.08)', borderRadius: 20, padding: '3px 10px', display: 'flex', gap: 5, alignItems: 'center' }}>
-                      <span style={{ fontSize: 10, color: f.status === 'good' ? '#16a34a' : f.status === 'ok' ? '#2563a8' : '#b91c1c' }}>{f.label}</span>
-                      <span style={{ fontSize: 10, fontWeight: 600, color: '#555' }}>{f.value}</span>
-                    </div>
-                  ))}
-                </div>
-                <div style={{ fontSize: 11, color: '#666', lineHeight: 1.6, ...F }}>{recoveryScore.advice}</div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
+              </>
+            )}
+          </div>
+        );
+      })()}
       {/* ── STRENGTH TAB ── */}
       {activeTab === 'strength' && (
         <div style={{ padding: '16px 16px 60px' }}>
