@@ -383,7 +383,7 @@ export const schedule = [
       name: "Cycle Class",
       protocol: "45-minute class. Stay in Zone 2–3 for the base intervals, push to Zone 4–5 on sprints, recover fully between efforts. Log it as 45 min.",
       zone: "Zone 2–4",
-      feel: "This is your dedicated cardio day and it counts as lower body volume. The sprint intervals are where the metabolic benefit comes from for recomp — don't hold back on those. Recover fully between efforts so you can actually push the next one."
+      feel: "This is your cardio day. Stay comfortable in Zone 2 through the base intervals and actually push the sprints — that's where the metabolic work happens. Recover fully between efforts so each sprint is worth something."
     },
     exercises: [],
     core_finisher: [],

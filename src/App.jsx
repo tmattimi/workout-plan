@@ -910,11 +910,18 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
     setShowMonthlyPrompt(false);
   }
 
-  const completedExercises = current?.exercises?.filter(ex => {
-    const exLog = logs[`${sessionKey}__${ex.name}`];
-    return exLog?.sets?.some(s => s.done);
-  }).length || 0;
-  const trackableCount = current?.exercises?.filter(ex => ex.category !== "Recovery" && ex.category !== "Mobility").length || 0;
+  // For cardio-only days, treat the cardio block as the trackable item
+  const isCardioOnly = current?.type === "cardio" && (!current?.exercises || current.exercises.length === 0);
+  const cardioLogKey = current?.cardio ? `${sessionKey}__${current.cardio.name}` : null;
+  const cardioDone = isCardioOnly && cardioLogKey && logs[cardioLogKey]?.sets?.some(s => s.done);
+
+  const completedExercises = isCardioOnly
+    ? (cardioDone ? 1 : 0)
+    : (current?.exercises?.filter(ex => {
+        const exLog = logs[`${sessionKey}__${ex.name}`];
+        return exLog?.sets?.some(s => s.done);
+      }).length || 0);
+  const trackableCount = isCardioOnly ? 1 : (current?.exercises?.filter(ex => ex.category !== "Recovery" && ex.category !== "Mobility").length || 0);
 
   const tabs = [
     ["plan","Plan"],
@@ -1369,21 +1376,42 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
                 </div>
                 <div style={{ borderBottom: "1px solid #ebebeb", background: "#fff" }}>
                   <div style={{ padding: "11px 16px", display: "flex", gap: "11px", alignItems: "flex-start" }}>
-                    <div style={{ width: "24px", height: "24px", borderRadius: "50%", background: "#4a8fff22", color: "#4a8fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "13px", flexShrink: 0, marginTop: "1px" }}>
-                      🏃
-                    </div>
+                    <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#4a8fff", flexShrink: 0, marginTop: "9px" }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: "13px", fontWeight: "600", marginBottom: "4px" }}>{cardio.name}</div>
                       <div style={{ display: "flex", gap: "5px", flexWrap: "wrap" }}>
                         <span style={{ fontSize: "10px", background: "#eff6ff", color: "#2563a8", padding: "2px 8px", borderRadius: "20px", fontWeight: "600" }}>{cardio.protocol}</span>
                         {cardio.zone && <span style={{ fontSize: "9px", color: "#999", padding: "2px 7px", background: "#f0f0f0", borderRadius: "20px" }}>{cardio.zone}</span>}
                       </div>
-                      {cardio.feel && <div style={{ fontSize: "11px", color: "#777", marginTop: "5px", lineHeight: "1.5", fontStyle: "italic" }}>"{cardio.feel}"</div>}
+                      {cardio.feel && <div style={{ fontSize: "11px", color: "#777", marginTop: "5px", lineHeight: "1.5", ...F }}>{cardio.feel}</div>}
                     </div>
                     <div style={{ display: "flex", flexDirection: "row", gap: "5px", flexShrink: 0, alignItems: "center" }}>
                       {cardioSwaps.length > 0 && (
                         <button onClick={() => setActiveSwapModal(cardioEx)} title="Swap cardio" style={{ background: "none", border: "1px solid #e0e0e0", borderRadius: "5px", color: "#aaa", fontSize: "12px", cursor: "pointer", padding: "5px 7px", lineHeight: 1 }}>
                           ⇄
+                        </button>
+                      )}
+                      {isCardioOnly && (
+                        <button
+                          onClick={() => {
+                            const key = cardioLogKey;
+                            const existing = logs[key] || { sets: [] };
+                            const already = existing.sets?.some(s => s.done);
+                            const updated = {
+                              ...logs,
+                              [key]: { ...existing, sets: already ? [] : [{ done: true, weight: null, reps: null, isPR: false }] }
+                            };
+                            handleLogsChange(updated);
+                          }}
+                          style={{
+                            background: cardioDone ? "#2d7a1e" : "transparent",
+                            color: cardioDone ? "#fff" : "#555",
+                            border: `1px solid ${cardioDone ? "#2d7a1e" : "#d0d0d0"}`,
+                            borderRadius: "5px", padding: "5px 10px", fontSize: "10px",
+                            cursor: "pointer", ...F,
+                          }}
+                        >
+                          {cardioDone ? "Done" : "Log"}
                         </button>
                       )}
                     </div>
