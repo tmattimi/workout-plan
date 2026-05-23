@@ -331,82 +331,470 @@ function PhotosSection() {
 }
 
 // ── Body scan section ─────────────────────────────────────────────────────────
-function BodyScanSection() {
+
+// ── Weight tracking section ───────────────────────────────────────────────────
+function WeightSection({ clientId }) {
+  const [healthData, setHealthData] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("daily_health_v1") || "{}"); } catch { return {}; }
+  });
+  const [input, setInput] = useState("");
+  const [editDate, setEditDate] = useState(today());
+  const [saved, setSaved] = useState(false);
+
+  // Load from Supabase
+  useEffect(() => {
+    if (!clientId) return;
+    import("../lib/supabase").then(async ({ getHealthLogs }) => {
+      const { data } = await getHealthLogs(clientId, 90);
+      if (data?.length > 0) {
+        const byDate = {};
+        data.forEach(row => { if (row.weight_lbs) byDate[row.log_date] = { ...byDate[row.log_date], weight_lbs: row.weight_lbs }; });
+        setHealthData(prev => ({ ...prev, ...byDate }));
+      }
+    });
+  }, [clientId]);
+
+  // Sorted weight history
+  const history = Object.entries(healthData)
+    .filter(([, d]) => d.weight_lbs)
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([date, d]) => ({ date, value: parseFloat(d.weight_lbs) }));
+
+  const current = healthData[editDate]?.weight_lbs || "";
+  const latest = history[history.length - 1];
+  const startWeight = history[0];
+  const totalChange = history.length >= 2 ? (latest.value - startWeight.value).toFixed(1) : null;
+  const changeColor = totalChange < 0 ? "#34c759" : totalChange > 0 ? "#e55" : "#aaa";
+
+  function save() {
+    const val = parseFloat(input);
+    if (isNaN(val) || val < 50 || val > 600) return;
+    const updated = { ...healthData, [editDate]: { ...(healthData[editDate] || {}), weight_lbs: val } };
+    setHealthData(updated);
+    localStorage.setItem("daily_health_v1", JSON.stringify(updated));
+    if (clientId) {
+      import("../lib/supabase").then(({ upsertHealthLog }) => upsertHealthLog(clientId, editDate, { weight_lbs: val }));
+    }
+    setInput("");
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  }
+
+  function remove(date) {
+    const updated = { ...healthData };
+    if (updated[date]) { delete updated[date].weight_lbs; if (!Object.keys(updated[date]).filter(k => k !== "weight_lbs").length) delete updated[date]; }
+    setHealthData(updated);
+    localStorage.setItem("daily_health_v1", JSON.stringify(updated));
+  }
+
+  // Sparkline
+  const vals = history.map(h => h.value);
+  const min = vals.length ? Math.min(...vals) : 0;
+  const max = vals.length ? Math.max(...vals) : 0;
+  const range = max - min || 1;
+  const W = 100; const H = 60;
+  const sparkPts = vals.map((v, i) => `${(i/(Math.max(vals.length-1,1)))*W},${H - ((v-min)/range)*(H-8) - 4}`).join(" ");
+
+  return (
+    <div style={{ paddingBottom: "40px" }}>
+      {/* Header stat */}
+      <div style={{ marginBottom: "20px" }}>
+        {latest ? (
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "16px" }}>
+            <div>
+              <div style={{ fontSize: "9px", letterSpacing: "0.15em", textTransform: "uppercase", color: "#bbb", marginBottom: "4px" }}>Current weight</div>
+              <div style={{ display: "flex", alignItems: "baseline", gap: "5px" }}>
+                <span style={{ fontSize: "36px", fontWeight: "700", color: "#111", lineHeight: 1, letterSpacing: "-1px" }}>{latest.value}</span>
+                <span style={{ fontSize: "13px", color: "#bbb" }}>lbs</span>
+              </div>
+              <div style={{ fontSize: "10px", color: "#bbb", marginTop: "3px" }}>
+                {new Date(latest.date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+              </div>
+            </div>
+            {totalChange !== null && (
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontSize: "22px", fontWeight: "700", color: changeColor, letterSpacing: "-0.5px" }}>
+                  {parseFloat(totalChange) > 0 ? "+" : ""}{totalChange}
+                </div>
+                <div style={{ fontSize: "9px", color: "#bbb" }}>lbs total</div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div style={{ color: "#bbb", fontSize: "13px", marginBottom: "16px", ...F }}>No weight logged yet.</div>
+        )}
+
+        {/* Sparkline */}
+        {history.length >= 2 && (
+          <div style={{ marginBottom: "20px" }}>
+            <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} preserveAspectRatio="none" style={{ display: "block" }}>
+              {/* Goal line if set — can add later */}
+              <polyline points={sparkPts} fill="none" stroke="#d0d0d0" strokeWidth="1" />
+              <polyline points={sparkPts} fill="none" stroke="#1a1a1a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              {history.map((h, i) => {
+                const x = (i/(history.length-1))*W;
+                const y = H - ((h.value-min)/range)*(H-8) - 4;
+                return <circle key={i} cx={x} cy={y} r={i===history.length-1?"3":"1.5"} fill={i===history.length-1?"#111":"#bbb"} />;
+              })}
+            </svg>
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: "4px" }}>
+              <span style={{ fontSize: "9px", color: "#bbb" }}>
+                {new Date(history[0].date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })} · {history[0].value} lbs
+              </span>
+              <span style={{ fontSize: "9px", color: "#bbb" }}>{history.length} entries</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Log entry */}
+      <div style={{ background: "#fff", border: "1px solid #ede9e4", borderRadius: "10px", padding: "14px 16px", marginBottom: "16px" }}>
+        <div style={{ fontSize: "9px", letterSpacing: "0.15em", textTransform: "uppercase", color: "#bbb", marginBottom: "12px" }}>Log weight</div>
+        <div style={{ display: "flex", gap: "8px", alignItems: "center", marginBottom: "10px" }}>
+          <input
+            type="date" value={editDate} onChange={e => setEditDate(e.target.value)}
+            style={{ flex: 1, padding: "9px 11px", borderRadius: "7px", border: "1px solid #e4e0db", fontSize: "13px", color: "#555", background: "#fafaf8" }}
+          />
+        </div>
+        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+          <input
+            type="number" inputMode="decimal" value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && save()}
+            placeholder={healthData[editDate]?.weight_lbs ? `Currently ${healthData[editDate].weight_lbs} lbs` : "e.g. 148.5"}
+            style={{ flex: 1, padding: "11px 13px", borderRadius: "7px", border: "1px solid #e4e0db", fontSize: "15px", color: "#111" }}
+            autoFocus
+          />
+          <span style={{ fontSize: "12px", color: "#bbb", flexShrink: 0 }}>lbs</span>
+          <button onClick={save} style={{
+            background: saved ? "#2d7a1e" : "#111", color: "#fff",
+            border: "none", borderRadius: "7px", padding: "11px 18px",
+            fontSize: "13px", fontWeight: "600", cursor: "pointer", ...F,
+            transition: "background 0.2s", flexShrink: 0,
+          }}>
+            {saved ? "Saved" : "Save"}
+          </button>
+        </div>
+      </div>
+
+      {/* History log */}
+      {history.length > 0 && (
+        <div style={{ background: "#fff", border: "1px solid #ede9e4", borderRadius: "10px", overflow: "hidden" }}>
+          <div style={{ padding: "12px 16px 8px", fontSize: "9px", letterSpacing: "0.15em", textTransform: "uppercase", color: "#bbb" }}>History</div>
+          {[...history].reverse().slice(0, 20).map(({ date, value }) => {
+            const prev = history[history.findIndex(h => h.date === date) - 1];
+            const diff = prev ? (value - prev.value).toFixed(1) : null;
+            return (
+              <div key={date} style={{ display: "flex", alignItems: "center", padding: "9px 16px", borderTop: "1px solid #f5f5f3" }}>
+                <div style={{ flex: 1, fontSize: "12px", color: "#555" }}>
+                  {new Date(date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+                </div>
+                <div style={{ display: "flex", alignItems: "baseline", gap: "4px", marginRight: "10px" }}>
+                  <span style={{ fontSize: "14px", fontWeight: "600", color: "#111" }}>{value}</span>
+                  <span style={{ fontSize: "10px", color: "#bbb" }}>lbs</span>
+                  {diff !== null && diff !== "0.0" && (
+                    <span style={{ fontSize: "9px", color: parseFloat(diff) < 0 ? "#2d7a1e" : "#e55", marginLeft: "2px" }}>
+                      {parseFloat(diff) > 0 ? "+" : ""}{diff}
+                    </span>
+                  )}
+                </div>
+                <button onClick={() => remove(date)} style={{ background: "none", border: "none", color: "#ddd", fontSize: "14px", cursor: "pointer", padding: "2px 6px" }}>×</button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BodyScanSection({ clientId }) {
   const [scans, setScans] = useState(loadScans);
   const [uploading, setUploading] = useState(false);
   const [expanded, setExpanded] = useState(null);
+  const [parseError, setParseError] = useState(null);
   const fileRef = useRef();
 
   useEffect(() => { saveScans(scans); }, [scans]);
 
-  const METRIC_LABELS = {
-    weight_lbs: { label: "Body Weight", unit: "lbs", explain: "Total weight including muscle, fat, bone, and water." },
-    body_fat_pct: { label: "Body Fat", unit: "%", explain: "Percentage of total weight that is fat. Active women typically range from 18 to 28%." },
-    lean_mass_lbs: { label: "Lean Mass", unit: "lbs", explain: "Everything that is not fat — muscle, bone, organs, water. Training builds this." },
-    fat_mass_lbs: { label: "Fat Mass", unit: "lbs", explain: "Total weight of fat tissue." },
-    bmr_kcal: { label: "Resting Metabolic Rate", unit: "kcal", explain: "Calories burned at rest. Higher lean mass means a higher BMR." },
-    visceral_fat: { label: "Visceral Fat Rating", unit: "", explain: "Fat stored around internal organs. Under 10 is healthy for most people." },
-  };
+  // ── InBody / DEXA metric definitions ───────────────────────────────────────
+  // Grouped by section matching the scan output
+  const METRIC_GROUPS = [
+    {
+      group: "Body Composition",
+      hint: "The core numbers — what your body is actually made of. Weight alone tells you nothing; these numbers tell you whether you're gaining muscle, losing fat, or both.",
+      metrics: [
+        { key: "weight_lbs",          label: "Body Weight",            unit: "lbs",  explain: "Total weight — muscle, fat, bone, water, everything. Fluctuates 2–5 lbs daily based on hydration and food volume alone, so don't read too much into single weigh-ins. The trend over weeks is what matters." },
+        { key: "lean_mass_lbs",       label: "Lean Body Mass",         unit: "lbs",  explain: "Everything in your body that isn't fat — muscle, bone, organs, and water. This is the number that training is supposed to move upward. If lean mass is increasing, the program is working even if the scale barely moves." },
+        { key: "fat_mass_lbs",        label: "Fat Mass",               unit: "lbs",  explain: "The actual weight of fat tissue. This is what you want to see decrease over time. Losing 0.5–1 lb of fat per week while maintaining lean mass is an excellent result for recomposition." },
+        { key: "body_fat_pct",        label: "Body Fat %",             unit: "%",    explain: "The percentage of your total weight that is fat. For active women, 18–28% is a healthy athletic range. Below 15% is very lean. The exact number matters less than the direction of the trend across scans." },
+        { key: "skeletal_muscle_lbs", label: "Skeletal Muscle Mass",   unit: "lbs",  explain: "The muscle you can actually train — not organs or connective tissue, just the contractile muscle fibers. This is the most direct measure of whether lifting is building mass. Even small increases (0.5–1 lb per month) during recomp are meaningful progress." },
+        { key: "dry_lean_mass_lbs",   label: "Dry Lean Mass",          unit: "lbs",  explain: "Lean mass minus the water component. Less influenced by hydration status — useful for comparing scans taken at different times of day or hydration levels." },
+      ]
+    },
+    {
+      group: "Body Water",
+      hint: "Water makes up 60–70% of lean mass. These numbers reflect cellular health and inflammation levels — not a concern for most people, but useful if something looks off.",
+      metrics: [
+        { key: "tbw_lbs",       label: "Total Body Water",       unit: "lbs",   explain: "The total water in your body. Normally 60–65% of body weight. Being well-hydrated before a scan gives you more accurate lean mass numbers — dehydration artificially lowers lean mass readings." },
+        { key: "icw_lbs",       label: "Intracellular Water",    unit: "lbs",   explain: "Water inside your cells. Higher intracellular water generally means healthier, well-nourished cells. Training typically increases this over time as muscle cells store more glycogen and water." },
+        { key: "ecw_lbs",       label: "Extracellular Water",    unit: "lbs",   explain: "Water outside your cells — in blood, lymph, and between tissues. Temporarily elevated after intense training (soreness, inflammation). Chronically elevated ECW can indicate overtraining or inflammation." },
+        { key: "ecw_tbw_ratio", label: "ECW/TBW Ratio",          unit: "",      explain: "The fraction of your body water that sits outside cells. Healthy range is typically 0.36–0.39. Values above 0.40 can indicate systemic inflammation or overtraining. A ratio of 0.376 (like in the example) is normal." },
+      ]
+    },
+    {
+      group: "Obesity Markers",
+      hint: "Useful context, but body fat % is a more meaningful number than BMI for anyone who trains.",
+      metrics: [
+        { key: "bmi",            label: "BMI",                    unit: "",   explain: "Height-to-weight ratio. Simple and widely used, but deeply flawed for anyone who lifts — muscle is dense, so muscular people often show high BMI despite low body fat. Use body fat % instead." },
+        { key: "pbf",            label: "Percent Body Fat (PBF)",  unit: "%",  explain: "Same as body fat % — the InBody label for it. The bar graph on the scan shows where you fall relative to the healthy range for your age and sex." },
+        { key: "visceral_fat",   label: "Visceral Fat Level",      unit: "",   explain: "Rated 1–20. Fat stored around your internal organs — the most health-relevant type of fat. Level 1–9 is healthy, 10–14 is caution, 15+ is high risk. This number drops significantly with consistent training and improved diet, often before visible body changes happen." },
+        { key: "bmr_kcal",       label: "Basal Metabolic Rate",    unit: "kcal", explain: "The calories your body burns at complete rest just to keep you alive — breathing, organ function, temperature regulation. More muscle = higher BMR = you burn more calories doing nothing. Every lb of muscle added increases BMR by roughly 6–10 kcal/day. This compounds over time." },
+      ]
+    },
+    {
+      group: "Segmental Lean Analysis",
+      hint: "Breaks down muscle mass by body segment. The most useful thing here is checking for left-right imbalances — asymmetry over ~5% is worth paying attention to.",
+      metrics: [
+        { key: "right_arm_lbs",  label: "Right Arm Lean Mass",    unit: "lbs", explain: "Muscle and lean tissue in the right arm. Compare to left arm. A difference of more than 0.3–0.5 lbs between arms is common but worth monitoring if you have a history of injury." },
+        { key: "left_arm_lbs",   label: "Left Arm Lean Mass",     unit: "lbs", explain: "Muscle and lean tissue in the left arm. If this is consistently lower than the right, targeted unilateral work (single-arm exercises) can help close the gap." },
+        { key: "trunk_lbs",      label: "Trunk Lean Mass",        unit: "lbs", explain: "Lean mass in the torso — the largest segment. Includes back, chest, and core musculature. This segment contributes most to overall metabolic rate. Compound movements like rows, hip thrusts, and pressing movements build this." },
+        { key: "right_leg_lbs",  label: "Right Leg Lean Mass",    unit: "lbs", explain: "Lean mass in the right leg. Includes quads, hamstrings, glutes, and calves. Should increase meaningfully as training progresses." },
+        { key: "left_leg_lbs",   label: "Left Leg Lean Mass",     unit: "lbs", explain: "Lean mass in the left leg. Leg asymmetry is common, especially in people with a history of injury. A consistent difference over 0.5 lbs is worth noting for your coach." },
+      ]
+    },
+    {
+      group: "Segmental Fat Analysis",
+      hint: "Fat distribution by limb — less actionable than the other sections, but useful for spotting patterns.",
+      metrics: [
+        { key: "right_arm_fat_pct",  label: "Right Arm Fat %",  unit: "%", explain: "Fat percentage in the right arm. Arms typically have lower fat % than the trunk. This number is not very actionable — overall body fat % is more relevant." },
+        { key: "left_arm_fat_pct",   label: "Left Arm Fat %",   unit: "%", explain: "Fat percentage in the left arm." },
+        { key: "trunk_fat_pct",      label: "Trunk Fat %",      unit: "%", explain: "Fat percentage in the torso. Often the last area to lean out. Elevated trunk fat % alongside a healthy visceral fat level is subcutaneous (under the skin), which is less of a health concern than visceral fat." },
+        { key: "right_leg_fat_pct",  label: "Right Leg Fat %",  unit: "%", explain: "Fat percentage in the right leg." },
+        { key: "left_leg_fat_pct",   label: "Left Leg Fat %",   unit: "%", explain: "Fat percentage in the left leg." },
+      ]
+    },
+  ];
+
+  // Flat lookup for edit access
+  const METRIC_LABELS = {};
+  METRIC_GROUPS.forEach(g => g.metrics.forEach(m => { METRIC_LABELS[m.key] = m; }));
 
   async function handleFile(e) {
     const file = e.target.files[0];
     if (!file) return;
     setUploading(true);
-    const base64 = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result.split(",")[1]); r.onerror = rej; r.readAsDataURL(file); });
-    const mediaType = file.type || "image/jpeg";
-    try {
-      // Image analysis requires vision AI — enter metrics manually below
-      const entry = { id: Date.now(), date: today(), scan_type: "Scan", metrics: {}, imageData: `data:${mediaType};base64,${base64}` };
-      const updated = [entry, ...scans];
-      setScans(updated);
-    } catch {}
-    setUploading(false);
+    setParseError(null);
     fileRef.current.value = "";
+
+    try {
+      const base64 = await new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = () => res(r.result.split(",")[1]);
+        r.onerror = rej;
+        r.readAsDataURL(file);
+      });
+      const mediaType = file.type || "image/jpeg";
+      const isPDF = mediaType === "application/pdf";
+
+      // Call Claude API to parse the scan
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1000,
+          messages: [{
+            role: "user",
+            content: [
+              {
+                type: isPDF ? "document" : "image",
+                source: { type: "base64", media_type: mediaType, data: base64 },
+              },
+              {
+                type: "text",
+                text: `This is a body composition scan (InBody, DEXA, or similar). Read every number on the document carefully.
+
+Return ONLY a valid JSON object. No markdown, no explanation, no text outside the JSON.
+
+Extract these values using exact key names — only include keys where a number is clearly visible on the scan:
+
+Body composition:
+  weight_lbs, lean_mass_lbs, fat_mass_lbs, body_fat_pct, skeletal_muscle_lbs, dry_lean_mass_lbs
+
+Body water:
+  tbw_lbs, icw_lbs, ecw_lbs, ecw_tbw_ratio
+
+Obesity / metabolic:
+  bmi, pbf, visceral_fat, bmr_kcal
+
+Segmental lean (lbs per segment):
+  right_arm_lbs, left_arm_lbs, trunk_lbs, right_leg_lbs, left_leg_lbs
+
+Segmental fat (% per segment):
+  right_arm_fat_pct, left_arm_fat_pct, trunk_fat_pct, right_leg_fat_pct, left_leg_fat_pct
+
+Also include:
+  "scan_type": device name from the scan header (e.g. "InBody 570", "DEXA")
+  "scan_date": date shown on the scan in YYYY-MM-DD format, or null
+  "interpretation": plain-English breakdown written directly to the client (not about them). Cover:
+    1. What the overall body composition picture looks like right now
+    2. The most meaningful number — what it tells them and whether it's good
+    3. Anything to watch or be aware of (imbalances, visceral fat, fluid ratio)
+    4. One specific thing the training should be targeting based on these results
+    Keep it to 4-5 sentences. No jargon. No hedging. Direct and clear.
+
+Return nothing except the JSON object.`,
+              }
+            ],
+          }],
+        }),
+      });
+
+      const data = await response.json();
+      const raw = data.content?.find(b => b.type === "text")?.text || "";
+      const clean = raw.replace(/```json|```/g, "").trim();
+      const parsed = JSON.parse(clean);
+
+      const { scan_type, scan_date, interpretation, ...metrics } = parsed;
+      const entry = {
+        id: Date.now(),
+        date: scan_date || today(),
+        scan_type: scan_type || "Body Scan",
+        metrics,
+        interpretation: interpretation || null,
+        imageData: `data:${mediaType};base64,${base64}`,
+      };
+      setScans(prev => [entry, ...prev]);
+      setExpanded(0);
+
+    } catch (err) {
+      console.error("Scan parse error:", err);
+      setParseError("Couldn't read the scan automatically. Try a clearer photo or enter the numbers manually below.");
+      // Still save the image so they can reference it
+      const base64 = await new Promise((res) => {
+        const r = new FileReader(); r.onload = () => res(r.result.split(",")[1]); r.readAsDataURL(file);
+      }).catch(() => null);
+      if (base64) {
+        setScans(prev => [{ id: Date.now(), date: today(), scan_type: "Body Scan", metrics: {}, imageData: `data:${file.type};base64,${base64}` }, ...prev]);
+        setExpanded(0);
+      }
+    }
+    setUploading(false);
+  }
+
+  function updateMetric(scanId, key, val) {
+    setScans(prev => prev.map(s => s.id === scanId ? { ...s, metrics: { ...s.metrics, [key]: val === "" ? undefined : parseFloat(val) } } : s));
   }
 
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
         <div style={{ fontSize: "9px", letterSpacing: "0.18em", textTransform: "uppercase", color: "#999" }}>Body Scans</div>
-        <button onClick={() => fileRef.current.click()} disabled={uploading} style={{ background: "#1a1a1a", color: "#f7f6f3", border: "none", borderRadius: "20px", padding: "5px 14px", fontSize: "11px", cursor: "pointer", ...F }}>
-          {uploading ? "Reading..." : "+ Upload scan"}
+        <button onClick={() => fileRef.current.click()} disabled={uploading} style={{ background: uploading ? "#999" : "#1a1a1a", color: "#f7f6f3", border: "none", borderRadius: "20px", padding: "5px 14px", fontSize: "11px", cursor: uploading ? "wait" : "pointer", ...F }}>
+          {uploading ? "Reading scan..." : "+ Upload scan"}
         </button>
         <input ref={fileRef} type="file" accept="image/*,.pdf" onChange={handleFile} style={{ display: "none" }} />
       </div>
 
-      <div style={{ background: "#fef3e4", border: "1px solid #f0c060", borderRadius: "6px", padding: "9px 12px", marginBottom: "10px", fontSize: "10px", color: "#7a5010", lineHeight: "1.55" }}>
-        InBody and similar devices vary by 3 to 5% based on hydration and timing. Use for trends, not exact numbers.
+      {parseError && (
+        <div style={{ background: "#fff8f0", border: "1px solid #fcd34d", borderRadius: "7px", padding: "10px 13px", marginBottom: "10px", fontSize: "11px", color: "#92400e", lineHeight: "1.6" }}>
+          {parseError}
+        </div>
+      )}
+
+      <div style={{ background: "#f9f9f7", border: "1px solid #e8e8e8", borderRadius: "7px", padding: "10px 13px", marginBottom: "12px", fontSize: "10px", color: "#aaa", lineHeight: "1.6" }}>
+        Upload a photo or PDF of your InBody or DEXA printout. Claude reads the scan and fills in all the numbers automatically.
       </div>
 
       {scans.length === 0 && !uploading && (
-        <div style={{ textAlign: "center", padding: "16px", color: "#bbb", fontSize: "12px" }}>Upload a photo of your InBody or DEXA printout — the app will extract all the numbers automatically.</div>
+        <div style={{ textAlign: "center", padding: "30px 20px", color: "#bbb", fontSize: "12px", lineHeight: "1.7", ...F }}>
+          No scans yet. Upload your first InBody or DEXA result.
+        </div>
       )}
 
       {scans.map((scan, si) => (
-        <div key={scan.id} style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "7px", marginBottom: "7px", overflow: "hidden" }}>
-          <button onClick={() => setExpanded(expanded === si ? null : si)} style={{ width: "100%", background: "none", border: "none", padding: "11px 13px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", textAlign: "left" }}>
+        <div key={scan.id} style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "9px", marginBottom: "10px", overflow: "hidden" }}>
+          <button onClick={() => setExpanded(expanded === si ? null : si)} style={{ width: "100%", background: "none", border: "none", padding: "13px 15px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", textAlign: "left" }}>
             <div>
-              <div style={{ fontSize: "12px", fontWeight: "600" }}>{scan.scan_type} · {scan.date}</div>
-              {scan.metrics?.body_fat_pct && <div style={{ fontSize: "10px", color: "#aaa", marginTop: "2px" }}>{scan.metrics.body_fat_pct}% body fat · {scan.metrics.lean_mass_lbs ? `${scan.metrics.lean_mass_lbs} lbs lean mass` : ""}</div>}
+              <div style={{ fontSize: "13px", fontWeight: "600", color: "#111" }}>{scan.scan_type}</div>
+              <div style={{ fontSize: "10px", color: "#aaa", marginTop: "2px" }}>
+                {new Date(scan.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "long", day: "numeric", year: "numeric" })}
+                {scan.metrics?.body_fat_pct && ` · ${scan.metrics.body_fat_pct}% body fat`}
+                {scan.metrics?.lean_mass_lbs && ` · ${scan.metrics.lean_mass_lbs} lbs lean mass`}
+              </div>
             </div>
             <span style={{ color: "#ccc", fontSize: "11px" }}>{expanded === si ? "▲" : "▼"}</span>
           </button>
+
           {expanded === si && (
-            <div style={{ padding: "0 13px 13px" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
-                {Object.entries(METRIC_LABELS).map(([key, meta]) => {
-                  const val = scan.metrics?.[key];
-                  if (val == null) return null;
+            <div style={{ padding: "0 15px 15px", borderTop: "1px solid #f5f5f3" }}>
+
+              {/* AI interpretation */}
+              {scan.interpretation && (
+                <div style={{ background: "#f9f9f7", borderRadius: "8px", padding: "12px 14px", margin: "12px 0", lineHeight: "1.75", fontSize: "12px", color: "#444", ...F }}>
+                  {scan.interpretation}
+                </div>
+              )}
+
+              {/* Metrics grouped by section */}
+              <div style={{ marginTop: "14px" }}>
+                {METRIC_GROUPS.map(group => {
+                  const groupVals = group.metrics.filter(m => scan.metrics?.[m.key] != null);
+                  if (groupVals.length === 0) return null;
                   return (
-                    <div key={key} style={{ background: "#f9f9f7", borderRadius: "5px", padding: "8px 10px" }}>
-                      <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.08em", color: "#aaa", marginBottom: "2px" }}>{meta.label}</div>
-                      <div style={{ fontSize: "15px", fontWeight: "700" }}>{val}{meta.unit}</div>
-                      <div style={{ fontSize: "9px", color: "#aaa", marginTop: "2px", lineHeight: "1.4" }}>{meta.explain}</div>
+                    <div key={group.group} style={{ marginBottom: "18px" }}>
+                      {/* Group header */}
+                      <div style={{ marginBottom: "8px" }}>
+                        <div style={{ fontSize: "9px", fontWeight: "700", letterSpacing: "0.15em", textTransform: "uppercase", color: "#555", marginBottom: "3px" }}>{group.group}</div>
+                        <div style={{ fontSize: "10px", color: "#aaa", lineHeight: "1.5", ...F }}>{group.hint}</div>
+                      </div>
+                      {/* Metric cards */}
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
+                        {group.metrics.map(meta => {
+                          const val = scan.metrics?.[meta.key];
+                          const hasVal = val != null && val !== "";
+                          return (
+                            <div key={meta.key} style={{ background: hasVal ? "#fafaf8" : "#f5f5f5", borderRadius: "8px", padding: "10px 12px", border: hasVal ? "1px solid #ede9e4" : "1px solid #eee" }}>
+                              <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.07em", color: "#bbb", marginBottom: "5px" }}>{meta.label}</div>
+                              <div style={{ display: "flex", alignItems: "baseline", gap: "3px", marginBottom: "4px" }}>
+                                <input
+                                  type="number" inputMode="decimal"
+                                  value={val ?? ""}
+                                  onChange={e => updateMetric(scan.id, meta.key, e.target.value)}
+                                  placeholder="—"
+                                  style={{ width: "100%", border: "none", background: "transparent", fontSize: hasVal ? "17px" : "13px", fontWeight: hasVal ? "700" : "400", color: hasVal ? "#111" : "#ccc", padding: 0, outline: "none" }}
+                                />
+                                {hasVal && meta.unit && <span style={{ fontSize: "10px", color: "#bbb", flexShrink: 0 }}>{meta.unit}</span>}
+                              </div>
+                              <div style={{ fontSize: "9px", color: "#bbb", lineHeight: "1.5" }}>{meta.explain}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   );
                 })}
+
+                {/* Show any metrics not yet entered */}
+                {METRIC_GROUPS.every(g => g.metrics.every(m => scan.metrics?.[m.key] == null)) && (
+                  <div style={{ textAlign: "center", padding: "20px", color: "#ccc", fontSize: "11px", lineHeight: "1.7", ...F }}>
+                    No metrics extracted yet. Tap any field above to enter manually, or re-upload a clearer photo.
+                  </div>
+                )}
               </div>
-              <button onClick={() => { const u = scans.filter(s => s.id !== scan.id); setScans(u); }} style={{ marginTop: "8px", background: "none", border: "none", color: "#e0e0e0", fontSize: "11px", cursor: "pointer" }}>Remove</button>
+
+              {/* Scan image thumbnail */}
+              {scan.imageData && (
+                <div style={{ marginTop: "12px" }}>
+                  <div style={{ fontSize: "9px", color: "#ccc", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "6px" }}>Original scan</div>
+                  <img src={scan.imageData} alt="Body scan" style={{ maxWidth: "100%", borderRadius: "6px", border: "1px solid #e8e8e8" }} />
+                </div>
+              )}
+
+              <button onClick={() => { setScans(prev => prev.filter(s => s.id !== scan.id)); if (expanded === si) setExpanded(null); }} style={{ marginTop: "12px", background: "none", border: "none", color: "#ddd", fontSize: "11px", cursor: "pointer", padding: 0 }}>
+                Remove this scan
+              </button>
             </div>
           )}
         </div>
@@ -414,6 +802,7 @@ function BodyScanSection() {
     </div>
   );
 }
+
 
 // ── Daily health log section ──────────────────────────────────────────────────
 function DailyHealthSection({ clientId }) {
@@ -638,9 +1027,10 @@ function DailyHealthSection({ clientId }) {
 
 // ── Main BodyTab ──────────────────────────────────────────────────────────────
 export default function BodyTab({ clientId }) {
-  const [section, setSection] = useState("measurements");
+  const [section, setSection] = useState("weight");
 
   const SECTIONS = [
+    { id: "weight", label: "Weight" },
     { id: "measurements", label: "Measurements" },
     { id: "health", label: "Health" },
     { id: "photos", label: "Photos" },
@@ -660,6 +1050,7 @@ export default function BodyTab({ clientId }) {
         ))}
       </div>
 
+      {section === "weight" && <WeightSection clientId={clientId} />}
       {section === "measurements" && <MeasurementsSection clientId={clientId} />}
       {section === "photos" && <PhotosSection />}
       {section === "health" && (
@@ -684,7 +1075,7 @@ export default function BodyTab({ clientId }) {
           clientId={clientId}
         />
       )}
-      {section === "scans" && <BodyScanSection />}
+      {section === "scans" && <BodyScanSection clientId={clientId} />}
       {/* Health history summary — data logged from Plan tab */}
       {section === "measurements" && (() => {
         // Show last 7 days health strip if any data exists
