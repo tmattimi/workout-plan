@@ -556,7 +556,23 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
     .map(([week, vol]) => ({ label: formatShort(week), value: Math.round(vol) }));
 
   // Weight trend from measurements
-  const weightTrend = measurements.filter(m => m.weight_lbs).map(m => ({ date: m.measured_at, value: m.weight_lbs, label: formatShort(m.measured_at) }));
+  // Weight from measurements table (Supabase)
+  const measWeightTrend = measurements.filter(m => m.weight_lbs).map(m => ({ date: m.measured_at, value: parseFloat(m.weight_lbs), label: formatShort(m.measured_at) }));
+  // Weight from daily health log (localStorage + Supabase health logs)
+  const healthWeightTrend = (() => {
+    try {
+      const health = JSON.parse(localStorage.getItem('daily_health_v1') || '{}');
+      return Object.entries(health)
+        .filter(([, d]) => d.weight_lbs)
+        .map(([date, d]) => ({ date, value: parseFloat(d.weight_lbs), label: formatShort(date) }));
+    } catch { return []; }
+  })();
+  // Merge both, dedupe by date, sort chronologically
+  const weightMap = {};
+  [...measWeightTrend, ...healthWeightTrend].forEach(e => {
+    if (!weightMap[e.date] || e.value) weightMap[e.date] = e;
+  });
+  const weightTrend = Object.values(weightMap).sort((a, b) => a.date.localeCompare(b.date));
   const latestWeight = weightTrend[weightTrend.length - 1]?.value;
   const firstWeight = weightTrend[0]?.value;
   const weightChange = latestWeight && firstWeight ? (latestWeight - firstWeight).toFixed(1) : null;
@@ -634,7 +650,6 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
     { id: 'overview', label: 'Overview' },
     { id: 'history', label: 'History' },
     { id: 'strength', label: 'Strength' },
-    { id: 'body', label: 'Body' },
     { id: 'goals', label: 'Goals' },
     { id: 'analytics', label: 'Analytics' },
   ];
@@ -986,198 +1001,6 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
                     </button>
                   );
                 })}
-              </div>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* ── BODY TAB ── */}
-      {activeTab === 'body' && (
-        <div style={{ padding: '16px 16px 60px' }}>
-          {measurements.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '60px 20px', color: '#aaa' }}>
-              <div style={{ fontSize: 11, letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>No measurements yet</div>
-              <div style={{ fontSize: 14, ...F, lineHeight: 1.7 }}>Log measurements in the Body tab to see trends here.</div>
-            </div>
-          ) : (
-            <>
-              {/* Latest snapshot */}
-              {latestMeas && (
-                <>
-                  <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.18em', color: '#999', marginBottom: 10 }}>Latest · {formatDate(latestMeas.measured_at)}</div>
-                  <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
-                    {[
-                      { key: 'weight_lbs', label: 'Weight', unit: 'lbs' },
-                      { key: 'body_fat_pct', label: 'Body Fat', unit: '%' },
-                      { key: 'waist_in', label: 'Waist', unit: 'in' },
-                      { key: 'hips_in', label: 'Hips', unit: 'in' },
-                    ].filter(f => latestMeas[f.key]).map(f => {
-                      const prev = firstMeas?.[f.key];
-                      const change = prev ? (latestMeas[f.key] - prev).toFixed(1) : null;
-                      return (
-                        <StatCard key={f.key} label={f.label} value={`${latestMeas[f.key]}${f.unit}`}
-                          sub={change ? `${change > 0 ? '+' : ''}${change} total` : undefined}
-                          trend={change ? parseFloat(change) : undefined}
-                          color={f.key === 'body_fat_pct' && change < 0 ? '#16a34a' : undefined}
-                        />
-                      );
-                    })}
-                  </div>
-                </>
-              )}
-
-              {/* Weight chart */}
-              {weightTrend.length >= 2 && (
-                <div style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: 10, padding: '14px', marginBottom: 14 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
-                    <div>
-                      <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.14em', color: '#aaa', marginBottom: 2 }}>Weight</div>
-                      <div style={{ fontSize: 11, color: '#888' }}>lbs over time</div>
-                    </div>
-                    {weightChange && (
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: 16, fontWeight: 700, color: parseFloat(weightChange) < 0 ? '#16a34a' : parseFloat(weightChange) > 0 ? '#b91c1c' : '#888', ...F }}>
-                          {weightChange > 0 ? '+' : ''}{weightChange} lbs
-                        </div>
-                        <div style={{ fontSize: 9, color: '#aaa' }}>total change</div>
-                      </div>
-                    )}
-                  </div>
-                  <SparklineWithGoal data={weightTrend} color="#2563a8" height={60} fillArea goalValue={goalWeightTarget} goalColor="#16a34a" goalLabel="Goal" />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-                    <span style={{ fontSize: 9, color: '#bbb' }}>{formatShort(weightTrend[0]?.date)} · {weightTrend[0]?.value} lbs</span>
-                    <span style={{ fontSize: 9, color: '#bbb' }}>{formatShort(weightTrend[weightTrend.length-1]?.date)} · {weightTrend[weightTrend.length-1]?.value} lbs</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Waist chart */}
-              {waistTrend.length >= 2 && (
-                <div style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: 10, padding: '14px', marginBottom: 14 }}>
-                  <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.14em', color: '#aaa', marginBottom: 10 }}>Waist (in)</div>
-                  <SparklineWithGoal data={waistTrend} color="#d97706" height={50} fillArea goalValue={goalWaistTarget} goalColor="#16a34a" />
-                </div>
-              )}
-
-              {/* Hips chart */}
-              {hipsTrend.length >= 2 && (
-                <div style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: 10, padding: '14px', marginBottom: 14 }}>
-                  <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.14em', color: '#aaa', marginBottom: 10 }}>Hips (in)</div>
-                  <SparklineWithGoal data={hipsTrend} color="#b91c1c" height={50} fillArea goalValue={goalHipsTarget} goalColor="#16a34a" />
-                </div>
-              )}
-
-              {/* Body fat chart */}
-              {bfTrend.length >= 2 && (
-                <div style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: 10, padding: '14px', marginBottom: 14 }}>
-                  <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.14em', color: '#aaa', marginBottom: 10 }}>Body Fat %</div>
-                  <SparklineWithGoal data={bfTrend} color="#7c3aed" height={50} fillArea goalValue={goalBFTarget} goalColor="#16a34a" />
-                </div>
-              )}
-
-              {/* Full measurement history table */}
-              <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.18em', color: '#999', marginBottom: 10 }}>All Measurements</div>
-              <div style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: 10, overflow: 'hidden' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr', padding: '8px 12px', borderBottom: '1px solid #f0f0f0' }}>
-                  {['Date', 'Weight', 'Waist', 'Hips', 'BF%'].map(h => (
-                    <span key={h} style={{ fontSize: 8, textTransform: 'uppercase', letterSpacing: '.1em', color: '#bbb' }}>{h}</span>
-                  ))}
-                </div>
-                {[...measurements].reverse().map((m, i) => (
-                  <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr', padding: '9px 12px', borderBottom: '1px solid #f5f5f5' }}>
-                    <span style={{ fontSize: 11, color: '#555' }}>{formatShort(m.measured_at)}</span>
-                    <span style={{ fontSize: 11, fontWeight: 600 }}>{m.weight_lbs || '—'}</span>
-                    <span style={{ fontSize: 11, color: '#555' }}>{m.waist_in || '—'}</span>
-                    <span style={{ fontSize: 11, color: '#555' }}>{m.hips_in || '—'}</span>
-                    <span style={{ fontSize: 11, color: '#555' }}>{m.body_fat_pct || '—'}</span>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* ── HEALTH TAB ── */}
-      {activeTab === 'history' && (
-        <WorkoutHistory clientId={clientId} localLogs={localLogs} />
-      )}
-
-      {activeTab === 'goals' && (
-        <div style={{ padding: '16px 16px 60px' }}>
-          <GoalTracker clientId={clientId} />
-        </div>
-      )}
-
-      {activeTab === 'health' && (
-        <div style={{ padding: '16px 16px 60px' }}>
-          {healthLogs.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '60px 20px', color: '#aaa' }}>
-              <div style={{ fontSize: 11, letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>No health data yet</div>
-              <div style={{ fontSize: 14, ...F, lineHeight: 1.7 }}>Log daily health data from the Plan tab to see trends here.</div>
-            </div>
-          ) : (
-            <>
-              {/* Health averages */}
-              <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.18em', color: '#999', marginBottom: 10 }}>30-Day Averages</div>
-              <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-                {avgSteps && <StatCard label="Avg Steps" value={avgSteps.toLocaleString()} sub="goal: 10,000" color={avgSteps >= 10000 ? '#16a34a' : '#111'} />}
-                {avgSleep && <StatCard label="Avg Sleep" value={`${avgSleep}h`} sub="goal: 8 hrs" color={parseFloat(avgSleep) >= 8 ? '#16a34a' : '#111'} />}
-                {avgHRV && <StatCard label="Avg HRV" value={`${avgHRV}`} sub="ms" />}
-              </div>
-
-              {/* Steps trend */}
-              {stepsTrend.length >= 5 && (
-                <div style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: 10, padding: '14px', marginBottom: 14 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                    <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.14em', color: '#aaa' }}>Daily Steps</div>
-                    <div style={{ fontSize: 11, color: '#888' }}>last 30 days</div>
-                  </div>
-                  <Sparkline data={stepsTrend} color="#16a34a" height={55} fillArea />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-                    <span style={{ fontSize: 9, color: '#bbb' }}>30 days ago</span>
-                    <span style={{ fontSize: 9, color: '#bbb' }}>Today</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Sleep trend */}
-              {sleepTrend.length >= 5 && (
-                <div style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: 10, padding: '14px', marginBottom: 14 }}>
-                  <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.14em', color: '#aaa', marginBottom: 10 }}>Sleep (hours)</div>
-                  <Sparkline data={sleepTrend} color="#2563a8" height={50} fillArea />
-                  {/* 8hr reference line hint */}
-                  <div style={{ fontSize: 10, color: '#bbb', marginTop: 6, textAlign: 'right' }}>Target: 8 hrs</div>
-                </div>
-              )}
-
-              {/* HRV trend */}
-              {hrvTrend.length >= 5 && (
-                <div style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: 10, padding: '14px', marginBottom: 14 }}>
-                  <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.14em', color: '#aaa', marginBottom: 4 }}>Heart Rate Variability</div>
-                  <div style={{ fontSize: 11, color: '#888', marginBottom: 10 }}>Higher is generally better — indicates good recovery</div>
-                  <Sparkline data={hrvTrend} color="#7c3aed" height={50} fillArea />
-                </div>
-              )}
-
-              {/* Daily log table — last 14 days */}
-              <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.18em', color: '#999', marginBottom: 10 }}>Recent Log</div>
-              <div style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: 10, overflow: 'hidden' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr', padding: '8px 12px', borderBottom: '1px solid #f0f0f0' }}>
-                  {['Date', 'Steps', 'Sleep', 'HRV', 'Energy'].map(h => (
-                    <span key={h} style={{ fontSize: 8, textTransform: 'uppercase', letterSpacing: '.1em', color: '#bbb' }}>{h}</span>
-                  ))}
-                </div>
-                {healthLogs.slice(0, 14).map((h, i) => (
-                  <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr', padding: '9px 12px', borderBottom: '1px solid #f5f5f5' }}>
-                    <span style={{ fontSize: 11, color: '#555' }}>{formatShort(h.log_date)}</span>
-                    <span style={{ fontSize: 11, color: h.steps >= 10000 ? '#16a34a' : '#555' }}>{h.steps ? h.steps.toLocaleString() : '—'}</span>
-                    <span style={{ fontSize: 11, color: h.sleep_hours >= 8 ? '#16a34a' : '#555' }}>{h.sleep_hours ? `${h.sleep_hours}h` : '—'}</span>
-                    <span style={{ fontSize: 11, color: '#555' }}>{h.hrv || '—'}</span>
-                    <span style={{ fontSize: 11, color: '#555' }}>{h.energy_level ? `${h.energy_level}/10` : '—'}</span>
-                  </div>
-                ))}
               </div>
             </>
           )}
