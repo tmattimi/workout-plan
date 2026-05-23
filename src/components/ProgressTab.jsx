@@ -653,160 +653,181 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
 
       {/* ── OVERVIEW TAB ── */}
       {activeTab === 'overview' && (() => {
-        // Current streak
+        // Streak
         let streak = 0;
-        const today = new Date().toISOString().slice(0,10);
+        const todayStr = new Date().toISOString().slice(0,10);
         for (let i = 0; i < 60; i++) {
           const d = new Date(); d.setDate(d.getDate() - i);
-          const key = d.toISOString().slice(0,10);
-          if (sessionDates.includes(key)) { streak++; }
+          if (sessionDates.includes(d.toISOString().slice(0,10))) streak++;
           else if (i > 0) break;
         }
-
-        // Sessions this month vs last month
         const thisMonth = new Date().toISOString().slice(0,7);
-        const lastMonthDate = new Date(); lastMonthDate.setMonth(lastMonthDate.getMonth()-1);
-        const lastMonth = lastMonthDate.toISOString().slice(0,7);
+        const lmDate = new Date(); lmDate.setMonth(lmDate.getMonth()-1);
+        const lastMonth = lmDate.toISOString().slice(0,7);
         const sessionsThisMonth = sessionDates.filter(d => d.startsWith(thisMonth)).length;
         const sessionsLastMonth = sessionDates.filter(d => d.startsWith(lastMonth)).length;
         const monthDiff = sessionsThisMonth - sessionsLastMonth;
 
-        return (
-          <div style={{ background: '#111', minHeight: '100%', padding: '16px 16px 80px' }}>
+        // Top lifts with history for sparklines
+        const benchmarks = [
+          'Hip Thrust', 'Romanian Deadlift', 'Leg Press',
+          'Lat Pulldown', 'Dumbbell Bench Press', 'Overhead Press', 'Row'
+        ];
+        const liftSparklines = benchmarks.map(kw => {
+          const hist = {};
+          allLogs.filter(l => l.exercises?.name?.toLowerCase().includes(kw.toLowerCase()) && l.weight_lbs && l.completed)
+            .forEach(l => {
+              if (!hist[l.session_date] || parseFloat(l.weight_lbs) > hist[l.session_date])
+                hist[l.session_date] = parseFloat(l.weight_lbs);
+            });
+          const pts = Object.entries(hist).sort((a,b) => a[0].localeCompare(b[0])).slice(-8).map(([,v]) => v);
+          const firstName = allLogs.find(l => l.exercises?.name?.toLowerCase().includes(kw.toLowerCase()))?.exercises?.name || kw;
+          const shortName = firstName.split('(')[0].trim().replace('Romanian Deadlift', 'RDL').replace('Dumbbell Bench Press', 'DB Bench').replace('Lat Pulldown', 'Lat Pulldown').replace('Hip Thrust', 'Hip Thrust');
+          return pts.length >= 2 ? { name: shortName, pts, latest: pts[pts.length-1], change: pts[pts.length-1] - pts[0] } : null;
+        }).filter(Boolean).slice(0,4);
 
+        const wtPts = weightTrend.slice(-10).map(w => w.value);
+
+        // Mini SVG sparkline helper
+        function miniLine(pts, color, h = 32) {
+          if (pts.length < 2) return null;
+          const min = Math.min(...pts), max = Math.max(...pts), range = max - min || 1;
+          const W = 100;
+          const points = pts.map((v,i) => `${(i/(pts.length-1))*W},${h - ((v-min)/range)*(h-6) - 3}`).join(' ');
+          const lastX = W, lastY = h - ((pts[pts.length-1]-min)/range)*(h-6) - 3;
+          return { points, lastX, lastY, W, h };
+        }
+
+        return (
+          <div style={{ background: '#111', minHeight: '100%', padding: '22px 18px 80px' }}>
             {!hasData ? (
               <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-                <div style={{ fontSize: 11, letterSpacing: '.2em', textTransform: 'uppercase', color: '#555', marginBottom: 12 }}>No sessions logged yet</div>
-                <div style={{ fontSize: 14, color: '#666', lineHeight: 1.7, ...F }}>Complete your first session to see your progress here.</div>
+                <div style={{ fontSize: 11, letterSpacing: '.2em', textTransform: 'uppercase', color: '#444', marginBottom: 10 }}>No sessions yet</div>
+                <div style={{ fontSize: 13, color: '#555', lineHeight: 1.8, ...F }}>Complete your first session to see your progress here.</div>
               </div>
-            ) : (
-              <>
-                {/* ── CONSISTENCY ─────────────────────────────────── */}
-                <div style={{ marginBottom: 16 }}>
-                  <div style={{ fontSize: '8px', letterSpacing: '.22em', textTransform: 'uppercase', color: '#444', marginBottom: 12 }}>Consistency</div>
+            ) : (<>
 
-                  {/* Stats row */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 14 }}>
-                    {[
-                      { label: 'Streak', value: streak, unit: streak === 1 ? 'day' : 'days' },
-                      { label: 'This month', value: sessionsThisMonth, unit: 'sessions', note: monthDiff !== 0 ? `${monthDiff > 0 ? '+' : ''}${monthDiff} vs last` : null, up: monthDiff > 0 },
-                      { label: 'Total', value: sessionDates.length, unit: 'sessions' },
-                    ].map(({ label, value, unit, note, up }) => (
-                      <div key={label} style={{ background: '#1c1c1e', borderRadius: 10, padding: '14px 12px' }}>
-                        <div style={{ fontSize: 26, fontWeight: 700, color: '#f5f5f7', lineHeight: 1, marginBottom: 3 }}>{value}</div>
-                        <div style={{ fontSize: 9, color: '#555', textTransform: 'uppercase', letterSpacing: '.1em' }}>{unit}</div>
-                        <div style={{ fontSize: 8, color: '#444', marginTop: 2, letterSpacing: '.06em' }}>{label}</div>
-                        {note && <div style={{ fontSize: 8, color: up ? '#34c759' : '#ff453a', marginTop: 4 }}>{note}</div>}
-                      </div>
-                    ))}
+              {/* ── STATS ROW — tight, no cards ── */}
+              <div style={{ display: 'flex', marginBottom: 32 }}>
+                {[
+                  { value: streak,               sub: 'day streak' },
+                  { value: sessionsThisMonth,     sub: 'this month', note: monthDiff !== 0 ? `${monthDiff > 0 ? '+' : ''}${monthDiff} vs last` : null, up: monthDiff > 0 },
+                  { value: Math.round(sessionsPerWeek * 10) / 10, sub: 'per week avg' },
+                ].map(({ value, sub, note, up }, i) => (
+                  <div key={i} style={{ flex: 1, textAlign: 'center', borderRight: i < 2 ? '1px solid #1c1c1e' : 'none' }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 3 }}>
+                      <span style={{ fontSize: 30, fontWeight: 700, color: '#f5f5f7', letterSpacing: '-1px', lineHeight: 1 }}>{value}</span>
+                      {note && <span style={{ fontSize: 8, color: up ? '#34c759' : '#ff453a', fontWeight: 600 }}>{note}</span>}
+                    </div>
+                    <div style={{ fontSize: 9, color: '#3a3a3c', marginTop: 4, letterSpacing: '.05em' }}>{sub}</div>
                   </div>
+                ))}
+              </div>
 
-                  {/* 30-day dot grid */}
-                  <div style={{ background: '#1c1c1e', borderRadius: 10, padding: '14px' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(10,1fr)', gap: 4, marginBottom: 8 }}>
-                      {Array.from({ length: 30 }, (_, i) => {
-                        const d = new Date(); d.setDate(d.getDate() - (29 - i));
-                        const key = d.toISOString().slice(0,10);
-                        const active = sessionDates.includes(key);
-                        const isToday = key === today;
-                        return (
-                          <div key={i} title={key} style={{
-                            aspectRatio: '1', borderRadius: 3,
-                            background: active ? '#f5f5f7' : '#2c2c2e',
-                            outline: isToday ? '1px solid #555' : 'none',
-                          }} />
-                        );
+              {/* ── BODY WEIGHT CHART ── */}
+              {wtPts.length >= 2 && (() => {
+                const sp = miniLine(wtPts, '#f5f5f7', 44);
+                const diff = (wtPts[wtPts.length-1] - wtPts[0]).toFixed(1);
+                const diffColor = parseFloat(diff) < 0 ? '#34c759' : parseFloat(diff) > 0 ? '#ff453a' : '#555';
+                return (
+                  <div style={{ marginBottom: 30 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
+                      <span style={{ fontSize: '8px', letterSpacing: '.2em', textTransform: 'uppercase', color: '#3a3a3c' }}>Body weight</span>
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                        <span style={{ fontSize: 20, fontWeight: 700, color: '#f5f5f7', letterSpacing: '-0.5px' }}>{wtPts[wtPts.length-1]}</span>
+                        <span style={{ fontSize: 10, color: '#555' }}>lbs</span>
+                        {diff !== '0.0' && <span style={{ fontSize: 10, color: diffColor, fontWeight: 600 }}>{parseFloat(diff)>0?'+':''}{diff} lbs</span>}
+                      </div>
+                    </div>
+                    <svg viewBox={`0 0 ${sp.W} ${sp.h}`} width="100%" height={sp.h} preserveAspectRatio="none" style={{ display: 'block' }}>
+                      <polyline points={sp.points} fill="none" stroke="#2c2c2e" strokeWidth="1" />
+                      <polyline points={sp.points} fill="none" stroke="#f5f5f7" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.55" />
+                      {wtPts.map((v, i) => {
+                        const x = (i/(wtPts.length-1))*sp.W;
+                        const min = Math.min(...wtPts), max = Math.max(...wtPts), range = max-min||1;
+                        const y = sp.h - ((v-min)/range)*(sp.h-6) - 3;
+                        return <circle key={i} cx={x} cy={y} r={i===wtPts.length-1?2.5:1.5} fill={i===wtPts.length-1?'#f5f5f7':'#3a3a3c'} />;
                       })}
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: 8, color: '#444' }}>30 days ago</span>
-                      <span style={{ fontSize: 8, color: '#444' }}>Today</span>
-                    </div>
+                    </svg>
                   </div>
-                </div>
+                );
+              })()}
 
-                {/* ── KEY NUMBERS ─────────────────────────────────── */}
-                <div style={{ marginBottom: 16 }}>
-                  <div style={{ fontSize: '8px', letterSpacing: '.22em', textTransform: 'uppercase', color: '#444', marginBottom: 12 }}>Key numbers</div>
-                  <div style={{ display: 'grid', gridTemplateColumns: latestWeight ? '1fr 1fr' : '1fr', gap: 8 }}>
-                    {/* Sessions this week */}
-                    <div style={{ background: '#1c1c1e', borderRadius: 10, padding: '14px 12px' }}>
-                      <div style={{ fontSize: 9, color: '#555', textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 6 }}>This week</div>
-                      <div style={{ fontSize: 30, fontWeight: 700, color: '#f5f5f7', lineHeight: 1 }}>{sessionsPerWeek}</div>
-                      <div style={{ fontSize: 9, color: '#444', marginTop: 3 }}>sessions / week avg</div>
-                    </div>
-
-                    {/* Body weight */}
-                    {latestWeight && (
-                      <div style={{ background: '#1c1c1e', borderRadius: 10, padding: '14px 12px' }}>
-                        <div style={{ fontSize: 9, color: '#555', textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 6 }}>Weight</div>
-                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                          <div style={{ fontSize: 30, fontWeight: 700, color: '#f5f5f7', lineHeight: 1 }}>{latestWeight}</div>
-                          <div style={{ fontSize: 11, color: '#555' }}>lbs</div>
-                        </div>
-                        {weightChange && (
-                          <div style={{ fontSize: 9, marginTop: 3, color: parseFloat(weightChange) < 0 ? '#34c759' : parseFloat(weightChange) > 0 ? '#ff453a' : '#555' }}>
-                            {parseFloat(weightChange) > 0 ? '+' : ''}{weightChange} lbs since start
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* ── GOALS ───────────────────────────────────────── */}
-                <div>
-                  <div style={{ fontSize: '8px', letterSpacing: '.22em', textTransform: 'uppercase', color: '#444', marginBottom: 12 }}>Goals</div>
-                  {activeGoals.length === 0 ? (
-                    <div style={{ background: '#1c1c1e', borderRadius: 10, padding: '20px 16px', textAlign: 'center' }}>
-                      <div style={{ fontSize: 11, color: '#555', lineHeight: 1.7, ...F }}>No active goals set. Add one in the Goals tab to track progress here.</div>
-                    </div>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      {activeGoals.slice(0,4).map((goal, i) => {
-                        const currentVal = goal.current_value ?? goal.currentValue ?? 0;
-                        const targetVal = goal.target_value ?? goal.targetValue;
-                        const lowerIsBetter = goal.type === 'bodyweight' || goal.type === 'body_fat' || goal.type === 'measurement';
-                        const startVal = goal.start_value || currentVal;
-                        let pct = null;
-                        if (targetVal && startVal !== undefined) {
-                          if (lowerIsBetter && startVal > targetVal) {
-                            pct = Math.min(100, Math.max(0, Math.round(((startVal - currentVal) / (startVal - targetVal)) * 100)));
-                          } else if (!lowerIsBetter) {
-                            pct = Math.min(100, Math.round((currentVal / targetVal) * 100));
-                          }
-                        }
-                        const barColor = pct >= 100 ? '#34c759' : pct >= 50 ? '#f5f5f7' : '#636366';
-                        return (
-                          <div key={goal.id || i} style={{ background: '#1c1c1e', borderRadius: 10, padding: '14px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: targetVal ? 10 : 0 }}>
-                              <div>
-                                <div style={{ fontSize: 13, fontWeight: 600, color: '#f5f5f7', marginBottom: 2 }}>{goal.name}</div>
-                                {goal.target_date && <div style={{ fontSize: 9, color: '#555' }}>By {goal.target_date}</div>}
-                              </div>
-                              {pct !== null && (
-                                <div style={{ fontSize: 14, fontWeight: 700, color: barColor }}>{pct}%</div>
-                              )}
+              {/* ── STRENGTH SPARKLINES ── */}
+              {liftSparklines.length > 0 && (
+                <div style={{ marginBottom: 30 }}>
+                  <div style={{ fontSize: '8px', letterSpacing: '.2em', textTransform: 'uppercase', color: '#3a3a3c', marginBottom: 16 }}>Strength</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                    {liftSparklines.map(({ name, pts, latest, change }) => {
+                      const sp = miniLine(pts, '#f5f5f7', 28);
+                      if (!sp) return null;
+                      const changeColor = change > 0 ? '#34c759' : change < 0 ? '#ff453a' : '#555';
+                      const min = Math.min(...pts), max = Math.max(...pts), range = max-min||1;
+                      return (
+                        <div key={name}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+                            <span style={{ fontSize: 11, color: '#888', ...F }}>{name}</span>
+                            <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
+                              <span style={{ fontSize: 15, fontWeight: 700, color: '#f5f5f7' }}>{latest}</span>
+                              <span style={{ fontSize: 9, color: '#555' }}>lbs</span>
+                              {change !== 0 && <span style={{ fontSize: 9, color: changeColor, fontWeight: 600 }}>{change>0?'+':''}{change}</span>}
                             </div>
-                            {targetVal && pct !== null && (
-                              <>
-                                <div style={{ height: 4, background: '#2c2c2e', borderRadius: 2, overflow: 'hidden', marginBottom: 6 }}>
-                                  <div style={{ height: '100%', width: `${pct}%`, background: barColor, borderRadius: 2, transition: 'width 0.6s ease' }} />
-                                </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: '#555' }}>
-                                  <span>{currentVal} {goal.unit}</span>
-                                  <span>Target: {targetVal} {goal.unit}</span>
-                                </div>
-                              </>
-                            )}
                           </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                          <svg viewBox={`0 0 ${sp.W} ${sp.h}`} width="100%" height={sp.h} preserveAspectRatio="none" style={{ display: 'block' }}>
+                            <polyline points={sp.points} fill="none" stroke="#2c2c2e" strokeWidth="1" />
+                            <polyline points={sp.points} fill="none" stroke="#f5f5f7" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.4" />
+                            {pts.map((v,i) => {
+                              const x = (i/(pts.length-1))*sp.W;
+                              const y = sp.h - ((v-min)/range)*(sp.h-6) - 3;
+                              return <circle key={i} cx={x} cy={y} r={i===pts.length-1?2.5:1.5} fill={i===pts.length-1?'#f5f5f7':'#3a3a3c'} />;
+                            })}
+                          </svg>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-              </>
-            )}
+              )}
+
+              {/* ── GOALS — slim bars, no cards ── */}
+              {activeGoals.length > 0 && (
+                <div>
+                  <div style={{ fontSize: '8px', letterSpacing: '.2em', textTransform: 'uppercase', color: '#3a3a3c', marginBottom: 14 }}>Goals</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    {activeGoals.slice(0,4).map((goal, i) => {
+                      const currentVal = goal.current_value ?? goal.currentValue ?? 0;
+                      const targetVal = goal.target_value ?? goal.targetValue;
+                      const lowerIsBetter = ['bodyweight','body_fat','measurement'].includes(goal.type);
+                      const startVal = goal.start_value || currentVal;
+                      let pct = null;
+                      if (targetVal && startVal !== undefined) {
+                        pct = lowerIsBetter && startVal > targetVal
+                          ? Math.min(100, Math.max(0, Math.round(((startVal - currentVal) / (startVal - targetVal)) * 100)))
+                          : !lowerIsBetter ? Math.min(100, Math.round((currentVal / targetVal) * 100)) : null;
+                      }
+                      const barColor = pct >= 100 ? '#34c759' : '#f5f5f7';
+                      return (
+                        <div key={goal.id || i}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
+                            <span style={{ fontSize: 11, color: '#888', ...F }}>{goal.name}</span>
+                            <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                              {pct !== null && <span style={{ fontSize: 12, fontWeight: 700, color: barColor }}>{pct}%</span>}
+                              {targetVal && <span style={{ fontSize: 9, color: '#444' }}>{currentVal} → {targetVal} {goal.unit}</span>}
+                            </div>
+                          </div>
+                          {pct !== null && (
+                            <div style={{ height: 2, background: '#1c1c1e', borderRadius: 1, overflow: 'hidden' }}>
+                              <div style={{ height: '100%', width: `${pct}%`, background: barColor, borderRadius: 1, transition: 'width 0.6s ease', opacity: 0.7 }} />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+            </>)}
           </div>
         );
       })()}

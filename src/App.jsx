@@ -602,7 +602,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
   // Client IDs are stable and set by the coach in Supabase
   // Only these two clients have hardcoded programs — all others wait for a coach-built plan
   const TARA_ID    = "fa2b1f9e-ed1e-4b7a-b2a3-def60932e2f5";
-  const SKYLER_ID  = "f1f04d99-76ec-477f-938f-ebfb456b1d88";
+  const SKYLER_ID  = "f1f04d99-76ec-477b-938f-ebfb456b1d88";
   const clientId   = clientData?.id || "";
 
   const defaultSchedule =
