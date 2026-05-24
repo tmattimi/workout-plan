@@ -1069,3 +1069,25 @@ export async function assignProgramToClient(programId, clientId) {
     .eq('id', clientId);
   return { error };
 }
+
+// ── Client preferences (equipment, injuries) — persisted to Supabase ──────────
+export async function saveClientPreferences(clientId, prefs) {
+  if (!supabase) return;
+  await supabase
+    .from('clients')
+    .update({
+      equipment: prefs.equipment || null,
+      injury_flags: prefs.injuries || null,
+    })
+    .eq('id', clientId);
+}
+
+export async function getClientPreferences(clientId) {
+  if (!supabase) return { data: null };
+  const { data } = await supabase
+    .from('clients')
+    .select('equipment, injury_flags')
+    .eq('id', clientId)
+    .single();
+  return { data };
+}

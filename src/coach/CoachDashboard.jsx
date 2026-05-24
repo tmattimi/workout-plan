@@ -444,6 +444,99 @@ function PlanBuilder({ coachId, onBack }) {
 }
 
 // ── Client Detail ──────────────────────────────────────────────────────────────
+// ── Assign Plan View ───────────────────────────────────────────────────────────
+function AssignPlanView({ client, coachId, onAssigned }) {
+  const [programs, setPrograms] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [assigning, setAssigning] = useState(null);
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    import("../lib/supabase").then(({ getPrograms }) => {
+      getPrograms(coachId).then(({ data }) => {
+        setPrograms(data || []);
+        setLoading(false);
+      });
+    });
+  }, [coachId]);
+
+  async function handleAssign(program) {
+    if (!window.confirm(`Assign "${program.name}" to ${client.name}? This will replace their current program.`)) return;
+    setAssigning(program.id);
+    const { getProgramById, assignProgramToClient } = await import("../lib/supabase");
+    const { data: fullProgram } = await getProgramById(program.id);
+    if (fullProgram) {
+      await assignProgramToClient(program.id, client.id);
+      // Also store schedule in client record for immediate use
+      await import("../lib/supabase").then(({ updateClient_db }) => {
+        updateClient_db(client.id, { assigned_program_id: program.id });
+      });
+    }
+    setAssigning(null);
+    onAssigned(program);
+  }
+
+  const filtered = programs.filter(p =>
+    !search || p.name.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div>
+      <div style={{ fontSize: "9px", letterSpacing: "0.15em", textTransform: "uppercase", color: "#bbb", marginBottom: "8px" }}>
+        Assign program to {client.name}
+      </div>
+      <div style={{ fontSize: "12px", color: "#777", lineHeight: "1.6", marginBottom: "14px" }}>
+        Select a program from the library. This replaces their current active plan immediately.
+      </div>
+
+      {programs.length === 0 && !loading && (
+        <div style={{ background: "#fff8f0", border: "1px solid #fcd34d", borderRadius: "8px", padding: "12px 14px", marginBottom: "12px", fontSize: "12px", color: "#92400e", lineHeight: "1.6" }}>
+          No programs in the library yet. Go to Program Library and save a program first.
+        </div>
+      )}
+
+      {programs.length > 0 && (
+        <input
+          value={search} onChange={e => setSearch(e.target.value)}
+          placeholder="Search programs..."
+          style={{ width: "100%", padding: "9px 12px", borderRadius: "7px", border: "1px solid #e4e0db", fontSize: "12px", marginBottom: "10px", boxSizing: "border-box" }}
+        />
+      )}
+
+      {loading && <div style={{ color: "#bbb", fontSize: "12px", padding: "10px 0" }}>Loading programs...</div>}
+
+      {filtered.map(program => (
+        <div key={program.id} style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "9px", padding: "13px 15px", marginBottom: "8px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: "13px", fontWeight: "600", color: "#111", marginBottom: "3px" }}>{program.name}</div>
+              {program.description && <div style={{ fontSize: "11px", color: "#aaa", lineHeight: "1.5", marginBottom: "4px" }}>{program.description.slice(0, 100)}{program.description.length > 100 ? "..." : ""}</div>}
+              <div style={{ display: "flex", gap: "5px", flexWrap: "wrap" }}>
+                {program.goal && <span style={{ fontSize: "9px", background: "#f0f0f0", color: "#666", padding: "2px 7px", borderRadius: "4px" }}>{program.goal.replace(/_/g," ")}</span>}
+                {program.days_per_week && <span style={{ fontSize: "9px", background: "#f0f0f0", color: "#666", padding: "2px 7px", borderRadius: "4px" }}>{program.days_per_week} days/wk</span>}
+                {program.is_template && <span style={{ fontSize: "9px", background: "#f0fff0", color: "#2d7a1e", padding: "2px 7px", borderRadius: "4px" }}>Template</span>}
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={() => handleAssign(program)}
+            disabled={assigning === program.id}
+            style={{
+              background: assigning === program.id ? "#aaa" : "#1a1a1a",
+              color: "#fff", border: "none", borderRadius: "20px",
+              padding: "7px 16px", fontSize: "11px",
+              cursor: assigning === program.id ? "wait" : "pointer",
+            }}
+          >
+            {assigning === program.id ? "Assigning..." : "Assign to " + client.name.split(" ")[0]}
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+
 function ClientDetail({ client, coachId, plans, onBack, onDelete, onAssignPlan }) {
   const [view, setView] = useState("overview"); // overview | notes | messages | assign
   const [overview, setOverview] = useState(null);
@@ -1226,22 +1319,13 @@ function ClientDetail({ client, coachId, plans, onBack, onDelete, onAssignPlan }
         </div>
       )}
 
-      {/* Assign Plan */}
+      {/* Assign Plan — pulls from program library */}
       {view === "assign" && (
-        <>
-          <div style={{ fontSize: "13px", color: "#555", marginBottom: "14px", lineHeight: "1.6" }}>
-            Select a plan to assign to {client.name}. This will replace their current active plan.
-          </div>
-          {plans.map(plan => (
-            <button key={plan.id} onClick={() => onAssignPlan(client.id, plan.id)} style={{ width: "100%", background: "#fff", border: "1px solid #e8e8e8", borderRadius: "8px", padding: "13px 15px", marginBottom: "7px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", ...F, textAlign: "left" }}>
-              <div>
-                <div style={{ fontSize: "14px", fontWeight: "600" }}>{plan.name}</div>
-                <div style={{ fontSize: "11px", color: "#aaa" }}>{plan.plan_days?.length || 0} days</div>
-              </div>
-              <span style={{ color: "#2563a8" }}>Assign →</span>
-            </button>
-          ))}
-        </>
+        <AssignPlanView
+          client={client}
+          coachId={coachId}
+          onAssigned={() => { setView("overview"); alert(`Program assigned to ${client.name}.`); }}
+        />
       )}
     </div>
   );
@@ -1540,8 +1624,10 @@ export default function CoachDashboard() {
   }
 
   async function handleAssignPlan(clientId, planId) {
-    await assignPlanToClient(clientId, planId);
-    alert("Plan assigned successfully.");
+    const { error } = await assignPlanToClient(clientId, planId);
+    if (!error) {
+      setClients(prev => prev.map(c => c.id === clientId ? { ...c, assigned_program_id: planId } : c));
+    }
   }
 
   if (!authChecked) return <div style={{ minHeight: "100vh", background: "#111", display: "flex", alignItems: "center", justifyContent: "center", color: "#555" }}>Loading...</div>;

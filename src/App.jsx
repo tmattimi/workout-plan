@@ -18,6 +18,7 @@ import RestTimer, { parseRestSeconds } from "./components/RestTimer";
 import SessionSummary from "./components/SessionSummary";
 import RecoveryCard from "./components/RecoveryCard";
 import HealthTab from "./components/HealthTab";
+import MessagesTab from "./components/MessagesTab";
 import HealthLogModal from "./components/HealthLogModal";
 import { getRecoveryAssessment } from "./lib/recoveryEngine";
 import { PRCelebration, OverloadSuggestions } from "./components/PRCelebration";
@@ -637,6 +638,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
   const [newMovement, setNewMovement] = useState({ name: "", sets: "", reps: "", notes: "" });
   const [dailyHealth, setDailyHealth] = useState(() => { try { return JSON.parse(localStorage.getItem("daily_health_v1") || "{}"); } catch { return {}; } });
   const [showHealthLog, setShowHealthLog] = useState(false);
+  const [unreadMessages, setUnreadMessages] = useState(0);
   const [showStretches, setShowStretches] = useState(false);
   const [sessionSkipped, setSessionSkipped] = useState({});  // { [sessionDate]: { reason, skipped } }
   const [syncStatus, setSyncStatus] = useState("idle"); // idle | syncing | synced | failed
@@ -661,10 +663,14 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
   function handleEquipmentChange(updated) {
     setClientEquipment(updated);
     localStorage.setItem("client_equipment", JSON.stringify(updated));
+    if (clientData?.id) import("./lib/supabase").then(({ saveClientPreferences }) =>
+      saveClientPreferences(clientData.id, { equipment: updated, injuries: clientInjuries }));
   }
   function handleInjuryChange(updated) {
     setClientInjuries(updated);
     localStorage.setItem("client_injuries", JSON.stringify(updated));
+    if (clientData?.id) import("./lib/supabase").then(({ saveClientPreferences }) =>
+      saveClientPreferences(clientData.id, { equipment: clientEquipment, injuries: updated }));
   }
 
   // Rest timer state
@@ -783,6 +789,34 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
     }
     seedFromSupabase();
     return () => { cancelled = true; };
+  }, [clientData?.id]);
+
+  // Seed equipment/injuries from Supabase into localStorage on login
+  useEffect(() => {
+    if (!clientData?.id) return;
+    import("./lib/supabase").then(({ getClientPreferences }) => {
+      getClientPreferences(clientData.id).then(({ data }) => {
+        if (data?.equipment) {
+          setClientEquipment(data.equipment);
+          localStorage.setItem("client_equipment", JSON.stringify(data.equipment));
+        }
+        if (data?.injury_flags?.length) {
+          setClientInjuries(data.injury_flags);
+          localStorage.setItem("client_injuries", JSON.stringify(data.injury_flags));
+        }
+      });
+    });
+  }, [clientData?.id]);
+
+  // Check unread messages from coach
+  useEffect(() => {
+    if (!clientData?.id) return;
+    import("./lib/supabase").then(({ getMessages }) => {
+      getMessages(clientData.id).then(({ data }) => {
+        const unread = (data || []).filter(m => m.sender === "coach" && !m.is_read).length;
+        setUnreadMessages(unread);
+      });
+    });
   }, [clientData?.id]);
 
   // Called whenever a set is marked done
@@ -929,6 +963,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
     ["body","Body"],
     ["nutrition","Nutrition"],
     ...(clientData?.sex === "female" ? [["cycle","Cycle"]] : []),
+    ["messages","Messages"],
     ["tools","Tools"],
   ];
 
@@ -1507,6 +1542,9 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
                             try { localStorage.setItem("daily_health_v1", JSON.stringify(updated)); } catch {}
                           }} style={{ flex: 1, padding: "8px 4px", borderRadius: "6px", border: "1px solid " + (sel ? "#1a1a1a" : "#e0e0e0"), background: sel ? "#1a1a1a" : "#fff", color: sel ? "#fff" : "#555", fontSize: "11px", cursor: "pointer", ...F }}>
                             {label}
+                {t === "messages" && unreadMessages > 0 && (
+                  <span style={{ display: "inline-block", width: "6px", height: "6px", borderRadius: "50%", background: "#ff3b30", marginLeft: "4px", verticalAlign: "middle", flexShrink: 0 }} />
+                )}
                           </button>
                         );
                       })}
@@ -1832,6 +1870,12 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
         />
       )}
       {tab === "nutrition" && <NutritionTab clientId={clientData?.id} />}
+      {tab === "messages" && (
+        <MessagesTab
+          clientId={clientData?.id}
+          onRead={() => setUnreadMessages(0)}
+        />
+      )}
       {tab === "cycle" && <CycleTracking clientId={clientData?.id} />}
       {tab === "tools" && (
         <ToolsTab
