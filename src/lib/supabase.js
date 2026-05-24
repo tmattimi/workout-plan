@@ -998,3 +998,74 @@ export async function deleteProgressPhoto(photo) {
   await supabase.storage.from('progress-photos').remove([photo.storage_path]);
   await supabase.from('progress_photos').delete().eq('id', photo.id);
 }
+
+// ── Program Library ───────────────────────────────────────────────────────────
+
+export async function saveProgram(coachId, programData) {
+  if (!supabase) return { data: null };
+  const { data, error } = await supabase
+    .from('workout_programs')
+    .insert({
+      coach_id: coachId,
+      name: programData.name,
+      description: programData.description || null,
+      goal: programData.goal || null,
+      level: programData.level || null,
+      days_per_week: programData.daysPerWeek || null,
+      schedule: programData.schedule,
+      metadata: programData.metadata || null,
+      is_template: programData.isTemplate || false,
+      client_id: programData.clientId || null,
+    })
+    .select().single();
+  return { data, error };
+}
+
+export async function updateProgram(programId, updates) {
+  if (!supabase) return { data: null };
+  const { data, error } = await supabase
+    .from('workout_programs')
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq('id', programId)
+    .select().single();
+  return { data, error };
+}
+
+export async function getPrograms(coachId) {
+  if (!supabase) return { data: [] };
+  const { data, error } = await supabase
+    .from('workout_programs')
+    .select('id, name, description, goal, level, days_per_week, is_template, client_id, created_at, metadata')
+    .eq('coach_id', coachId)
+    .order('created_at', { ascending: false });
+  return { data: data || [], error };
+}
+
+export async function getProgramById(programId) {
+  if (!supabase) return { data: null };
+  const { data, error } = await supabase
+    .from('workout_programs')
+    .select('*')
+    .eq('id', programId)
+    .single();
+  return { data, error };
+}
+
+export async function deleteProgram(programId) {
+  if (!supabase) return { error: null };
+  const { error } = await supabase
+    .from('workout_programs')
+    .delete()
+    .eq('id', programId);
+  return { error };
+}
+
+export async function assignProgramToClient(programId, clientId) {
+  if (!supabase) return { error: null };
+  // Update client's assigned program
+  const { error } = await supabase
+    .from('clients')
+    .update({ assigned_program_id: programId })
+    .eq('id', clientId);
+  return { error };
+}

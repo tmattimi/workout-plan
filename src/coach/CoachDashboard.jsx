@@ -1569,7 +1569,7 @@ export default function CoachDashboard() {
           </button>
         </div>
         <div style={{ display: "flex", gap: "3px" }}>
-          {[["clients","Clients"],["plans","Plan Builder"]].map(([v, label]) => (
+          {[["clients","Clients"],["library","Program Library"],["plans","Plan Builder"]].map(([v, label]) => (
             <button key={v} onClick={() => { setView(v); setSelectedClient(null); }} style={{ background: view === v && !selectedClient ? "#f7f6f3" : "transparent", color: view === v && !selectedClient ? "#111" : "#666", border: "1px solid", borderColor: view === v && !selectedClient ? "#f7f6f3" : "#333", borderRadius: "4px 4px 0 0", padding: "6px 14px", fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", cursor: "pointer", ...F }}>
               {label}
             </button>
@@ -1597,6 +1597,10 @@ export default function CoachDashboard() {
           onSelect={setSelectedClient}
           onNewClient={() => setShowCreateClient(true)}
         />
+      ) : view === "library" ? (
+        <div style={{ padding: "16px", overflowY: "auto", flex: 1 }}>
+          <ProgramLibrary coachId={session.user.id} />
+        </div>
       ) : (
         <PlanBuilder coachId={session.user.id} onBack={() => setView("clients")} />
       )}
