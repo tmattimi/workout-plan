@@ -52,9 +52,9 @@ export default function MessagesTab({ clientId }) {
     setSending(false);
 
     if (error) {
-      console.error("Message send error:", error);
-      // Keep the message visible but mark it as failed
-      setMessages(prev => prev.map(m => m.id === tempId ? { ...m, failed: true } : m));
+      console.error("Message send error:", JSON.stringify(error));
+      // Show the actual error code in the message for debugging
+      setMessages(prev => prev.map(m => m.id === tempId ? { ...m, failed: true, errorMsg: error.code + ": " + error.message } : m));
       return;
     }
 
@@ -129,7 +129,7 @@ export default function MessagesTab({ clientId }) {
                   opacity: msg.id?.startsWith("temp-") ? 0.7 : 1,
                 }}>
                   {msg.message}
-                  {msg.failed && <div style={{ fontSize: "10px", marginTop: "4px", color: "#dc2626" }}>Failed to send — check your connection</div>}
+                  {msg.failed && <div style={{ fontSize: "10px", marginTop: "4px", color: "#dc2626" }}>Failed: {msg.errorMsg || "check your connection"}</div>}
                 </div>
                 <div style={{ fontSize: "9px", color: "#ccc", marginTop: "3px", textAlign: isCoach ? "left" : "right", paddingLeft: isCoach ? "4px" : 0, paddingRight: isCoach ? 0 : "4px" }}>
                   {msg.id?.startsWith("temp-") ? "Sending..." : formatTime(msg.created_at)}
