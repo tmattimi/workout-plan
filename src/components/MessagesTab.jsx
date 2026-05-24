@@ -48,16 +48,21 @@ export default function MessagesTab({ clientId }) {
     setMessages(prev => [...prev, tempMsg]);
 
     // Send to Supabase and replace temp with real row
-    const { data } = await sendMessage(null, clientId, text, "client");
+    const { data, error } = await sendMessage(null, clientId, text, "client");
     setSending(false);
+
+    if (error) {
+      console.error("Message send error:", error);
+      // Keep the message visible but mark it as failed
+      setMessages(prev => prev.map(m => m.id === tempId ? { ...m, failed: true } : m));
+      return;
+    }
 
     if (data) {
       // Replace temp message with the real saved row
       setMessages(prev => prev.map(m => m.id === tempId ? data : m));
-    } else {
-      // If no row returned, just reload to get the real state
-      await loadMessages();
     }
+    // If no data and no error, the realtime subscription will handle it
   }
 
   function formatTime(ts) {
@@ -113,19 +118,21 @@ export default function MessagesTab({ clientId }) {
             <div key={msg.id} style={{ display: "flex", justifyContent: isCoach ? "flex-start" : "flex-end", marginBottom: "4px" }}>
               <div style={{ maxWidth: "75%" }}>
                 <div style={{
-                  background: isCoach ? "#fff" : "#1a1a1a",
-                  color: isCoach ? "#111" : "#f5f5f7",
-                  border: isCoach ? "1px solid #e8e8e8" : "none",
+                  background: isCoach ? "#fff" : msg.failed ? "#fee2e2" : "#1a1a1a",
+                  color: isCoach ? "#111" : msg.failed ? "#991b1b" : "#f5f5f7",
+                  border: isCoach ? "1px solid #e8e8e8" : msg.failed ? "1px solid #fca5a5" : "none",
                   borderRadius: isCoach ? "4px 16px 16px 16px" : "16px 4px 16px 16px",
                   padding: "10px 14px",
                   fontSize: "13px",
                   lineHeight: "1.6",
                   ...F,
+                  opacity: msg.id?.startsWith("temp-") ? 0.7 : 1,
                 }}>
                   {msg.message}
+                  {msg.failed && <div style={{ fontSize: "10px", marginTop: "4px", color: "#dc2626" }}>Failed to send — check your connection</div>}
                 </div>
                 <div style={{ fontSize: "9px", color: "#ccc", marginTop: "3px", textAlign: isCoach ? "left" : "right", paddingLeft: isCoach ? "4px" : 0, paddingRight: isCoach ? 0 : "4px" }}>
-                  {formatTime(msg.created_at)}
+                  {msg.id?.startsWith("temp-") ? "Sending..." : formatTime(msg.created_at)}
                 </div>
               </div>
             </div>
