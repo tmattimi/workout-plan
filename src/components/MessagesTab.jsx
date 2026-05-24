@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { getMessages, sendMessage, subscribeToMessages } from "../lib/supabase";
+import { getMessages, sendMessage, subscribeToMessages, markMessagesRead } from "../lib/supabase";
 
 const F = { fontFamily: "'Georgia','Times New Roman',serif" };
 
@@ -33,6 +33,8 @@ export default function MessagesTab({ clientId }) {
     const { data } = await getMessages(clientId);
     setMessages((data || []).sort((a, b) => a.created_at.localeCompare(b.created_at)));
     setLoading(false);
+    // Mark coach messages as read
+    markMessagesRead(clientId, "coach").catch(() => {});
   }
 
   async function handleSend() {
@@ -40,12 +42,22 @@ export default function MessagesTab({ clientId }) {
     setSending(true);
     const text = reply.trim();
     setReply("");
-    // Optimistic UI
-    const temp = { id: "temp-" + Date.now(), client_id: clientId, sender: "client", message: text, created_at: new Date().toISOString(), is_read: false };
-    setMessages(prev => [...prev, temp]);
-    await sendMessage(null, clientId, text, "client");
+    const tempId = "temp-" + Date.now();
+    const tempMsg = { id: tempId, client_id: clientId, sender: "client", message: text, created_at: new Date().toISOString(), is_read: false };
+    // Add optimistic message immediately
+    setMessages(prev => [...prev, tempMsg]);
+
+    // Send to Supabase and replace temp with real row
+    const { data } = await sendMessage(null, clientId, text, "client");
     setSending(false);
-    loadMessages(); // refresh to get real ID
+
+    if (data) {
+      // Replace temp message with the real saved row
+      setMessages(prev => prev.map(m => m.id === tempId ? data : m));
+    } else {
+      // If no row returned, just reload to get the real state
+      await loadMessages();
+    }
   }
 
   function formatTime(ts) {
