@@ -8,28 +8,19 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ error: 'Missing prompt' });
   }
 
-  const apiKey = process.env.GROQ_API_KEY;
-  if (!apiKey) {
-    return res.status(500).json({ error: 'GROQ_API_KEY not configured' });
-  }
-
   try {
-    const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
+        'x-api-key': process.env.ANTHROPIC_API_KEY || '',
+        'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        response_format: { type: 'json_object' },
+        model: 'claude-sonnet-4-20250514',
         max_tokens: 8000,
-        temperature: 0.3,
+        system: 'You are an expert personal trainer and exercise scientist. Return only valid JSON with no markdown, no explanation, no code blocks. Your response must start with { and end with }.',
         messages: [
-          {
-            role: 'system',
-            content: 'You are an expert personal trainer and exercise scientist. Return only valid JSON with no markdown, no explanation, no code blocks. Your response must start with { and end with }.',
-          },
           {
             role: 'user',
             content: prompt,
@@ -41,21 +32,23 @@ module.exports = async function handler(req, res) {
     const data = await resp.json();
 
     if (data.error) {
-      console.error('Groq error:', data.error);
+      console.error('Anthropic error:', data.error);
       return res.status(500).json({ error: data.error.message || 'AI generation failed' });
     }
 
-    const text = data.choices?.[0]?.message?.content || '{}';
+    const text = data.content?.[0]?.text || '{}';
 
-    // Validate parseable JSON
+    // Strip any accidental markdown fences
+    const clean = text.replace(/^```json\n?/, '').replace(/\n?```$/, '').trim();
+
     try {
-      JSON.parse(text);
+      JSON.parse(clean);
     } catch {
-      console.error('Invalid JSON from Groq:', text.slice(0, 200));
+      console.error('Invalid JSON from Anthropic:', clean.slice(0, 200));
       return res.status(500).json({ error: 'AI returned invalid JSON. Please try again.' });
     }
 
-    return res.status(200).json({ result: text });
+    return res.status(200).json({ result: clean });
 
   } catch (err) {
     console.error('Server error:', err.message);
