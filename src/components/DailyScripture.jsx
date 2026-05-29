@@ -496,10 +496,12 @@ function getSundayPrompt() {
 
 // ── Cross SVG ─────────────────────────────────────────────────────────────────
 function CrossMark({ color = "#555" }) {
+  // Vertical bar: full height (18px)
+  // Horizontal bar: narrower (10px wide), positioned 1/3 from top
   return (
-    <svg width="13" height="15" viewBox="0 0 13 15" fill="none" style={{ flexShrink: 0, marginTop: "2px" }}>
-      <rect x="5.5" y="0" width="2" height="15" rx="1" fill={color} />
-      <rect x="0" y="5" width="13" height="2" rx="1" fill={color} />
+    <svg width="12" height="18" viewBox="0 0 12 18" fill="none" style={{ flexShrink: 0, marginTop: "1px" }}>
+      <rect x="5" y="0" width="2" height="18" rx="1" fill={color} />
+      <rect x="1" y="5" width="10" height="2" rx="1" fill={color} />
     </svg>
   );
 }

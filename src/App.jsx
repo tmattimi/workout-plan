@@ -19,6 +19,9 @@ import SessionSummary from "./components/SessionSummary";
 import RecoveryCard from "./components/RecoveryCard";
 import HealthTab from "./components/HealthTab";
 import MessagesTab from "./components/MessagesTab";
+import ErrorBoundary from "./components/ErrorBoundary";
+import InstallPrompt from "./components/InstallPrompt";
+import PaymentGate from "./components/PaymentGate";
 import HealthLogModal from "./components/HealthLogModal";
 import { getRecoveryAssessment } from "./lib/recoveryEngine";
 import { PRCelebration, OverloadSuggestions } from "./components/PRCelebration";
@@ -31,8 +34,6 @@ import { getClientByToken } from "./lib/supabase";
 import NewProgressTab from "./components/ProgressTab";
 import PhotosTab from "./components/PhotosTab";
 import WorkoutHistory from "./components/WorkoutHistory";
-import TrackingTab from "./components/TrackingTab";
-import ActivityLog from "./components/ActivityLog";
 import CycleTracking from "./components/CycleTracking";
 import HealthIntegration from "./components/HealthIntegration";
 import NutritionTab from "./components/NutritionTab";
@@ -195,15 +196,17 @@ function SetLogger({ exercise, sessionKey, logs, onLogsChange, accent = '#555', 
     const increment = prev.maxW >= 100 ? 5 : 2.5;
 
     if (prev.avgR >= rangeMax && prev.sets >= targetSets) {
-      return { text: `↑ ${prev.maxW + increment} lbs × ${rangeMin}–${rangeMin + 2}`, type: "increase", prev: `Last: ${prev.maxW} lbs × ${prev.avgR} avg reps` };
+      const next = prev.maxW + increment;
+      return { text: `${next} lbs × ${rangeMin}–${rangeMin + 2} reps`, type: "increase", suggestedWeight: next, prev: `Last session: ${prev.maxW} lbs × ${prev.avgR} reps — hit top of range` };
     }
     if (prev.avgR < rangeMin - 1) {
-      return { text: `↓ ${Math.max(prev.maxW - increment, increment)} lbs × ${rangeMin}–${rangeMax}`, type: "drop", prev: `Last: ${prev.maxW} lbs × ${prev.avgR} avg reps` };
+      const next = Math.max(prev.maxW - increment, increment);
+      return { text: `${next} lbs × ${rangeMin}–${rangeMax} reps`, type: "drop", suggestedWeight: next, prev: `Last session: ${prev.maxW} lbs × ${prev.avgR} reps — below range` };
     }
     if (prev.sets < targetSets) {
-      return { text: `${prev.maxW} lbs × ${targetSets} sets`, type: "hold", prev: `Last: ${prev.sets}/${targetSets} sets completed` };
+      return { text: `${prev.maxW} lbs × ${targetSets} sets`, type: "hold", suggestedWeight: prev.maxW, prev: `Last session: only ${prev.sets}/${targetSets} sets — match the weight` };
     }
-    return { text: `${prev.maxW} lbs × ${Math.min(prev.avgR + 1, rangeMax)} reps`, type: "reps", prev: `Last: ${prev.maxW} lbs × ${prev.avgR} avg reps` };
+    return { text: `${prev.maxW} lbs × ${Math.min(prev.avgR + 1, rangeMax)} reps`, type: "reps", suggestedWeight: prev.maxW, prev: `Last session: ${prev.maxW} lbs × ${prev.avgR} reps — push one more` };
   })();
 
   const targetColors = { increase: "#2d7a1e", drop: "#a02020", hold: "#c47a0a", reps: "#1d6fa8" };
@@ -213,11 +216,37 @@ function SetLogger({ exercise, sessionKey, logs, onLogsChange, accent = '#555', 
       {/* Header: target + controls */}
       <div style={{ padding: "8px 12px", background: "#f5f5f3", borderBottom: "1px solid #e8e8e8" }}>
         {overloadTarget && (
-          <div style={{ marginBottom: "6px", display: "flex", alignItems: "center", gap: "8px" }}>
-            <div style={{ fontSize: "10px", fontWeight: "700", color: targetColors[overloadTarget.type] || "#555" }}>
-              Target: {overloadTarget.text}
+          <div style={{
+            marginBottom: "8px",
+            background: overloadTarget.type === "increase" ? "#f0fff4" : overloadTarget.type === "drop" ? "#fff5f5" : overloadTarget.type === "reps" ? "#eff6ff" : "#fffbea",
+            border: `1px solid ${overloadTarget.type === "increase" ? "#bbf7d0" : overloadTarget.type === "drop" ? "#fecaca" : overloadTarget.type === "reps" ? "#bfdbfe" : "#fde68a"}`,
+            borderRadius: "7px", padding: "8px 10px",
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <div>
+                <div style={{ fontSize: "9px", fontWeight: "700", letterSpacing: "0.1em", textTransform: "uppercase", color: targetColors[overloadTarget.type], marginBottom: "2px" }}>
+                  {overloadTarget.type === "increase" ? "Ready to progress" : overloadTarget.type === "drop" ? "Reduce weight" : overloadTarget.type === "reps" ? "Add a rep" : "Match last session"}
+                </div>
+                <div style={{ fontSize: "12px", fontWeight: "700", color: "#111" }}>{overloadTarget.text}</div>
+                <div style={{ fontSize: "9px", color: "#aaa", marginTop: "1px" }}>{overloadTarget.prev}</div>
+              </div>
+              {overloadTarget.suggestedWeight && (
+                <button
+                  onClick={() => {
+                    // Pre-fill the next empty set with the suggested weight
+                    const nextEmpty = exLog.sets.findIndex(s => !s.weight && s.type !== "warmup");
+                    if (nextEmpty >= 0) {
+                      const updated = [...exLog.sets];
+                      updated[nextEmpty] = { ...updated[nextEmpty], weight: String(overloadTarget.suggestedWeight) };
+                      onLogsChange({ ...logs, [exKey]: { ...exLog, sets: updated } });
+                    }
+                  }}
+                  style={{ background: "#1a1a1a", color: "#fff", border: "none", borderRadius: "6px", padding: "5px 10px", fontSize: "10px", cursor: "pointer", flexShrink: 0, marginLeft: "8px", lineHeight: 1.3 }}
+                >
+                  Use {overloadTarget.suggestedWeight} lbs
+                </button>
+              )}
             </div>
-            <div style={{ fontSize: "9px", color: "#bbb" }}>{overloadTarget.prev}</div>
           </div>
         )}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -639,6 +668,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
   const [dailyHealth, setDailyHealth] = useState(() => { try { return JSON.parse(localStorage.getItem("daily_health_v1") || "{}"); } catch { return {}; } });
   const [showHealthLog, setShowHealthLog] = useState(false);
   const [unreadMessages, setUnreadMessages] = useState(0);
+  const [exerciseVideos, setExerciseVideos] = useState({}); // { exerciseName: videoUrl }
   const [showStretches, setShowStretches] = useState(false);
   const [sessionSkipped, setSessionSkipped] = useState({});  // { [sessionDate]: { reason, skipped } }
   const [syncStatus, setSyncStatus] = useState("idle"); // idle | syncing | synced | failed
@@ -807,6 +837,33 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
       });
     });
   }, [clientData?.id]);
+
+  // Handle Stripe payment redirect
+  async function handlePay() {
+    if (!clientData?.id || !clientData?.email) return;
+    try {
+      const res = await fetch('/api/stripe-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clientId: clientData.id,
+          clientEmail: clientData.email,
+          clientName: clientData.name,
+        }),
+      });
+      const { url } = await res.json();
+      if (url) window.location.href = url;
+    } catch (err) {
+      console.error('Payment error:', err);
+    }
+  }
+
+  // Load exercise demo videos
+  useEffect(() => {
+    import("./lib/supabase").then(({ getExerciseVideos }) => {
+      getExerciseVideos().then(({ data }) => setExerciseVideos(data || {}));
+    });
+  }, []);
 
   // Check unread messages from coach
   useEffect(() => {
@@ -1082,6 +1139,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
       </div>
 
       {/* PLAN */}
+      {/* Each tab wrapped in an error boundary so one broken tab can't crash others */}
       {tab === "plan" && (
         <>
           {/* No plan assigned yet */}
@@ -1138,7 +1196,17 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
               {trackableCount > 0 && (
                 <div style={{ flexShrink: 0, marginLeft: "12px", textAlign: "right" }}>
                   {completedExercises === trackableCount && completedExercises > 0 ? (
-                    <button onClick={() => setShowSessionSummary(true)} style={{ background: "#2d7a1e", color: "#fff", border: "none", borderRadius: "7px", padding: "7px 14px", fontSize: "11px", cursor: "pointer", fontWeight: "600" }}>
+                    <button onClick={() => {
+                        setShowSessionSummary(true);
+                        if (clientData?.id) {
+                          const setsCount = Object.values(logs).reduce((s, ex) => s + (ex.sets?.filter(s => s.done)?.length || 0), 0);
+                          const prsCount = Object.values(logs).reduce((s, ex) => s + (ex.sets?.filter(s => s.done && s.isPR)?.length || 0), 0);
+                          fetch('/api/send-email', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ type: 'session_logged', to: 'tara.mattimiro@gmail.com',
+                              data: { clientName: clientData.name, sessionFocus: current?.focus, setsLogged: setsCount, prsHit: prsCount, sessionDate } })
+                          }).catch(() => {});
+                        }
+                      }} style={{ background: "#2d7a1e", color: "#fff", border: "none", borderRadius: "7px", padding: "7px 14px", fontSize: "11px", cursor: "pointer", fontWeight: "600" }}>
                       Finish
                     </button>
                   ) : (
@@ -1296,6 +1364,16 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
 
                   {isOpen && (
                     <div style={{ padding: "0 16px 12px 51px" }}>
+                      {/* Demo video — appears at top of form cues */}
+                      {exerciseVideos[ex.name] && (
+                        <div style={{ marginBottom: "10px", borderRadius: "8px", overflow: "hidden", background: "#000" }}>
+                          <video
+                            src={exerciseVideos[ex.name]}
+                            autoPlay loop muted playsInline
+                            style={{ width: "100%", maxHeight: "200px", objectFit: "cover", display: "block" }}
+                          />
+                        </div>
+                      )}
                       {ex.imbalanceNote && (
                         <div style={{ fontSize: "11px", color: "#7a5010", lineHeight: "1.6", marginBottom: "7px", background: "#fef3e4", border: "1px solid #f0c060", borderRadius: "5px", padding: "8px 10px" }}>
                           <strong>Imbalance note:</strong> {ex.imbalanceNote}
@@ -1842,8 +1920,9 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
         />
       )}
 
-      {tab === "progress" && <NewProgressTab clientId={clientData?.id} bodyweight={clientData?.weight || 170} localLogs={logs} measurements={measurements} />}
-      {tab === "body" && <BodyTab clientId={clientData?.id} />}
+      {tab === "progress" && <ErrorBoundary tabName="Progress"><NewProgressTab clientId={clientData?.id} bodyweight={clientData?.weight || 170} localLogs={logs} measurements={measurements} />}
+      </ErrorBoundary>}
+      {tab === "body" && <ErrorBoundary tabName="Body"><BodyTab clientId={clientData?.id} />}
       {tab === "health" && (
         <HealthTab
           dailyHealth={dailyHealth}
@@ -1869,6 +1948,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
           clientId={clientData?.id}
         />
       )}
+      </ErrorBoundary>}
       {tab === "nutrition" && <NutritionTab clientId={clientData?.id} />}
       {tab === "messages" && (
         <MessagesTab
@@ -1900,6 +1980,8 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
         />
       )}
 
+      <PaymentGate clientData={clientData} onPay={handlePay} />
+      <InstallPrompt />
       {showHealthLog && (
         <HealthLogModal
           todayKey={todayKey}

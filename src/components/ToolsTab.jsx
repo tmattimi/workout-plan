@@ -217,6 +217,135 @@ function GoalsSection({ clientId }) {
 }
 
 
+// ── Ask Coach AI ─────────────────────────────────────────────────────────────
+function CoachAISection({ clientId }) {
+  const [question, setQuestion] = useState("");
+  const [answer, setAnswer] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [history, setHistory] = useState([]);
+
+  const QUICK_QUESTIONS = [
+    "Why am I not seeing progress?",
+    "How do I know if I'm working hard enough?",
+    "What should I eat before training?",
+    "How sore is too sore?",
+    "Should I train if I'm tired?",
+    "How long until I see results?",
+  ];
+
+  async function ask(q) {
+    const text = q || question.trim();
+    if (!text) return;
+    setLoading(true);
+    setAnswer(null);
+    setQuestion("");
+
+    const newHistory = [...history, { role: "user", content: text }];
+
+    try {
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 400,
+          system: `You are a knowledgeable personal trainer assistant helping a client understand their training. 
+Be direct, warm, and practical. Keep answers to 2-4 sentences unless the question needs more. 
+No disclaimers or suggestions to see a doctor for basic training questions. 
+You know about exercise science, nutrition, recovery, and progressive overload. 
+Speak like a coach talking to a client, not like a textbook.`,
+          messages: newHistory,
+        }),
+      });
+
+      const data = await response.json();
+      const replyText = data.content?.[0]?.text || "I couldn't process that — try again.";
+      const updatedHistory = [...newHistory, { role: "assistant", content: replyText }];
+      setHistory(updatedHistory.slice(-10)); // keep last 5 exchanges
+      setAnswer(replyText);
+    } catch (err) {
+      setAnswer("Something went wrong. Check your connection and try again.");
+    }
+    setLoading(false);
+  }
+
+  return (
+    <div>
+      <div style={{ fontSize: "9px", letterSpacing: "0.18em", textTransform: "uppercase", color: "#bbb", marginBottom: "6px" }}>
+        Ask a training question
+      </div>
+      <div style={{ fontSize: "11px", color: "#aaa", marginBottom: "14px", lineHeight: "1.6" }}>
+        Get instant answers about your training, recovery, nutrition, or program.
+      </div>
+
+      {/* Answer */}
+      {answer && (
+        <div style={{ background: "#f9f9f7", border: "1px solid #e4e0db", borderRadius: "9px", padding: "14px 16px", marginBottom: "14px", fontSize: "13px", color: "#333", lineHeight: "1.75", ...F }}>
+          {answer}
+        </div>
+      )}
+
+      {loading && (
+        <div style={{ background: "#f9f9f7", border: "1px solid #e4e0db", borderRadius: "9px", padding: "14px 16px", marginBottom: "14px", fontSize: "13px", color: "#bbb", lineHeight: "1.75", ...F }}>
+          Thinking...
+        </div>
+      )}
+
+      {/* Input */}
+      <div style={{ display: "flex", gap: "8px", marginBottom: "14px" }}>
+        <input
+          value={question}
+          onChange={e => setQuestion(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && ask()}
+          placeholder="Ask anything about your training..."
+          style={{ flex: 1, padding: "10px 13px", borderRadius: "8px", border: "1px solid #e4e0db", fontSize: "13px", color: "#111" }}
+        />
+        <button
+          onClick={() => ask()}
+          disabled={!question.trim() || loading}
+          style={{
+            background: question.trim() ? "#111" : "#e4e0db",
+            color: question.trim() ? "#fff" : "#aaa",
+            border: "none", borderRadius: "8px", padding: "10px 14px",
+            fontSize: "12px", cursor: question.trim() ? "pointer" : "default", flexShrink: 0,
+          }}
+        >
+          Ask
+        </button>
+      </div>
+
+      {/* Quick questions */}
+      {!answer && !loading && (
+        <div>
+          <div style={{ fontSize: "9px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#bbb", marginBottom: "8px" }}>Common questions</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
+            {QUICK_QUESTIONS.map(q => (
+              <button key={q} onClick={() => ask(q)} style={{
+                background: "#fafaf8", border: "1px solid #e4e0db", borderRadius: "8px",
+                padding: "10px 14px", fontSize: "12px", color: "#555", cursor: "pointer",
+                textAlign: "left", ...F, lineHeight: "1.4",
+              }}>
+                {q}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* New question button after answering */}
+      {answer && !loading && (
+        <button
+          onClick={() => { setAnswer(null); }}
+          style={{ background: "none", border: "1px solid #e4e0db", borderRadius: "8px", padding: "10px 14px", fontSize: "12px", color: "#aaa", cursor: "pointer", width: "100%", ...F }}
+        >
+          Ask another question
+        </button>
+      )}
+    </div>
+  );
+}
+
+
 // ── Exercise Library ──────────────────────────────────────────────────────────
 const MUSCLE_GROUPS = ["All", "Chest", "Back", "Lats", "Shoulders", "Triceps", "Biceps", "Glutes", "Hamstrings", "Quads", "Core", "Cardio"];
 const CATEGORIES = ["All", "Compound Bilateral", "Compound Unilateral", "Isolation Bilateral", "Isolation Unilateral"];
@@ -514,6 +643,7 @@ export default function ToolsTab({ principles, clientEquipment, clientInjuries, 
     { id: "library", label: "Exercise Library" },
     { id: "muscles", label: "Muscles" },
     { id: "guide", label: "Guide" },
+    { id: "coach", label: "Ask Coach AI" },
   ];
 
   return (
@@ -554,6 +684,7 @@ export default function ToolsTab({ principles, clientEquipment, clientInjuries, 
 
       {section === "library" && <ExerciseLibrary onGoToAlternatives={() => setSection("alternatives")} />}
       {section === "guide" && <GuideSection principles={principles} />}
+      {section === "coach" && <CoachAISection clientId={clientId} />}
     </div>
   );
 }

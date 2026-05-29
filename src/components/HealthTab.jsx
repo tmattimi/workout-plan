@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { getRecoveryAssessment } from "../lib/recoveryEngine";
+import ActivityLog from "./ActivityLog";
 
 const F = { fontFamily: "'Georgia','Times New Roman',serif" };
 
@@ -222,6 +223,22 @@ function HistoryRow({ date, data }) {
   );
 }
 
+
+// ── Activity Log Section ─────────────────────────────────────────────────────
+function ActivityLogSection({ clientId }) {
+  return (
+    <div>
+      <div style={{ fontSize: "9px", letterSpacing: "0.15em", textTransform: "uppercase", color: "#bbb", marginBottom: "10px" }}>
+        Non-workout activity
+      </div>
+      <div style={{ fontSize: "11px", color: "#aaa", lineHeight: "1.6", marginBottom: "14px" }}>
+        Log walks, runs, sports, yoga, and other activities that happen outside your training sessions.
+      </div>
+      <ActivityLog clientId={clientId} />
+    </div>
+  );
+}
+
 export default function HealthTab({ dailyHealth, todayKey, onHealthUpdate, clientId }) {
   const [section, setSection] = useState("today"); // today | history | integrations
 
@@ -236,6 +253,7 @@ export default function HealthTab({ dailyHealth, todayKey, onHealthUpdate, clien
   const SECTIONS = [
     { id: "today",        label: "Today" },
     { id: "history",      label: "History" },
+    { id: "activity",     label: "Activity" },
     { id: "integrations", label: "Connect" },
   ];
 
@@ -285,6 +303,10 @@ export default function HealthTab({ dailyHealth, todayKey, onHealthUpdate, clien
       )}
 
       {/* INTEGRATIONS */}
+      {section === "activity" && (
+        <ActivityLogSection clientId={clientId} />
+      )}
+
       {section === "integrations" && (
         <div>
           {[

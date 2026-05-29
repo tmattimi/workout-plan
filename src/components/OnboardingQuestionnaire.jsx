@@ -5,18 +5,21 @@ const F = { fontFamily: "'Georgia','Times New Roman',serif" };
 
 const STEPS = [
   "welcome",
-  "goals",
-  "stats",
-  "measurements",
-  "strength",
-  "training",
-  "cardio",
-  "injuries",
-  "lifestyle",
-  "background",
+  "goals",       // required — what are you working toward
+  "stats",       // required — height, weight, age, sex
+  "training",    // required — days, schedule, session length
+  "injuries",    // required — safety
+  "background",  // required — experience level
+  "measurements", // optional — can skip
+  "strength",    // optional — can skip
+  "cardio",      // optional — can skip
+  "lifestyle",   // optional — can skip
   "anything_else",
   "complete",
 ];
+
+// Steps that are required before coach can build a program
+const REQUIRED_STEPS = ["welcome", "goals", "stats", "training", "injuries", "background"];
 
 const DAYS = ["MON","TUE","WED","THU","FRI","SAT","SUN"];
 const DAY_LABELS = { MON:"Mon", TUE:"Tue", WED:"Wed", THU:"Thu", FRI:"Fri", SAT:"Sat", SUN:"Sun" };
@@ -1243,7 +1246,18 @@ export default function OnboardingQuestionnaire({ client, onComplete }) {
       )}
 
       {/* Navigation */}
-      <div style={{ display: "flex", gap: "8px", marginTop: "16px" }}>
+      {/* Skip optional steps — shows after required steps done */}
+      {!REQUIRED_STEPS.includes(step) && step !== "complete" && step !== "anything_else" && (
+        <div style={{ textAlign: "center", marginTop: "10px" }}>
+          <button
+            onClick={() => setStep("anything_else")}
+            style={{ background: "none", border: "none", fontSize: "11px", color: "#bbb", cursor: "pointer", textDecoration: "underline" }}
+          >
+            Skip remaining optional steps →
+          </button>
+        </div>
+      )}
+      <div style={{ display: "flex", gap: "8px", marginTop: "10px" }}>
         <button
           onClick={prevStep}
           style={{ flex: 1, background: "#fafaf8", color: "#555", border: "1px solid #e4e0db", borderRadius: "9px", padding: "14px", fontSize: "13px", cursor: "pointer", ...F }}
@@ -1264,7 +1278,7 @@ export default function OnboardingQuestionnaire({ client, onComplete }) {
             disabled={!canProceed()}
             style={{ flex: 2, background: canProceed() ? "#111" : "#ddd", color: canProceed() ? "#fff" : "#aaa", border: "none", borderRadius: "9px", padding: "14px", fontSize: "13px", cursor: canProceed() ? "pointer" : "default", ...F }}
           >
-            Continue →
+            {REQUIRED_STEPS.includes(step) && step === REQUIRED_STEPS[REQUIRED_STEPS.length - 1] ? "Continue to optional details →" : "Continue →"}
           </button>
         )}
       </div>

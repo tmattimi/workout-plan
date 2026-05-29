@@ -400,7 +400,63 @@ export async function sendMessage(coachId, clientId, message, sender, exerciseId
     .insert({ coach_id: coachId, client_id: clientId, message, sender, exercise_id: exerciseId })
     .select()
     .single();
+
+  if (!error && data) {
+    // Fire-and-forget email notification
+    sendMessageEmailNotification(clientId, message, sender).catch(() => {});
+  }
+
   return { data, error };
+}
+
+async function sendMessageEmailNotification(clientId, message, sender) {
+  try {
+    // Get client and coach info
+    const { data: client } = await supabase
+      .from('clients')
+      .select('name, email')
+      .eq('id', clientId)
+      .single();
+    if (!client) return;
+
+    const appUrl = window.location.origin;
+
+    if (sender === 'coach') {
+      // Email the client
+      if (!client.email) return;
+      await fetch('/api/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'coach_message',
+          to: client.email,
+          data: {
+            clientName: client.name,
+            messageText: message,
+            coachName: 'Tara',
+          },
+        }),
+      });
+    } else {
+      // Email the coach
+      const coachEmail = 'tara.mattimiro@gmail.com';
+      await fetch('/api/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'client_message',
+          to: coachEmail,
+          data: {
+            clientName: client.name,
+            messageText: message,
+          },
+        }),
+      });
+    }
+  } catch (e) {
+    // Non-critical — log but don't throw
+    console.warn('Email notification failed:', e.message);
+  }
 }
 
 export async function markMessagesRead(clientId, sender) {
@@ -828,7 +884,7 @@ export async function uploadPhoto(clientId, monthKey, poseId, base64DataUrl) {
 
   const path = `${clientId}/${monthKey}/${poseId}.jpg`;
   const { error } = await supabase.storage
-    .from('progress-photos')
+    .from('progress_photos')
     .upload(path, blob, { upsert: true, contentType: mime });
 
   if (error) return { url: null, error };
@@ -840,7 +896,7 @@ export async function uploadPhoto(clientId, monthKey, poseId, base64DataUrl) {
 export async function getPhotoUrls(clientId) {
   if (!supabase) return { data: [] };
   const { data, error } = await supabase.storage
-    .from('progress-photos')
+    .from('progress_photos')
     .list(`${clientId}`, { limit: 100 });
   return { data, error };
 }
@@ -885,7 +941,7 @@ export async function getClientWorkoutAnalytics(clientId, days = 28) {
       .gte('swapped_at', new Date(Date.now() - days * 86400000).toISOString())
       .order('swapped_at', { ascending: false }),
     supabase
-      .from('checkins')
+      .from('weekly_checkins')
       .select('*')
       .eq('client_id', clientId)
       .gte('checked_in_at', new Date(Date.now() - days * 86400000).toISOString())
@@ -962,7 +1018,7 @@ export async function uploadProgressPhoto(clientId, file, tag = 'front') {
   const ext = file.name.split('.').pop();
   const path = `${clientId}/${Date.now()}_${tag}.${ext}`;
   const { data, error } = await supabase.storage
-    .from('progress-photos')
+    .from('progress_photos')
     .upload(path, file, { cacheControl: '3600', upsert: false });
   if (error) return { data: null, error };
 
@@ -986,7 +1042,7 @@ export async function getProgressPhotos(clientId) {
   // Get signed URLs for each photo
   const withUrls = await Promise.all(data.map(async photo => {
     const { data: urlData } = await supabase.storage
-      .from('progress-photos')
+      .from('progress_photos')
       .createSignedUrl(photo.storage_path, 3600);
     return { ...photo, url: urlData?.signedUrl || null };
   }));
@@ -1090,4 +1146,149 @@ export async function getClientPreferences(clientId) {
     .eq('id', clientId)
     .single();
   return { data };
+}
+
+// ── Exercise Video Library ────────────────────────────────────────────────────
+
+export async function uploadExerciseVideo(exerciseName, file) {
+  if (!supabase) return { error: 'No Supabase' };
+  const ext = file.name.split('.').pop();
+  const path = `${exerciseName.toLowerCase().replace(/[^a-z0-9]/g, '-')}.${ext}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from('exercise-videos')
+    .upload(path, file, { upsert: true, contentType: file.type });
+
+  if (uploadError) return { error: uploadError };
+
+  const { data: { publicUrl } } = supabase.storage
+    .from('exercise-videos')
+    .getPublicUrl(path);
+
+  // Update exercises table
+  const { error: dbError } = await supabase
+    .from('exercises')
+    .update({ video_url: publicUrl })
+    .eq('name', exerciseName);
+
+  return { url: publicUrl, error: dbError };
+}
+
+export async function getExerciseVideos() {
+  if (!supabase) return { data: {} };
+  const { data } = await supabase
+    .from('exercises')
+    .select('name, video_url')
+    .not('video_url', 'is', null);
+  const map = {};
+  (data || []).forEach(ex => { map[ex.name] = ex.video_url; });
+  return { data: map };
+}
+
+export async function setExerciseVideoUrl(exerciseName, url) {
+  if (!supabase) return { error: 'No Supabase' };
+  const { error } = await supabase
+    .from('exercises')
+    .update({ video_url: url })
+    .eq('name', exerciseName);
+  return { error };
+}
+
+// ── Group Programming ─────────────────────────────────────────────────────────
+
+export async function getGroups(coachId) {
+  if (!supabase) return { data: [] };
+  const { data, error } = await supabase
+    .from('client_groups')
+    .select(`
+      id, name, description, color, created_at,
+      client_group_members (
+        client_id,
+        clients ( id, name, email )
+      )
+    `)
+    .eq('coach_id', coachId)
+    .order('created_at');
+  return { data: data || [], error };
+}
+
+export async function createGroup(coachId, { name, description, color }) {
+  if (!supabase) return { data: null };
+  const { data, error } = await supabase
+    .from('client_groups')
+    .insert({ coach_id: coachId, name, description, color: color || '#1a1a1a' })
+    .select().single();
+  return { data, error };
+}
+
+export async function updateGroup(groupId, updates) {
+  if (!supabase) return { error: null };
+  const { error } = await supabase
+    .from('client_groups')
+    .update(updates)
+    .eq('id', groupId);
+  return { error };
+}
+
+export async function deleteGroup(groupId) {
+  if (!supabase) return { error: null };
+  const { error } = await supabase
+    .from('client_groups')
+    .delete().eq('id', groupId);
+  return { error };
+}
+
+export async function addClientToGroup(groupId, clientId) {
+  if (!supabase) return { error: null };
+  const { error } = await supabase
+    .from('client_group_members')
+    .upsert({ group_id: groupId, client_id: clientId });
+  return { error };
+}
+
+export async function removeClientFromGroup(groupId, clientId) {
+  if (!supabase) return { error: null };
+  const { error } = await supabase
+    .from('client_group_members')
+    .delete()
+    .eq('group_id', groupId)
+    .eq('client_id', clientId);
+  return { error };
+}
+
+export async function assignProgramToGroup(programId, groupId) {
+  if (!supabase) return { error: null, count: 0 };
+  // Get all clients in the group
+  const { data: members } = await supabase
+    .from('client_group_members')
+    .select('client_id')
+    .eq('group_id', groupId);
+  if (!members?.length) return { error: null, count: 0 };
+  // Update all clients
+  const { error } = await supabase
+    .from('clients')
+    .update({ assigned_program_id: programId })
+    .in('id', members.map(m => m.client_id));
+  return { error, count: members.length };
+}
+
+export async function broadcastMessageToGroup(coachId, groupId, message) {
+  if (!supabase) return { error: null };
+  // Get all clients in the group
+  const { data: members } = await supabase
+    .from('client_group_members')
+    .select('client_id')
+    .eq('group_id', groupId);
+  if (!members?.length) return { error: null, count: 0 };
+  // Send message to each client
+  const inserts = members.map(m => ({
+    coach_id: coachId,
+    client_id: m.client_id,
+    message,
+    sender: 'coach',
+  }));
+  const { error } = await supabase.from('client_messages').insert(inserts);
+  // Log the broadcast
+  await supabase.from('group_messages').insert({ group_id: groupId, coach_id: coachId, message });
+  return { error, count: members.length };
 }

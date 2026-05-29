@@ -6,7 +6,7 @@ import {
   getMyPlans, createPlan, updatePlan, createPlanDay,
   addExerciseToPlanDay, removePlanExercise, reorderPlanExercises,
   assignPlanToClient, getAllExercises, getClientOverview,
-  createCoachNote, getMessages, sendMessage, markMessagesRead,
+  createCoachNote, getMessages, sendMessage, markMessagesRead, subscribeToMessages,
   inviteClient, getClientIntake, seedClientDataFromIntake
 } from "../lib/supabase";
 import { formatDate } from "../storage";
@@ -444,6 +444,99 @@ function PlanBuilder({ coachId, onBack }) {
 }
 
 // ── Client Detail ──────────────────────────────────────────────────────────────
+// ── Billing Panel ─────────────────────────────────────────────────────────────
+function BillingPanel({ client, coachId }) {
+  const [saving, setSaving] = useState(false);
+  const [status, setStatus] = useState(client.billing_status || 'trial');
+  const [saved, setSaved] = useState(false);
+
+  const statusColors = {
+    active: "#2d7a1e", trial: "#c47a0a", complimentary: "#2563a8",
+    past_due: "#a02020", cancelled: "#888", paused: "#555",
+  };
+
+  const statusLabels = {
+    active: "Active", trial: "Trial", complimentary: "Complimentary",
+    past_due: "Past due", cancelled: "Cancelled", paused: "Paused",
+  };
+
+  async function saveStatus(newStatus) {
+    setSaving(true);
+    await updateClient_db(client.id, { billing_status: newStatus });
+    setStatus(newStatus);
+    setSaved(true);
+    setSaving(false);
+    setTimeout(() => setSaved(false), 2000);
+  }
+
+  const trialEnd = client.trial_ends_at ? new Date(client.trial_ends_at) : null;
+  const trialDaysLeft = trialEnd ? Math.max(0, Math.ceil((trialEnd - Date.now()) / 86400000)) : null;
+
+  return (
+    <div>
+      <div style={{ fontSize: "9px", letterSpacing: "0.15em", textTransform: "uppercase", color: "#bbb", marginBottom: "14px" }}>
+        Billing — {client.name}
+      </div>
+
+      {/* Current status */}
+      <div style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "9px", padding: "14px 16px", marginBottom: "12px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div>
+            <div style={{ fontSize: "9px", color: "#bbb", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "4px" }}>Status</div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: statusColors[status] || "#bbb" }} />
+              <span style={{ fontSize: "15px", fontWeight: "600", color: "#111" }}>{statusLabels[status] || status}</span>
+            </div>
+          </div>
+          <div style={{ textAlign: "right" }}>
+            {status === 'trial' && trialDaysLeft !== null && (
+              <div style={{ fontSize: "11px", color: "#c47a0a" }}>{trialDaysLeft} days left</div>
+            )}
+            {client.billing_next_renewal && (
+              <div style={{ fontSize: "11px", color: "#aaa" }}>
+                Renews {new Date(client.billing_next_renewal).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+              </div>
+            )}
+            {client.stripe_customer_id && (
+              <div style={{ fontSize: "9px", color: "#ddd", marginTop: "2px" }}>Stripe: {client.stripe_customer_id.slice(0, 12)}...</div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Manual override — for Tara to manage edge cases */}
+      <div style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "9px", padding: "14px 16px", marginBottom: "12px" }}>
+        <div style={{ fontSize: "10px", fontWeight: "600", color: "#555", marginBottom: "10px" }}>Override status</div>
+        <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+          {["active", "trial", "complimentary", "paused", "cancelled"].map(s => (
+            <button
+              key={s} onClick={() => saveStatus(s)} disabled={saving || s === status}
+              style={{
+                padding: "6px 12px", borderRadius: "20px", fontSize: "11px", cursor: s === status ? "default" : "pointer",
+                background: s === status ? statusColors[s] : "#f5f5f3",
+                color: s === status ? "#fff" : "#555",
+                border: `1px solid ${s === status ? statusColors[s] : "#e4e0db"}`,
+                opacity: saving ? 0.6 : 1,
+              }}
+            >
+              {statusLabels[s]}
+            </button>
+          ))}
+        </div>
+        {saved && <div style={{ fontSize: "10px", color: "#2d7a1e", marginTop: "8px" }}>Saved</div>}
+      </div>
+
+      {/* Complimentary note */}
+      {status === "complimentary" && (
+        <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: "8px", padding: "11px 13px", fontSize: "11px", color: "#1e40af", lineHeight: "1.6" }}>
+          Complimentary access — this client will never see a payment gate regardless of billing status.
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 // ── Assign Plan View ───────────────────────────────────────────────────────────
 function AssignPlanView({ client, coachId, onAssigned }) {
   const [programs, setPrograms] = useState([]);
@@ -622,8 +715,6 @@ function ClientDetail({ client, coachId, plans, onBack, onDelete, onAssignPlan }
     setInviting(false);
   }
 
-  const pollRef = useRef(null);
-
   useEffect(() => {
     async function load() {
       const { recalculatePRsFromLogs } = await import("../lib/supabase");
@@ -639,13 +730,27 @@ function ClientDetail({ client, coachId, plans, onBack, onDelete, onAssignPlan }
     }
     load();
 
-    // Poll messages every 30s when on messages tab
-    pollRef.current = setInterval(async () => {
-      const { data } = await getMessages(client.id);
-      if (data) setMessages(data);
-    }, 30000);
+    // Real-time subscription — messages appear instantly when client sends
+    const unsub = subscribeToMessages(client.id, (newMsg) => {
+      setMessages(prev => {
+        const exists = prev.some(m => m.id === newMsg.id);
+        if (exists) return prev;
+        const updated = [...prev, newMsg].sort((a, b) => a.created_at.localeCompare(b.created_at));
+        return updated;
+      });
+      // If on messages tab, mark as read immediately
+      setView(v => {
+        if (v === "messages") markMessagesRead(client.id, "client");
+        return v;
+      });
+      // Update unread count in overview
+      setOverview(prev => prev ? {
+        ...prev,
+        unreadFromClient: (prev.unreadFromClient || 0) + (newMsg.sender === "client" ? 1 : 0)
+      } : prev);
+    });
 
-    return () => clearInterval(pollRef.current);
+    return () => { if (unsub?.unsubscribe) unsub.unsubscribe(); };
   }, [client.id]);
 
   async function handleSendNote() {
@@ -707,7 +812,7 @@ function ClientDetail({ client, coachId, plans, onBack, onDelete, onAssignPlan }
 
       {/* Sub-nav */}
       <div style={{ display: "flex", gap: "5px", marginBottom: "16px", overflowX: "auto" }}>
-        {[["overview","Overview"],["analytics","Analytics"],["photos","Photos"],["workout_notes","Workout Notes"],["ai","AI Analysis"],["view_program","View Program"],["program","Build Program"],["intake","Intake Form"],["notes","Coach Notes"],["messages","Messages"],["assign","Assign Plan"],["edit","Edit Client"]].map(([v, label]) => (
+        {[["overview","Overview"],["analytics","Analytics"],["photos","Photos"],["workout_notes","Workout Notes"],["ai","AI Analysis"],["view_program","View Program"],["program","Build Program"],["intake","Intake Form"],["notes","Coach Notes"],["messages","Messages"],["assign","Assign Plan"],["billing","Billing"],["edit","Edit Client"]].map(([v, label]) => (
           <button key={v} onClick={() => setView(v)} style={{ flex: "0 0 auto", background: view === v ? "#111" : "#fff", color: view === v ? "#fff" : "#555", border: "1px solid #e0e0e0", borderRadius: "20px", padding: "6px 14px", fontSize: "11px", cursor: "pointer", ...F, whiteSpace: "nowrap" }}>
             {label}{v === "messages" && overview?.unreadFromClient > 0 ? ` (${overview.unreadFromClient})` : ""}
           </button>
@@ -1254,6 +1359,10 @@ function ClientDetail({ client, coachId, plans, onBack, onDelete, onAssignPlan }
       )}
 
       {/* Edit Client */}
+      {view === "billing" && (
+        <BillingPanel client={client} coachId={coachId} />
+      )}
+
       {view === "edit" && (
         <div>
           <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.15em", color: "#999", marginBottom: "14px" }}>Client Details</div>
@@ -1400,6 +1509,22 @@ function ClientListView({ clients, loading, unreadCounts, onSelect, onNewClient 
     return client.total_sessions || 0;
   }
 
+  // Build roster health summary
+  const rosterStats = (() => {
+    const totalUnread = Object.values(unreadCounts).reduce((s, n) => s + n, 0);
+    const activeThisWeek = clients.filter(c => {
+      if (!c.last_workout_at) return false;
+      const days = Math.floor((Date.now() - new Date(c.last_workout_at)) / 86400000);
+      return days <= 7;
+    }).length;
+    const needsCheckIn = clients.filter(c => {
+      if (!c.last_workout_at) return true;
+      const days = Math.floor((Date.now() - new Date(c.last_workout_at)) / 86400000);
+      return days > 7;
+    }).length;
+    return { totalUnread, activeThisWeek, needsCheckIn };
+  })();
+
   const filtered = clients
     .filter(c => !search || c.name.toLowerCase().includes(search.toLowerCase()))
     .sort((a, b) => {
@@ -1438,6 +1563,24 @@ function ClientListView({ clients, loading, unreadCounts, onSelect, onNewClient 
 
   return (
     <div style={{ padding: "16px 16px 60px" }}>
+
+      {/* Roster at-a-glance summary */}
+      {clients.length > 0 && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px", marginBottom: "16px" }}>
+          <div style={{ background: rosterStats.activeThisWeek === clients.length ? "#f0fff4" : "#fff", border: `1px solid ${rosterStats.activeThisWeek === clients.length ? "#bbf7d0" : "#e8e8e8"}`, borderRadius: "9px", padding: "12px 10px", textAlign: "center" }}>
+            <div style={{ fontSize: "24px", fontWeight: "700", color: "#111", lineHeight: 1 }}>{rosterStats.activeThisWeek}</div>
+            <div style={{ fontSize: "8px", color: "#aaa", textTransform: "uppercase", letterSpacing: "0.1em", marginTop: "3px" }}>Active this week</div>
+          </div>
+          <div style={{ background: rosterStats.needsCheckIn > 0 ? "#fff8f0" : "#fff", border: `1px solid ${rosterStats.needsCheckIn > 0 ? "#fed7aa" : "#e8e8e8"}`, borderRadius: "9px", padding: "12px 10px", textAlign: "center" }}>
+            <div style={{ fontSize: "24px", fontWeight: "700", color: rosterStats.needsCheckIn > 0 ? "#c47a0a" : "#111", lineHeight: 1 }}>{rosterStats.needsCheckIn}</div>
+            <div style={{ fontSize: "8px", color: "#aaa", textTransform: "uppercase", letterSpacing: "0.1em", marginTop: "3px" }}>Need check-in</div>
+          </div>
+          <div style={{ background: rosterStats.totalUnread > 0 ? "#fff5f5" : "#fff", border: `1px solid ${rosterStats.totalUnread > 0 ? "#fecaca" : "#e8e8e8"}`, borderRadius: "9px", padding: "12px 10px", textAlign: "center" }}>
+            <div style={{ fontSize: "24px", fontWeight: "700", color: rosterStats.totalUnread > 0 ? "#a02020" : "#111", lineHeight: 1 }}>{rosterStats.totalUnread}</div>
+            <div style={{ fontSize: "8px", color: "#aaa", textTransform: "uppercase", letterSpacing: "0.1em", marginTop: "3px" }}>Unread messages</div>
+          </div>
+        </div>
+      )}
 
       {/* Recent activity feed */}
       {recentActivity.length > 0 && (
@@ -1615,12 +1758,33 @@ export default function CoachDashboard() {
     if (session) loadData();
   }, [session]);
 
+  // Refresh unread counts every 20 seconds
+  useEffect(() => {
+    if (!session) return;
+    const interval = setInterval(() => loadUnreadCounts(), 20000);
+    return () => clearInterval(interval);
+  }, [session, clients]);
+
   async function loadData() {
     setLoading(true);
     const [clientsResult, plansResult] = await Promise.all([getMyClients(), getMyPlans()]);
-    setClients(clientsResult.data || []);
+    const newClients = clientsResult.data || [];
+    setClients(newClients);
     setPlans(plansResult.data || []);
     setLoading(false);
+    // Load unread message counts per client
+    loadUnreadCounts(newClients);
+  }
+
+  async function loadUnreadCounts(clientList) {
+    const list = clientList || clients;
+    if (!list.length) return;
+    const counts = {};
+    await Promise.all(list.map(async c => {
+      const { data } = await getMessages(c.id);
+      counts[c.id] = (data || []).filter(m => m.sender === "client" && !m.is_read).length;
+    }));
+    setUnreadCounts(counts);
   }
 
   async function handleAssignPlan(clientId, planId) {
@@ -1655,7 +1819,7 @@ export default function CoachDashboard() {
           </button>
         </div>
         <div style={{ display: "flex", gap: "3px" }}>
-          {[["clients","Clients"],["library","Program Library"],["plans","Plan Builder"]].map(([v, label]) => (
+          {[["clients","Clients"],["groups","Groups"],["library","Program Library"],["videos","Videos"],["plans","Plan Builder"]].map(([v, label]) => (
             <button key={v} onClick={() => { setView(v); setSelectedClient(null); }} style={{ background: view === v && !selectedClient ? "#f7f6f3" : "transparent", color: view === v && !selectedClient ? "#111" : "#666", border: "1px solid", borderColor: view === v && !selectedClient ? "#f7f6f3" : "#333", borderRadius: "4px 4px 0 0", padding: "6px 14px", fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", cursor: "pointer", ...F }}>
               {label}
             </button>
@@ -1686,6 +1850,14 @@ export default function CoachDashboard() {
       ) : view === "library" ? (
         <div style={{ padding: "16px", overflowY: "auto", flex: 1 }}>
           <ProgramLibrary coachId={session.user.id} />
+        </div>
+      ) : view === "groups" ? (
+        <div style={{ padding: "16px", overflowY: "auto", flex: 1 }}>
+          <GroupProgramming coachId={session.user.id} allClients={clients} />
+        </div>
+      ) : view === "videos" ? (
+        <div style={{ padding: "16px", overflowY: "auto", flex: 1 }}>
+          <VideoLibrary coachId={session.user.id} />
         </div>
       ) : (
         <PlanBuilder coachId={session.user.id} onBack={() => setView("clients")} />

@@ -739,31 +739,40 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
                 ))}
               </div>
 
-              {/* ── BODY WEIGHT CHART ── */}
-              {wtPts.length >= 2 && (() => {
-                const sp = miniLine(wtPts, '#f5f5f7', 44);
-                const diff = (wtPts[wtPts.length-1] - wtPts[0]).toFixed(1);
-                const diffColor = parseFloat(diff) < 0 ? '#34c759' : parseFloat(diff) > 0 ? '#ff453a' : '#555';
+              {/* ── BODY WEIGHT CHART ── always visible if any entry exists */}
+              {wtPts.length >= 1 && (() => {
+                const hasChart = wtPts.length >= 2;
+                const sp = hasChart ? miniLine(wtPts, '#f5f5f7', 44) : null;
+                const diff = hasChart ? (wtPts[wtPts.length-1] - wtPts[0]).toFixed(1) : null;
+                const diffColor = diff === null ? '#555' : parseFloat(diff) < 0 ? '#34c759' : parseFloat(diff) > 0 ? '#ff453a' : '#555';
                 return (
-                  <div style={{ marginBottom: 30 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
+                  <div style={{ marginBottom: 30, borderBottom: '1px solid #1c1c1e', paddingBottom: 26 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: hasChart ? 12 : 6 }}>
                       <span style={{ fontSize: '8px', letterSpacing: '.2em', textTransform: 'uppercase', color: '#3a3a3c' }}>Body weight</span>
                       <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
                         <span style={{ fontSize: 20, fontWeight: 700, color: '#f5f5f7', letterSpacing: '-0.5px' }}>{wtPts[wtPts.length-1]}</span>
                         <span style={{ fontSize: 10, color: '#555' }}>lbs</span>
-                        {diff !== '0.0' && <span style={{ fontSize: 10, color: diffColor, fontWeight: 600 }}>{parseFloat(diff)>0?'+':''}{diff} lbs</span>}
+                        {diff !== null && diff !== '0.0' && (
+                          <span style={{ fontSize: 10, color: diffColor, fontWeight: 600 }}>{parseFloat(diff)>0?'+':''}{diff}</span>
+                        )}
                       </div>
                     </div>
-                    <svg viewBox={`0 0 ${sp.W} ${sp.h}`} width="100%" height={sp.h} preserveAspectRatio="none" style={{ display: 'block' }}>
-                      <polyline points={sp.points} fill="none" stroke="#2c2c2e" strokeWidth="1" />
-                      <polyline points={sp.points} fill="none" stroke="#f5f5f7" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.55" />
-                      {wtPts.map((v, i) => {
-                        const x = (i/(wtPts.length-1))*sp.W;
-                        const min = Math.min(...wtPts), max = Math.max(...wtPts), range = max-min||1;
-                        const y = sp.h - ((v-min)/range)*(sp.h-6) - 3;
-                        return <circle key={i} cx={x} cy={y} r={i===wtPts.length-1?2.5:1.5} fill={i===wtPts.length-1?'#f5f5f7':'#3a3a3c'} />;
-                      })}
-                    </svg>
+                    {hasChart ? (
+                      <svg viewBox={`0 0 ${sp.W} ${sp.h}`} width="100%" height={sp.h} preserveAspectRatio="none" style={{ display: 'block' }}>
+                        <polyline points={sp.points} fill="none" stroke="#2c2c2e" strokeWidth="1" />
+                        <polyline points={sp.points} fill="none" stroke="#f5f5f7" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.55" />
+                        {wtPts.map((v, i) => {
+                          const x = (i/(wtPts.length-1))*sp.W;
+                          const min = Math.min(...wtPts), max = Math.max(...wtPts), range = max-min||1;
+                          const y = sp.h - ((v-min)/range)*(sp.h-6) - 3;
+                          return <circle key={i} cx={x} cy={y} r={i===wtPts.length-1?2.5:1.5} fill={i===wtPts.length-1?'#f5f5f7':'#3a3a3c'} />;
+                        })}
+                      </svg>
+                    ) : (
+                      <div style={{ fontSize: 9, color: '#333', marginTop: 4, lineHeight: 1.6 }}>
+                        Log your weight daily in the Body tab — the chart will appear once you have a few entries.
+                      </div>
+                    )}
                   </div>
                 );
               })()}
