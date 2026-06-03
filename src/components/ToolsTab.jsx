@@ -551,6 +551,7 @@ function GuideSection({ principles, openEntryId }) {
   const filtered = q
     ? allEntries.filter(p =>
         p.title.toLowerCase().includes(q) ||
+        (p.subtitle || "").toLowerCase().includes(q) ||
         p.body.toLowerCase().includes(q) ||
         (p.tags || []).some(t => t.toLowerCase().includes(q))
       )
@@ -578,7 +579,8 @@ function GuideSection({ principles, openEntryId }) {
                 style={{ width: "100%", background: "transparent", border: "none", padding: "10px 13px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", cursor: "pointer", textAlign: "left" }}>
                 <div>
                   <div style={{ fontSize: "12px", fontWeight: "600", color: "#1a1a1a" }}>{p.title}</div>
-                  <div style={{ fontSize: "9px", color: "#bbb", marginTop: "1px", textTransform: "uppercase", letterSpacing: "0.08em" }}>{p.section}</div>
+                  {p.subtitle && <div style={{ fontSize: "11px", color: "#888", marginTop: "1px", lineHeight: 1.4 }}>{p.subtitle}</div>}
+                  <div style={{ fontSize: "9px", color: "#bbb", marginTop: "3px", textTransform: "uppercase", letterSpacing: "0.08em" }}>{p.section}</div>
                 </div>
                 <span style={{ color: "#ccc", fontSize: "11px", flexShrink: 0, marginLeft: "8px", marginTop: "2px" }}>{expandedPrinciple === p.key ? "▲" : "▼"}</span>
               </button>
@@ -611,7 +613,10 @@ function GuideSection({ principles, openEntryId }) {
               <div key={key} style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "6px", marginBottom: "5px", overflow: "hidden" }}>
                 <button onClick={() => setExpandedPrinciple(expandedPrinciple === key ? null : key)}
                   style={{ width: "100%", background: "transparent", border: "none", padding: "10px 13px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", textAlign: "left" }}>
-                  <span style={{ fontSize: "12px", fontWeight: "600", color: "#1a1a1a" }}>{p.title}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: "12px", fontWeight: "600", color: "#1a1a1a" }}>{p.title}</div>
+                    {p.subtitle && <div style={{ fontSize: "11px", color: "#888", marginTop: "1px", lineHeight: 1.4 }}>{p.subtitle}</div>}
+                  </div>
                   <span style={{ color: "#ccc", fontSize: "11px", flexShrink: 0, marginLeft: "8px" }}>{expandedPrinciple === key ? "▲" : "▼"}</span>
                 </button>
                 {expandedPrinciple === key && (
