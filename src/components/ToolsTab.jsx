@@ -348,8 +348,34 @@ Speak like a coach talking to a client, not like a textbook.`,
 
 
 // ── Exercise Library ──────────────────────────────────────────────────────────
-const MUSCLE_GROUPS = ["All", "Chest", "Back", "Lats", "Shoulders", "Triceps", "Biceps", "Glutes", "Hamstrings", "Quads", "Core", "Cardio"];
+// Maps each broad filter group to the specific anatomical names used as
+// primaryMuscle / secondaryMuscles in the exercise database. This keeps the
+// descriptive labels in the data while making the filter reliable — selecting
+// "Triceps" correctly matches "Tricep" and "Tricep Long Head", etc.
+const MUSCLE_GROUP_MAP = {
+  Chest:      ["Chest", "Upper Chest"],
+  Back:       ["Lats", "Mid Back", "Upper Back", "Lower Back"],
+  Shoulders:  ["Shoulder", "Side Delt", "Rear Delt", "Front Delt", "External Rotators"],
+  Triceps:    ["Tricep", "Tricep Long Head"],
+  Biceps:     ["Bicep", "Bicep Long Head", "Brachialis"],
+  Glutes:     ["Glutes"],
+  Hamstrings: ["Hamstrings"],
+  Quads:      ["Quads", "Adductors", "Inner Thigh"],
+  Calves:     ["Gastrocnemius", "Soleus"],
+  Core:       ["Core", "Deep Core", "Abs", "Obliques", "TVA", "Hip Flexors"],
+};
+
+const MUSCLE_GROUPS = ["All", "Chest", "Back", "Shoulders", "Triceps", "Biceps", "Glutes", "Hamstrings", "Quads", "Calves", "Core"];
 const CATEGORIES = ["All", "Compound Bilateral", "Compound Unilateral", "Isolation Bilateral", "Isolation Unilateral"];
+
+// Which broad group does a specific muscle name belong to?
+function groupForMuscle(name) {
+  if (!name) return null;
+  for (const [group, names] of Object.entries(MUSCLE_GROUP_MAP)) {
+    if (names.includes(name)) return group;
+  }
+  return null;
+}
 
 function ExerciseLibrary({ onGoToAlternatives }) {
   const [search, setSearch] = useState("");
@@ -360,9 +386,11 @@ function ExerciseLibrary({ onGoToAlternatives }) {
   const q = search.toLowerCase().trim();
 
   const filtered = EXERCISE_DB.filter(ex => {
+    // Match against the mapped group names (exact), not fragile substrings.
+    const groupNames = muscle === "All" ? null : (MUSCLE_GROUP_MAP[muscle] || []);
     const matchMuscle = muscle === "All" ||
-      ex.primaryMuscle?.toLowerCase().includes(muscle.toLowerCase()) ||
-      ex.secondaryMuscles?.some(m => m.toLowerCase().includes(muscle.toLowerCase()));
+      groupNames.includes(ex.primaryMuscle) ||
+      ex.secondaryMuscles?.some(m => groupNames.includes(m));
     const matchCat = category === "All" || ex.category === category;
     const matchSearch = !q ||
       ex.name.toLowerCase().includes(q) ||
@@ -372,10 +400,11 @@ function ExerciseLibrary({ onGoToAlternatives }) {
     return matchMuscle && matchCat && matchSearch;
   });
 
-  // Group by primary muscle
+  // Group by broad muscle group (so "Tricep" and "Tricep Long Head" both
+  // appear under one "Triceps" header instead of fragmenting).
   const grouped = {};
   filtered.forEach(ex => {
-    const key = ex.primaryMuscle || "Other";
+    const key = groupForMuscle(ex.primaryMuscle) || ex.primaryMuscle || "Other";
     if (!grouped[key]) grouped[key] = [];
     grouped[key].push(ex);
   });
