@@ -1,4 +1,5 @@
 import { useState } from "react";
+import MuscleMap from "./MuscleMap";
 
 const FRONT=['chest','shoulders','biceps','core','quads','calves'];
 const BACK=['back','shoulders','triceps','glutes','hamstrings','calves'];
@@ -401,7 +402,13 @@ export default function MuscleScience() {
       </div>
       <div style={{ display:'flex', gap:10, alignItems:'flex-start', marginBottom:12 }}>
         <div style={{ background:'#f7f4f0', borderRadius:10, padding:'8px 4px', flexShrink:0, textAlign:'center' }}>
-          {view === 'front' ? frontSVG() : backSVG()}
+          <MuscleMap
+            view={view}
+            sel={sel}
+            onPick={pick}
+            colorFor={(id) => D[id]?.c || '#2563a8'}
+            size={150}
+          />
           <div style={{ fontSize:10, color:'#aaa', marginTop:4 }}>Tap a muscle group</div>
         </div>
         <div style={{ flex:1, display:'flex', flexDirection:'column', gap:2 }}>
