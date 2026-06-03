@@ -1065,8 +1065,8 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
     ["body","Body"],
     ["nutrition","Nutrition"],
     ...(clientData?.sex === "female" ? [["cycle","Cycle"]] : []),
-    ["messages","Messages"],
     ["tools","Tools"],
+    ["messages","Messages"],
   ];
 
   // Monthly prompt modal

@@ -678,7 +678,6 @@ export default function ToolsTab({ principles, clientEquipment, clientInjuries, 
     { id: "library", label: "Exercise Library" },
     { id: "muscles", label: "Muscles" },
     { id: "guide", label: "Guide" },
-    { id: "coach", label: "Ask Coach AI" },
   ];
 
   return (
@@ -719,7 +718,6 @@ export default function ToolsTab({ principles, clientEquipment, clientInjuries, 
 
       {section === "library" && <ExerciseLibrary onGoToAlternatives={() => setSection("alternatives")} />}
       {section === "guide" && <GuideSection principles={principles} />}
-      {section === "coach" && <CoachAISection clientId={clientId} />}
     </div>
   );
 }
