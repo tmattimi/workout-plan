@@ -22,6 +22,7 @@ const ID_TO_SLUGS = {
   shoulders:  ["front-deltoids", "back-deltoids"],
   biceps:     ["biceps"],
   triceps:    ["triceps"],
+  forearms:   ["forearm"],
   core:       ["abs", "obliques"],
   back:       ["upper-back", "lower-back", "trapezius"],
   quads:      ["quadriceps"],
@@ -48,7 +49,10 @@ export default function MuscleMap({ view = "front", sel, onPick, colorFor, size 
   }, [sel]);
 
   const selColor = (sel && colorFor) ? colorFor(sel) : "#2563a8";
-  const colors = ["#e4dfd8", selColor]; // [baseline, selected]
+  // Unselected muscles use a soft blue tint to signal "these are selectable";
+  // the selected muscle shows in its own distinct color.
+  const baseline = "#9db8d8";
+  const colors = [baseline, selColor]; // [unselected/active-looking, selected]
 
   function handleClick(part) {
     const slug = part?.muscle || part?.slug || (typeof part === "string" ? part : null);

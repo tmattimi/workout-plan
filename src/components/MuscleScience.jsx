@@ -1,8 +1,8 @@
 import { useState } from "react";
 import MuscleMap from "./MuscleMap";
 
-const FRONT=['chest','shoulders','biceps','core','quads','calves'];
-const BACK=['back','shoulders','triceps','glutes','hamstrings','calves'];
+const FRONT=['chest','shoulders','biceps','forearms','core','quads','calves'];
+const BACK=['back','shoulders','triceps','forearms','glutes','hamstrings','calves'];
 
 const D={
   chest:{label:'Chest',clinical:'Pectoralis major and minor',cat:'Horizontal push',c:'#2563a8',l:'#dbeafe',
@@ -114,6 +114,17 @@ const D={
     biomech:'When the knee is bent, the gastrocnemius is shortened at both its upper attachment on the femur and its lower attachment through plantarflexion simultaneously. A muscle cannot generate full tension when shortened at both ends, which is why seated raises effectively isolate the soleus.',
     vol:'15 to 22 sets per week split between standing and seated variations. Calves are conditioned by daily walking and typically require higher training frequency than most muscles — three to four sessions per week is often necessary.',
     errors:['Only standing raises means the soleus is never directly trained regardless of total volume accumulated','Not dropping the heel fully below the step removes the stretch position that provides the most growth stimulus','Bouncing at the bottom uses Achilles tendon recoil as momentum instead of muscle force','Low reps on seated raises work against the slow-twitch fiber composition of the soleus']
+  },
+  forearms:{label:'Forearms',clinical:'Wrist flexors, wrist extensors, brachioradialis',cat:'Grip and wrist control',c:'#0369a1',l:'#e0f2fe',
+    overview:'The forearm is a dense bundle of small muscles controlling the wrist, fingers, and grip. It receives heavy indirect work from every pulling and holding movement, which is why many lifters never train it directly. But grip is frequently the first link to fail on heavy rows, deadlifts, and carries — when the hands give out before the target muscle does, the set ends early and the larger muscle is left understimulated. Direct forearm work removes that ceiling.',
+    regions:[
+      {name:'Wrist flexors (palm-side)',dot:'#0369a1',act:'The muscles on the underside of the forearm that curl the wrist and close the fingers. They generate crushing grip strength and are loaded every time you hold a bar. They respond well to direct wrist curls and to simply holding heavier loads for time. The stretch at the bottom of a wrist curl, where the bar rolls toward the fingertips, is where most of the stimulus lives.',exs:['Wrist Curl','Dead Hang','Farmer Carry']},
+      {name:'Wrist extensors (back of forearm)',dot:'#0284c7',act:'The muscles on the top of the forearm that lift the wrist back. They are far weaker than the flexors and chronically underdeveloped because almost no common exercise trains them. Strengthening them balances the forearm and is one of the most effective ways to address the elbow pain that plagues people who do a lot of gripping work.',exs:['Reverse Wrist Curl','Reverse Curl']},
+      {name:'Brachioradialis (forearm peak)',dot:'#075985',act:'The thick muscle that forms the upper outer forearm and crosses the elbow. It flexes the elbow most powerfully when the hand is in a neutral or palms-down position, which is exactly why hammer curls and reverse curls build the forearm in a way standard curls never do. It contributes much of the visible mass when the forearm is developed.',exs:['Hammer Curl','Reverse Curl','Zottman Curl']},
+    ],
+    biomech:'Grip endurance and grip strength are partly separate qualities. Maximal strength responds to heavy holds for short durations, while endurance responds to sustained hangs and carries. Because the forearm flexors are used in almost all pulling, they recover quickly and tolerate high frequency — they can be trained at the end of most sessions without interfering with recovery elsewhere.',
+    vol:'8 to 15 direct sets per week is plenty for most people, layered on top of the substantial indirect work from pulling and carrying. Two to three short sessions, often as finishers, work well. Balance flexor and extensor work to protect the elbow.',
+    errors:['Never training extensors while doing heavy gripping creates the imbalance that drives most elbow tendon pain','Using straps on every heavy pull means grip never has to adapt and the forearm stays underdeveloped','Treating forearms as too small to bother training, then wondering why grip fails before the back does on rows','Only training with a palms-up grip and never including neutral or palms-down work that builds the brachioradialis']
   },
 };
 
@@ -314,7 +325,9 @@ export default function MuscleScience() {
     </svg>
   );
 
-  if (sel) {
+  // Build the detail panel for the selected muscle (rendered on the right,
+  // beside the figure — not as a separate full screen).
+  function DetailPanel() {
     const m = D[sel];
     const tabs = [['anatomy','Anatomy'],['training','Biomechanics'],['errors','Common errors']];
     let body;
@@ -368,15 +381,15 @@ export default function MuscleScience() {
     }
 
     return (
-      <div style={{ paddingBottom:60 }}>
-        <div style={{ padding:'13px 15px 0' }}>
-          <button onClick={goBack} style={{ display:'flex', alignItems:'center', gap:5, background:'none', border:'none', fontSize:12, color:'#888', cursor:'pointer', ...F, marginBottom:10, padding:0 }}>← All muscles</button>
+      <div>
+        <div style={{ padding:'0 2px' }}>
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
             <div>
-              <div style={{ fontSize:19, fontWeight:500, color:m.c, marginBottom:2, ...F }}>{m.label}</div>
+              <div style={{ fontSize:18, fontWeight:500, color:m.c, marginBottom:2, ...F }}>{m.label}</div>
               <div style={{ fontSize:11, color:'#aaa', fontStyle:'italic', marginBottom:5 }}>{m.clinical}</div>
               <span style={{ fontSize:10, padding:'2px 9px', borderRadius:20, background:m.l, color:m.c, border:`1px solid ${m.c}33` }}>{m.cat}</span>
             </div>
+            <button onClick={goBack} title="Close" style={{ background:'none', border:'none', fontSize:18, color:'#bbb', cursor:'pointer', lineHeight:1, padding:'2px 4px', ...F }}>✕</button>
           </div>
         </div>
         <div style={{ display:'flex', borderBottom:'1px solid #f0f0f0', marginTop:12 }}>
@@ -384,7 +397,7 @@ export default function MuscleScience() {
             <button key={t} onClick={() => { setTab(t); setExpR(null); }} style={{ flex:1, padding:'9px 4px', fontSize:11, border:'none', background:'none', borderBottom: tab===t ? `2px solid ${m.c}` : '2px solid transparent', color: tab===t ? m.c : '#aaa', cursor:'pointer', ...F, fontWeight: tab===t ? 600 : 400 }}>{l}</button>
           ))}
         </div>
-        <div style={{ padding:'13px 15px' }}>{body}</div>
+        <div style={{ padding:'13px 2px' }}>{body}</div>
       </div>
     );
   }
@@ -400,8 +413,8 @@ export default function MuscleScience() {
           <button key={v} onClick={() => { setView(v); setSel(null); }} style={{ flex:1, padding:'7px', borderRadius:20, border:'1px solid', borderColor: view===v ? '#111' : '#e0e0e0', background: view===v ? '#111' : '#fff', color: view===v ? '#fff' : '#666', fontSize:11, cursor:'pointer', ...F }}>{l}</button>
         ))}
       </div>
-      <div style={{ display:'flex', gap:10, alignItems:'flex-start', marginBottom:12 }}>
-        <div style={{ background:'#f7f4f0', borderRadius:10, padding:'8px 4px', flexShrink:0, textAlign:'center' }}>
+      <div style={{ display:'flex', gap:12, alignItems:'flex-start', marginBottom:12 }}>
+        <div style={{ background:'#f7f4f0', borderRadius:10, padding:'8px 4px', flexShrink:0, textAlign:'center', position:'sticky', top:8 }}>
           <MuscleMap
             view={view}
             sel={sel}
@@ -409,25 +422,31 @@ export default function MuscleScience() {
             colorFor={(id) => D[id]?.c || '#2563a8'}
             size={150}
           />
-          <div style={{ fontSize:10, color:'#aaa', marginTop:4 }}>Tap a muscle group</div>
+          <div style={{ fontSize:10, color:'#aaa', marginTop:4 }}>{sel ? 'Tap another muscle' : 'Tap a muscle group'}</div>
         </div>
-        <div style={{ flex:1, display:'flex', flexDirection:'column', gap:2 }}>
-          {list.map(id => {
-            const m = D[id];
-            return (
-              <button key={id} onClick={() => pick(id)} style={{ display:'flex', alignItems:'center', gap:7, padding:'6px 8px', borderRadius:7, border:'1px solid transparent', background:'transparent', cursor:'pointer', textAlign:'left', width:'100%', fontFamily:'inherit' }}>
-                <span style={{ width:8, height:8, borderRadius:'50%', background:m.c, flexShrink:0 }}/>
-                <div>
-                  <div style={{ fontSize:12, fontWeight:500, color:'#1a1a1a' }}>{m.label}</div>
-                  <div style={{ fontSize:10, color:'#aaa' }}>{m.regions.length} regions</div>
-                </div>
-              </button>
-            );
-          })}
+        <div style={{ flex:1, minWidth:0 }}>
+          {sel ? (
+            <DetailPanel />
+          ) : (
+            <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
+              {list.map(id => {
+                const m = D[id];
+                return (
+                  <button key={id} onClick={() => pick(id)} style={{ display:'flex', alignItems:'center', gap:7, padding:'7px 8px', borderRadius:7, border:'1px solid #f0eee9', background:'#fff', cursor:'pointer', textAlign:'left', width:'100%', fontFamily:'inherit' }}>
+                    <span style={{ width:9, height:9, borderRadius:'50%', background:m.c, flexShrink:0 }}/>
+                    <div>
+                      <div style={{ fontSize:12, fontWeight:500, color:'#1a1a1a' }}>{m.label}</div>
+                      <div style={{ fontSize:10, color:'#aaa' }}>{m.regions.length} regions</div>
+                    </div>
+                  </button>
+                );
+              })}
+              <div style={{ fontSize:11, color:'#bbb', lineHeight:1.6, padding:'8px 8px 0' }}>
+                Tap the figure or a muscle above to explore anatomy, biomechanics, and training science.
+              </div>
+            </div>
+          )}
         </div>
-      </div>
-      <div style={{ background:'#fff', border:'1px solid #eee', borderRadius:10, padding:'20px 14px', textAlign:'center' }}>
-        <div style={{ fontSize:12, color:'#aaa', lineHeight:1.6 }}>Select a muscle group above to explore anatomy, biomechanics, and training science.</div>
       </div>
     </div>
   );
