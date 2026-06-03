@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import HealthTab from "./HealthTab";
+import { InlineEmpty } from "./ui";
 
 const F = { fontFamily: "'Georgia','Times New Roman',serif" };
 
@@ -150,7 +151,7 @@ function MeasurementsSection({ clientId }) {
         <div style={{ textAlign: "center", padding: "20px", color: "#bbb", fontSize: "12px" }}>Loading...</div>
       )}
       {!loading && measurements.length === 0 && !adding && (
-        <div style={{ textAlign: "center", padding: "20px", color: "#bbb", fontSize: "12px", ...F }}>No measurements logged yet.</div>
+        <InlineEmpty>No measurements logged yet.</InlineEmpty>
       )}
 
       {latest && (
@@ -275,7 +276,7 @@ function PhotosSection() {
 
       {subview === "history" && (
         monthsWithPhotos.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "20px", color: "#bbb", fontSize: "12px" }}>No photos yet.</div>
+          <InlineEmpty>No photos yet.</InlineEmpty>
         ) : monthsWithPhotos.map(k => (
           <div key={k} style={{ marginBottom: "16px" }}>
             <div style={{ fontSize: "11px", fontWeight: "600", color: "#666", marginBottom: "6px" }}>{formatMonth(k)}</div>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { InlineEmpty } from "./ui";
 
 const F = { fontFamily: "'Georgia','Times New Roman',serif" };
 
@@ -392,10 +393,7 @@ export default function NutritionTab({ clientId }) {
           </div>
 
           {dayLog.length === 0 && (
-            <div style={{ textAlign: "center", padding: "24px", color: "#bbb", ...F }}>
-              <div style={{ fontSize: "13px", marginBottom: "4px" }}>Nothing logged yet</div>
-              <div style={{ fontSize: "11px" }}>Tap "+ Add food" to start tracking</div>
-            </div>
+            <InlineEmpty>Nothing logged yet. Tap "+ Add food" to start tracking.</InlineEmpty>
           )}
 
           {dayLog.map(item => (

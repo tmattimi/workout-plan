@@ -13,11 +13,15 @@ import { formatDate } from "../storage";
 import AICoachPanel from "../components/AICoachPanel";
 import AIProgramBuilder from "../components/AIProgramBuilder";
 import ClientAnalytics from "./ClientAnalytics";
+import ClientProgramReview from "./ClientProgramReview";
+import ProgressDashboard from "../components/ProgressDashboard";
+import { UI, SectionLabel, EmptyState, Card, InlineEmpty } from "../components/ui";
 
 const F = { fontFamily: "'Georgia','Times New Roman',serif" };
 const DAYS = ["MON","TUE","WED","THU","FRI","SAT","SUN"];
 const SESSION_TYPES = ["push","pull","legs","upper","lower","full_body","rest","cardio"];
 const MUSCLE_GROUPS = ["chest","back","shoulders","biceps","triceps","quads","hamstrings","glutes","calves","core"];
+
 
 // ── Auth Gate ──────────────────────────────────────────────────────────────────
 function LoginScreen({ onLogin }) {
@@ -646,6 +650,7 @@ function ClientDetail({ client, coachId, plans, onBack, onDelete, onAssignPlan }
   const [editForm, setEditForm] = useState({ name: client.name || "", email: client.email || "", phone: client.phone || "", goal: client.goal || "recomp", sex: client.sex || "male", notes: client.notes || "" });
   const [seeding, setSeeding] = useState(false);
   const [seedResult, setSeedResult] = useState(null);
+  const [showProgramReview, setShowProgramReview] = useState(false);
 
   async function handleSeedFromIntake() {
     if (!intake) return;
@@ -810,13 +815,38 @@ function ClientDetail({ client, coachId, plans, onBack, onDelete, onAssignPlan }
         )}
       </div>
 
-      {/* Sub-nav */}
-      <div style={{ display: "flex", gap: "5px", marginBottom: "16px", overflowX: "auto" }}>
-        {[["overview","Overview"],["analytics","Analytics"],["photos","Photos"],["workout_notes","Workout Notes"],["ai","AI Analysis"],["view_program","View Program"],["program","Build Program"],["intake","Intake Form"],["notes","Coach Notes"],["messages","Messages"],["assign","Assign Plan"],["billing","Billing"],["edit","Edit Client"]].map(([v, label]) => (
-          <button key={v} onClick={() => setView(v)} style={{ flex: "0 0 auto", background: view === v ? "#111" : "#fff", color: view === v ? "#fff" : "#555", border: "1px solid #e0e0e0", borderRadius: "20px", padding: "6px 14px", fontSize: "11px", cursor: "pointer", ...F, whiteSpace: "nowrap" }}>
-            {label}{v === "messages" && overview?.unreadFromClient > 0 ? ` (${overview.unreadFromClient})` : ""}
-          </button>
-        ))}
+      {/* Sub-nav — grouped by purpose with dividers */}
+      <div style={{ display: "flex", gap: "5px", marginBottom: "16px", overflowX: "auto", alignItems: "center" }}>
+        {(() => {
+          const groups = [
+            // Snapshot
+            [["overview","Overview"]],
+            // Progress & Insights
+            [["progress_dashboard","Progress"],["analytics","Analytics"],["ai","AI Analysis"],["program_review","Program Review"],["photos","Photos"]],
+            // Programming
+            [["view_program","View Program"],["program","Build Program"],["assign","Assign Plan"]],
+            // Communication
+            [["messages","Messages"],["notes","Coach Notes"],["workout_notes","Workout Notes"]],
+            // Client Admin
+            [["intake","Intake Form"],["billing","Billing"],["edit","Edit Client"]],
+          ];
+          const els = [];
+          groups.forEach((group, gi) => {
+            group.forEach(([v, label]) => {
+              els.push(
+                <button key={v} onClick={() => setView(v)} style={{ flex: "0 0 auto", background: view === v ? "#111" : "#fff", color: view === v ? "#fff" : "#555", border: "1px solid #e0e0e0", borderRadius: "20px", padding: "6px 14px", fontSize: "11px", cursor: "pointer", ...F, whiteSpace: "nowrap" }}>
+                  {label}{v === "messages" && overview?.unreadFromClient > 0 ? ` (${overview.unreadFromClient})` : ""}
+                </button>
+              );
+            });
+            if (gi < groups.length - 1) {
+              els.push(
+                <div key={`div-${gi}`} style={{ flex: "0 0 auto", width: "1px", alignSelf: "stretch", background: "#ddd", margin: "4px 3px" }} />
+              );
+            }
+          });
+          return els;
+        })()}
       </div>
 
       {/* Overview */}
@@ -1083,19 +1113,44 @@ function ClientDetail({ client, coachId, plans, onBack, onDelete, onAssignPlan }
         );
       })()}
 
+      {/* Progress Dashboard */}
+      {view === "progress_dashboard" && (
+        <ProgressDashboard clientId={client.id} clientName={client.name} />
+      )}
+
       {/* AI Analysis */}
       {view === "analytics" && (
         <ClientAnalytics clientId={client.id} />
       )}
 
-      {view === "photos" && (
-        <div style={{ textAlign: "center", padding: "40px 20px", color: "#bbb" }}>
-          
-          <div style={{ fontSize: "13px", marginBottom: "6px" }}>Progress photos</div>
-          <div style={{ fontSize: "11px", lineHeight: "1.6" }}>
-            Photo viewing from the coach dashboard is coming soon.
+      {/* Program Review */}
+      {view === "program_review" && (
+        <div style={{ padding: "8px 0" }}>
+          <div style={{ fontSize: "13px", color: "#555", marginBottom: "16px", lineHeight: 1.6 }}>
+            Generate an AI-powered review of {client.name}'s training period — what's working, what needs attention, and specific recommendations for the next program rotation.
           </div>
+          <button
+            onClick={() => setShowProgramReview(true)}
+            style={{ ...F, fontSize: "14px", fontWeight: "600", padding: "11px 24px", background: "#111", color: "#fff", border: "none", borderRadius: "7px", cursor: "pointer" }}
+          >
+            Generate Program Review
+          </button>
         </div>
+      )}
+
+      {showProgramReview && (
+        <ClientProgramReview
+          client={client}
+          onClose={() => setShowProgramReview(false)}
+        />
+      )}
+
+      {view === "photos" && (
+        <EmptyState
+          icon="◎"
+          title="Progress photos"
+          detail="Photo viewing from the coach dashboard is coming soon. Clients can upload progress photos from their app today."
+        />
       )}
 
       {view === "ai" && overview && (
@@ -1131,10 +1186,11 @@ function ClientDetail({ client, coachId, plans, onBack, onDelete, onAssignPlan }
             const logsWithNotes = (overview.recentLogs || []).filter(log => log.notes && log.notes.trim());
             if (logsWithNotes.length === 0) {
               return (
-                <div style={{ textAlign: "center", padding: "30px 20px", color: "#bbb" }}>
-                  <div style={{ fontSize: "13px", marginBottom: "4px" }}>No exercise notes yet</div>
-                  <div style={{ fontSize: "11px" }}>Notes that {client.name} leaves on exercises will appear here.</div>
-                </div>
+                <EmptyState
+                  icon="✎"
+                  title="No exercise notes yet"
+                  detail={`Notes that ${client.name} leaves on exercises during workouts will appear here.`}
+                />
               );
             }
             // Group by date
@@ -1195,7 +1251,7 @@ function ClientDetail({ client, coachId, plans, onBack, onDelete, onAssignPlan }
             </div>
             <div style={{ maxHeight: "380px", overflowY: "auto", padding: "12px", display: "flex", flexDirection: "column", gap: "8px" }}>
               {messages.length === 0 && (
-                <div style={{ textAlign: "center", color: "#bbb", fontSize: "12px", padding: "30px 0" }}>No messages yet</div>
+                <div style={{ textAlign: "center", color: UI.faint, fontSize: "12px", padding: "30px 0", ...F }}>No messages yet — say hello to {client.name}</div>
               )}
               {messages.map((msg, i) => {
                 const isCoach = msg.sender === "coach";
@@ -1242,11 +1298,11 @@ function ClientDetail({ client, coachId, plans, onBack, onDelete, onAssignPlan }
       {view === "intake" && (
         <div>
           {!intake ? (
-            <div style={{ padding: "40px 20px", textAlign: "center", color: "#aaa" }}>
-              <div style={{ fontSize: "11px", letterSpacing: "0.15em", textTransform: "uppercase", color: "#bbb", marginBottom: "10px" }}>No sessions yet</div>
-              <div style={{ fontSize: "14px", marginBottom: "6px" }}>No intake submitted yet</div>
-              <div style={{ fontSize: "12px", lineHeight: "1.6" }}>The client hasn't completed the onboarding questionnaire yet.</div>
-            </div>
+            <EmptyState
+              icon="✎"
+              title="No intake submitted yet"
+              detail="This client hasn't completed the onboarding questionnaire yet."
+            />
           ) : (
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
@@ -1688,10 +1744,11 @@ function ClientListView({ clients, loading, unreadCounts, onSelect, onNewClient 
       {loading && <div style={{ textAlign: "center", color: "#aaa", padding: "20px", fontSize: "13px" }}>Loading clients...</div>}
 
       {!loading && clients.length === 0 && (
-        <div style={{ textAlign: "center", padding: "40px 20px", color: "#aaa" }}>
-          <div style={{ fontSize: "13px", marginBottom: "6px" }}>No clients yet</div>
-          <div style={{ fontSize: "11px" }}>Tap "+ New Client" to get started</div>
-        </div>
+        <EmptyState
+          icon="+"
+          title="No clients yet"
+          detail='Tap "+ New Client" above to add your first client and send them an invite.'
+        />
       )}
 
       {listView === "status" ? (

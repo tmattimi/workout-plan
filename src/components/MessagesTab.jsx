@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { getMessages, sendMessage, subscribeToMessages, markMessagesRead } from "../lib/supabase";
+import { InlineEmpty } from "./ui";
 
 const F = { fontFamily: "'Georgia','Times New Roman',serif" };
 
@@ -99,9 +100,9 @@ export default function MessagesTab({ clientId }) {
         {loading && <div style={{ textAlign: "center", color: "#bbb", fontSize: "12px", padding: "20px" }}>Loading...</div>}
 
         {!loading && messages.length === 0 && (
-          <div style={{ textAlign: "center", padding: "40px 20px", color: "#bbb", fontSize: "12px", lineHeight: "1.7", ...F }}>
+          <InlineEmpty>
             No messages yet. Send a note to Tara — questions about form, how a session felt, anything.
-          </div>
+          </InlineEmpty>
         )}
 
         {grouped.map((item, i) => {

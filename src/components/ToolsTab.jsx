@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { EXERCISE_DB } from "../data/exercises";
 import MuscleScience from "./MuscleScience";
 import AlternativeExercises from "./AlternativeExercises";
+import { InlineEmpty } from "./ui";
 
 const F = { fontFamily: "'Georgia','Times New Roman',serif" };
 
@@ -170,7 +171,7 @@ function GoalsSection({ clientId }) {
         );
       })}
 
-      {active.length === 0 && !adding && <div style={{ textAlign: "center", padding: "16px", color: "#bbb", fontSize: "12px", ...F }}>No active goals. Tap "+ New Goal" to add one.</div>}
+      {active.length === 0 && !adding && <InlineEmpty>No active goals. Tap "+ New Goal" to add one.</InlineEmpty>}
 
       {completed.length > 0 && (
         <button onClick={() => setShowCompleted(p => !p)} style={{ background: "none", border: "none", color: "#bbb", fontSize: "11px", cursor: "pointer", padding: "6px 0" }}>
