@@ -1148,6 +1148,25 @@ export async function getClientPreferences(clientId) {
   return { data };
 }
 
+// ── Client day order (custom weekly schedule arrangement) ─────────────────────
+export async function saveDayOrder(clientId, dayOrder) {
+  if (!supabase || !clientId) return;
+  await supabase
+    .from('clients')
+    .update({ day_order: dayOrder })
+    .eq('id', clientId);
+}
+
+export async function getDayOrder(clientId) {
+  if (!supabase || !clientId) return { data: null };
+  const { data } = await supabase
+    .from('clients')
+    .select('day_order')
+    .eq('id', clientId)
+    .single();
+  return { data: data?.day_order || null };
+}
+
 // ── Exercise Video Library ────────────────────────────────────────────────────
 
 export async function uploadExerciseVideo(exerciseName, file) {

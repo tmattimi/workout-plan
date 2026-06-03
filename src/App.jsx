@@ -14,6 +14,7 @@ import {
 import MeasurementsTracker from "./components/MeasurementsTracker";
 import MuscleScience from "./components/MuscleScience";
 import WarmUp from "./components/WarmUp";
+import DayReorderStrip from "./components/DayReorderStrip";
 import RestTimer, { parseRestSeconds } from "./components/RestTimer";
 import SessionSummary from "./components/SessionSummary";
 import RecoveryCard from "./components/RecoveryCard";
@@ -644,9 +645,53 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
   const defaultPrinciples = taraPrinciples;
 
   // Use DB-assigned plan if present, then client-specific default, then nothing
-  const activeSchedule = adaptedSchedule || defaultSchedule;
+  const baseSchedule = adaptedSchedule || defaultSchedule;
+
+  // Custom day order — persisted per client so the week reflects how they
+  // actually arranged it. Stored as an array of day labels, e.g. ["TUE","MON",...].
+  const [dayOrder, setDayOrder] = useState(null);
+
+  // Apply the saved order to the base schedule. Days are matched by their
+  // `day` label so logging (keyed by day) stays correctly attached. Any days
+  // not in the saved order (e.g. a newly added day) fall to the end in their
+  // original order.
+  const activeSchedule = (() => {
+    if (!baseSchedule) return null;
+    if (!dayOrder || !dayOrder.length) return baseSchedule;
+    const byDay = {};
+    baseSchedule.forEach(d => { byDay[d.day] = d; });
+    const ordered = [];
+    dayOrder.forEach(label => { if (byDay[label]) { ordered.push(byDay[label]); delete byDay[label]; } });
+    // Append any remaining days that weren't in the saved order
+    baseSchedule.forEach(d => { if (byDay[d.day]) ordered.push(byDay[d.day]); });
+    return ordered;
+  })();
   const hasPlan = !!activeSchedule;
   const principles = defaultPrinciples;
+
+  // Load saved day order on mount
+  useEffect(() => {
+    if (!clientId) return;
+    let cancelled = false;
+    import("./lib/supabase").then(({ getDayOrder }) =>
+      getDayOrder(clientId).then(({ data }) => {
+        if (!cancelled && data && Array.isArray(data)) setDayOrder(data);
+      })
+    );
+    return () => { cancelled = true; };
+  }, [clientId]);
+
+  // Persist a new order and update local state immediately. Preserve which
+  // day the user was viewing by its label, so the selection doesn't jump.
+  function persistDayOrder(newOrder) {
+    const currentLabel = activeSchedule?.[activeDay]?.day;
+    setDayOrder(newOrder);
+    if (currentLabel) {
+      const newIdx = newOrder.indexOf(currentLabel);
+      if (newIdx >= 0) setActiveDay(newIdx);
+    }
+    if (clientId) import("./lib/supabase").then(({ saveDayOrder }) => saveDayOrder(clientId, newOrder));
+  }
 
   const [activeDay, setActiveDay] = useState(() => {
     if (!activeSchedule) return 0;
@@ -1169,20 +1214,13 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
           {/* Plan exists — show full UI */}
           {hasPlan && (
           <>
-          {/* Day selector */}
-          <div style={{ display: "flex", overflowX: "auto", background: "#fff", borderBottom: "1px solid #e5e5e5", msOverflowStyle: "none", scrollbarWidth: "none" }}>
-            {activeSchedule.map((d, i) => (
-              <button key={d.day} onClick={() => { setActiveDay(i); setExpandedEx(null); setShowLogger({}); }} style={{
-                flex: "0 0 auto", background: "transparent", border: "none",
-                borderBottom: activeDay === i ? "3px solid #1a1a1a" : "3px solid transparent",
-                padding: "11px 12px 8px", cursor: "pointer", ...F,
-                display: "flex", flexDirection: "column", alignItems: "center", gap: "2px", minWidth: "46px",
-              }}>
-                <span style={{ fontSize: "8px", fontWeight: "800", letterSpacing: "0.15em", color: activeDay === i ? "#1a1a1a" : "#bbb" }}>{d.day}</span>
-                <span style={{ fontSize: "9px", color: activeDay === i ? "#1a1a1a" : "#ccc", whiteSpace: "nowrap" }}>{d.label}</span>
-              </button>
-            ))}
-          </div>
+          {/* Day selector with reorder */}
+          <DayReorderStrip
+            schedule={activeSchedule}
+            activeDay={activeDay}
+            onSelect={(i) => { setActiveDay(i); setExpandedEx(null); setShowLogger({}); }}
+            onReorder={(newOrder) => persistDayOrder(newOrder)}
+          />
 
           {/* Session header */}
           <div style={{ background: "linear-gradient(135deg, #2c2c2e 0%, #1c1c1e 100%)", borderBottom: "1px solid #3a3a3c", padding: "14px 16px" }}>

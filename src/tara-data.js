@@ -112,7 +112,7 @@ export const schedule = [
     focus: "Upper Body — Back & Biceps",
     muscles: ["Back", "Biceps", "Rear Delts", "Core"],
     cardio: {
-      name: "StairMaster (Warm-Up)",
+      name: "StairMaster",
       protocol: "Level 5–7 for 20 minutes before lifting",
       zone: "Zone 2 (60–70% max HR)",
       feel: "Keep it genuinely easy — conversational pace, full sentences. This is a moving warm-up, not a cardio session. If you feel your legs fatiguing before you've touched a weight, bring the level down. The goal is blood flow and joint prep, not energy expenditure."
@@ -201,7 +201,7 @@ export const schedule = [
     focus: "Lower Body — Quad Definition & Glute Volume",
     muscles: ["Quads", "Glutes", "Calves"],
     cardio: {
-      name: "StairMaster (Optional)",
+      name: "StairMaster",
       protocol: "Level 5–6 for 10–15 minutes post-session — only if legs feel recovered",
       zone: "Zone 2 (60–70% max HR)",
       feel: "This is optional. Wilson et al. (2012) found post-leg cardio can impair quad and glute recovery when fatigue is high. If your legs feel genuinely spent after this session, skip it — you already have 85+ min of cardio in the week between Tuesday, Thursday, and Friday. If legs feel good, a short easy StairMaster is fine."
@@ -291,7 +291,7 @@ export const schedule = [
     focus: "Upper Body — Chest, Shoulders & Triceps",
     muscles: ["Chest", "Shoulders", "Triceps"],
     cardio: {
-      name: "StairMaster (Warm-Up)",
+      name: "StairMaster",
       protocol: "Level 5–7 for 20 minutes before lifting",
       zone: "Zone 2 (60–70% max HR)",
       feel: "Same as Tuesday — easy warm-up pace. Shoulders and upper body need blood flow before pressing. Keep the level low enough that you're not breathing hard when you step off."
