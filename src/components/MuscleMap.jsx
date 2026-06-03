@@ -57,13 +57,28 @@ export default function MuscleMap({ view = "front", sel, onPick, colorFor, size 
     if (id && onPick) onPick(id);
   }
 
+  // Hover affordance: the library renders an SVG with class .rbh; its muscle
+  // shapes are <polygon> elements. We scope a hover rule to our wrapper so the
+  // muscle under the cursor lightens and shows a pointer, signalling it's
+  // tappable. Scoped to .muscle-map-wrap so it never leaks to other SVGs.
+  const hoverCSS = `
+    .muscle-map-wrap .rbh polygon { transition: fill 0.12s ease; }
+    .muscle-map-wrap .rbh polygon:hover {
+      fill: ${selColor}99 !important;
+      cursor: pointer;
+    }
+  `;
+
   return (
-    <Model
-      data={data}
-      type={view === "back" ? "posterior" : "anterior"}
-      onClick={handleClick}
-      highlightedColors={colors}
-      style={{ width: size, margin: "0 auto" }}
-    />
+    <div className="muscle-map-wrap">
+      <style>{hoverCSS}</style>
+      <Model
+        data={data}
+        type={view === "back" ? "posterior" : "anterior"}
+        onClick={handleClick}
+        highlightedColors={colors}
+        style={{ width: size, margin: "0 auto" }}
+      />
+    </div>
   );
 }
