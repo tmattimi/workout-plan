@@ -647,29 +647,36 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
   // Use DB-assigned plan if present, then client-specific default, then nothing
   const baseSchedule = adaptedSchedule || defaultSchedule;
 
-  // Custom day order — persisted per client so the week reflects how they
-  // actually arranged it. Stored as an array of day labels, e.g. ["TUE","MON",...].
+  // Custom workout-to-day assignment, persisted per client. The weekday slots
+  // (MON, TUE, WED...) stay in fixed order. What the user rearranges is WHICH
+  // workout sits in each slot. dayOrder is an array of the original day-keys in
+  // slot order, e.g. ["WED","TUE","MON",...] means slot 0 (Monday) shows what
+  // was originally Wednesday's workout. The slot keeps its own weekday label.
   const [dayOrder, setDayOrder] = useState(null);
 
-  // Apply the saved order to the base schedule. Days are matched by their
-  // `day` label so logging (keyed by day) stays correctly attached. Any days
-  // not in the saved order (e.g. a newly added day) fall to the end in their
-  // original order.
+  // Build the displayed schedule: each fixed weekday slot keeps its own
+  // day/label, but carries the workout content assigned to it. Logging is keyed
+  // by the workout's identity (we preserve the original `day` as `workoutKey`)
+  // so logged sets stay attached to the right workout even when moved slots.
   const activeSchedule = (() => {
     if (!baseSchedule) return null;
-    if (!dayOrder || !dayOrder.length) return baseSchedule;
-    const byDay = {};
-    baseSchedule.forEach(d => { byDay[d.day] = d; });
-    const ordered = [];
-    dayOrder.forEach(label => { if (byDay[label]) { ordered.push(byDay[label]); delete byDay[label]; } });
-    // Append any remaining days that weren't in the saved order
-    baseSchedule.forEach(d => { if (byDay[d.day]) ordered.push(byDay[d.day]); });
-    return ordered;
+    // Default assignment: each slot shows its own original workout
+    const slots = baseSchedule.map(d => ({ ...d, slotDay: d.day, slotLabel: d.label, workoutKey: d.day }));
+    if (!dayOrder || !dayOrder.length) return slots;
+
+    const byKey = {};
+    baseSchedule.forEach(d => { byKey[d.day] = d; });
+    return baseSchedule.map((slot, i) => {
+      const assignedKey = dayOrder[i] || slot.day;
+      const workout = byKey[assignedKey] || slot;
+      // Keep this SLOT's fixed weekday label, but use the assigned workout's content
+      return { ...workout, slotDay: slot.day, slotLabel: slot.label, workoutKey: workout.day, day: slot.day };
+    });
   })();
   const hasPlan = !!activeSchedule;
   const principles = defaultPrinciples;
 
-  // Load saved day order on mount
+  // Load saved assignment on mount
   useEffect(() => {
     if (!clientId) return;
     let cancelled = false;
@@ -681,15 +688,10 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
     return () => { cancelled = true; };
   }, [clientId]);
 
-  // Persist a new order and update local state immediately. Preserve which
-  // day the user was viewing by its label, so the selection doesn't jump.
+  // Persist a new workout-to-slot assignment. The viewed slot index stays the
+  // same (labels are fixed), so activeDay doesn't need to change.
   function persistDayOrder(newOrder) {
-    const currentLabel = activeSchedule?.[activeDay]?.day;
     setDayOrder(newOrder);
-    if (currentLabel) {
-      const newIdx = newOrder.indexOf(currentLabel);
-      if (newIdx >= 0) setActiveDay(newIdx);
-    }
     if (clientId) import("./lib/supabase").then(({ saveDayOrder }) => saveDayOrder(clientId, newOrder));
   }
 

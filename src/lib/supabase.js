@@ -1148,6 +1148,25 @@ export async function getClientPreferences(clientId) {
   return { data };
 }
 
+// ── Client pinned exercises (key lifts shown on Progress overview) ────────────
+export async function savePinnedExercises(clientId, pinned) {
+  if (!supabase || !clientId) return;
+  await supabase
+    .from('clients')
+    .update({ pinned_exercises: pinned })
+    .eq('id', clientId);
+}
+
+export async function getPinnedExercises(clientId) {
+  if (!supabase || !clientId) return { data: null };
+  const { data } = await supabase
+    .from('clients')
+    .select('pinned_exercises')
+    .eq('id', clientId)
+    .single();
+  return { data: data?.pinned_exercises || null };
+}
+
 // ── Client day order (custom weekly schedule arrangement) ─────────────────────
 export async function saveDayOrder(clientId, dayOrder) {
   if (!supabase || !clientId) return;

@@ -1,7 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import GoalTracker from './GoalTracker';
 import WorkoutHistory from './WorkoutHistory';
+import ProgressDashboard from './ProgressDashboard';
+import ExerciseProgress from './ExerciseProgress';
 import { supabase } from '../lib/supabase';
+import { EmptyState, InlineEmpty } from './ui';
 import {
   MUSCLE_GROUPS, BENCHMARK_LIFTS, RELATIVE_STRENGTH_STANDARDS,
   epley1RM, calculateMuscleScores, evaluateStrengthRatios, evaluateRelativeStrength, getExerciseWeights
@@ -390,7 +393,7 @@ function MuscleGroupDetail({ group, muscleScore, allLogs, prs, onBack }) {
           </div>
         </>
       ) : (
-        <div style={{ textAlign: 'center', padding: '30px 20px', color: '#aaa', fontSize: 12 }}>No logged exercises for this muscle group yet.</div>
+        <InlineEmpty>No logged exercises for this muscle group yet.</InlineEmpty>
       )}
     </div>
   );
@@ -648,6 +651,7 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
 
   const TABS = [
     { id: 'overview', label: 'Overview' },
+    { id: 'dashboard', label: 'Dashboard' },
     { id: 'history', label: 'History' },
     { id: 'strength', label: 'Strength' },
     { id: 'goals', label: 'Goals' },
@@ -855,6 +859,18 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
           </div>
         );
       })()}
+
+      {/* ── EXERCISE PROGRESS (on overview, light section below the summary) ── */}
+      {activeTab === 'overview' && (
+        <div style={{ padding: '20px 16px 70px', background: '#f7f6f3' }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a', marginBottom: 4, ...F }}>Exercise Progress</div>
+          <div style={{ fontSize: 11, color: '#999', marginBottom: 16, lineHeight: 1.5 }}>
+            Track any lift over time. Pin your key exercises to keep them here.
+          </div>
+          <ExerciseProgress allLogs={allLogs} clientId={clientId} />
+        </div>
+      )}
+
       {/* ── STRENGTH TAB ── */}
       {activeTab === 'strength' && (
         <div style={{ padding: '16px 16px 60px' }}>
@@ -1259,11 +1275,19 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
 
           {/* No analytics data */}
           {!acwr && progressionStatus.length === 0 && !bodyComposition && (
-            <div style={{ textAlign: 'center', padding: '60px 20px', color: '#aaa' }}>
-              <div style={{ fontSize: 11, letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>Not enough data yet</div>
-              <div style={{ fontSize: 14, ...F, lineHeight: 1.7 }}>Log sessions consistently for 4+ weeks to unlock training load and progression analytics.</div>
-            </div>
+            <EmptyState
+              icon="📊"
+              title="Not enough data yet"
+              detail="Log sessions consistently for 4+ weeks to unlock training load and progression analytics."
+            />
           )}
+        </div>
+      )}
+
+      {/* ── DASHBOARD TAB ── */}
+      {activeTab === 'dashboard' && (
+        <div style={{ padding: '16px 16px 60px' }}>
+          <ProgressDashboard clientId={clientId} />
         </div>
       )}
     </div>

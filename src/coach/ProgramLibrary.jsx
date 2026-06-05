@@ -216,7 +216,7 @@ export default function ProgramLibrary({ coachId }) {
                 "body_recomposition",
                 taraSchedule,
                 { injuries: ["L5 herniated disc", "scoliosis", "SI joint dysfunction", "ACL strain history"], contraindications: ["No barbell squats", "No conventional deadlifts"], imbalance_note: taraNotes },
-                "fa2b1f9e-ed1e-4b7a-b2a3-def60932e2f5"
+                null
               )} disabled={saving} style={{ background: saving ? "#ccc" : "#2563a8", color: "#fff", border: "none", borderRadius: "20px", padding: "6px 14px", fontSize: "11px", cursor: "pointer", ...F }}>
                 {saving ? "Saving..." : "Save Tara's Program"}
               </button>
@@ -228,7 +228,7 @@ export default function ProgramLibrary({ coachId }) {
                 "muscle_gain",
                 skylerSchedule,
                 {},
-                "f1f04d99-76ec-477b-938f-ebfb456b1d88"
+                null
               )} disabled={saving} style={{ background: saving ? "#ccc" : "#1a1a1a", color: "#fff", border: "none", borderRadius: "20px", padding: "6px 14px", fontSize: "11px", cursor: "pointer", ...F }}>
                 {saving ? "Saving..." : "Save Skyler's Program"}
               </button>

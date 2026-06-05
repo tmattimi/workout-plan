@@ -136,12 +136,13 @@ function PoseSlot({ pose, image, uploading, onUpload, onRemove, compact }) {
 // ── Main component ─────────────────────────────────────────────────────────────
 export default function PhotosTab({ clientId }) {
   const [photos, setPhotos] = useState(loadLocalPhotos);
-  const [view, setView] = useState("current"); // current | history | compare | guide
+  const [view, setView] = useState("entries"); // entries | add | detail | compare | guide
   const [uploading, setUploading] = useState({}); // { poseId: bool }
   const [compareA, setCompareA] = useState(null);
   const [compareB, setCompareB] = useState(null);
   const [customDate, setCustomDate] = useState(getDateKey());
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [selectedEntry, setSelectedEntry] = useState(null); // dateKey of entry being viewed
 
   // Use the selected date key for current entry
   const activeKey = customDate || getDateKey();
@@ -200,21 +201,115 @@ export default function PhotosTab({ clientId }) {
 
       {/* Nav tabs */}
       <div style={{ display: "flex", gap: "6px", marginBottom: "18px", overflowX: "auto", msOverflowStyle: "none", scrollbarWidth: "none" }}>
-        {[["current", "Add Photos"], ["history", "History"], ["compare", "Compare"], ["guide", "Guide"]].map(([v, label]) => (
-          <button key={v} onClick={() => setView(v)} style={{
+        {[["entries", "Entries"], ["add", "Add Entry"], ["compare", "Compare"], ["guide", "Guide"]].map(([v, label]) => (
+          <button key={v} onClick={() => { setView(v); setSelectedEntry(null); }} style={{
             flexShrink: 0, padding: "7px 14px",
-            border: "1px solid " + (view === v ? "#1a1a1a" : "#e0e0e0"),
+            border: "1px solid " + (view === v || (v === "entries" && view === "detail") ? "#1a1a1a" : "#e0e0e0"),
             borderRadius: "20px",
-            background: view === v ? "#1a1a1a" : "transparent",
-            color: view === v ? "#f7f6f3" : "#888",
+            background: (view === v || (v === "entries" && view === "detail")) ? "#1a1a1a" : "transparent",
+            color: (view === v || (v === "entries" && view === "detail")) ? "#f7f6f3" : "#888",
             cursor: "pointer", fontSize: "11px", letterSpacing: "0.04em", ...F,
           }}>{label}</button>
         ))}
       </div>
 
-      {/* ── ADD PHOTOS ── */}
-      {view === "current" && (
+      {/* ── ENTRIES LANDING — list of dates only, no photos shown ── */}
+      {view === "entries" && (
         <>
+          {!hasAnyPhotos ? (
+            <div style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "12px", padding: "40px 24px", textAlign: "center" }}>
+              <div style={{ fontSize: "26px", color: "#ddd", marginBottom: "12px" }}>◎</div>
+              <div style={{ fontSize: "14px", color: "#555", marginBottom: "6px" }}>No progress photos yet</div>
+              <div style={{ fontSize: "12px", color: "#999", lineHeight: 1.6, maxWidth: "280px", margin: "0 auto 16px" }}>
+                Progress photos are the clearest record of how your body changes. Add your first entry to start.
+              </div>
+              <button onClick={() => { setCustomDate(getDateKey()); setView("add"); }} style={{
+                background: "#1a1a1a", color: "#f7f6f3", border: "none", borderRadius: "20px",
+                padding: "9px 22px", fontSize: "13px", cursor: "pointer", ...F,
+              }}>Add your first entry</button>
+            </div>
+          ) : (
+            <>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
+                <span style={{ fontSize: "11px", color: "#999" }}>
+                  {allEntries.length} {allEntries.length === 1 ? "entry" : "entries"} · tap to view
+                </span>
+                <button onClick={() => { setCustomDate(getDateKey()); setView("add"); }} style={{
+                  background: "none", border: "1px solid #1a1a1a", borderRadius: "20px",
+                  padding: "5px 14px", fontSize: "11px", color: "#1a1a1a", cursor: "pointer", ...F,
+                }}>+ Add entry</button>
+              </div>
+
+              {/* Date list — photos hidden, just date + pose count */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                {allEntries.map(([dateKey, entry]) => {
+                  const poseCount = POSES.filter(p => entry[p.id]).length;
+                  return (
+                    <button key={dateKey} onClick={() => { setSelectedEntry(dateKey); setView("detail"); }} style={{
+                      display: "flex", alignItems: "center", justifyContent: "space-between",
+                      background: "#fff", border: "1px solid #e8e8e8", borderRadius: "10px",
+                      padding: "14px 16px", cursor: "pointer", textAlign: "left", width: "100%", ...F,
+                    }}>
+                      <div>
+                        <div style={{ fontSize: "14px", color: "#1a1a1a", fontWeight: "600" }}>{formatDate(dateKey)}</div>
+                        <div style={{ fontSize: "11px", color: "#aaa", marginTop: "2px" }}>{poseCount} of {POSES.length} poses</div>
+                      </div>
+                      <span style={{ fontSize: "16px", color: "#ccc" }}>›</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </>
+      )}
+
+      {/* ── ENTRY DETAIL — photos for one selected date ── */}
+      {view === "detail" && selectedEntry && (() => {
+        const entry = photos[selectedEntry] || {};
+        return (
+          <>
+            <button onClick={() => { setView("entries"); setSelectedEntry(null); }} style={{
+              background: "none", border: "none", fontSize: "12px", color: "#888", cursor: "pointer",
+              marginBottom: "12px", padding: 0, ...F,
+            }}>← All entries</button>
+            <div style={{ fontSize: "16px", color: "#1a1a1a", fontWeight: "600", marginBottom: "4px" }}>{formatDate(selectedEntry)}</div>
+            <div style={{ fontSize: "11px", color: "#aaa", marginBottom: "16px" }}>
+              {POSES.filter(p => entry[p.id]).length} of {POSES.length} poses
+            </div>
+            <div style={{ display: "flex", gap: "6px", marginBottom: "16px" }}>
+              {POSES.map(pose => (
+                <div key={pose.id} style={{ flex: 1, minWidth: 0 }}>
+                  {entry[pose.id] ? (
+                    <>
+                      <img src={entry[pose.id]} alt={pose.label}
+                        style={{ width: "100%", aspectRatio: "3/4", objectFit: "cover", borderRadius: "8px", display: "block" }} />
+                      <div style={{ fontSize: "9px", color: "#bbb", textAlign: "center", marginTop: "3px" }}>{pose.label}</div>
+                    </>
+                  ) : (
+                    <div style={{ width: "100%", aspectRatio: "3/4", background: "#f7f6f3", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <span style={{ fontSize: "9px", color: "#ddd" }}>{pose.label}</span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            <button onClick={() => { setCustomDate(selectedEntry); setView("add"); }} style={{
+              background: "none", border: "1px solid #e0e0e0", borderRadius: "8px",
+              padding: "9px", fontSize: "12px", color: "#888", cursor: "pointer", width: "100%", ...F,
+            }}>Add or replace photos for this date</button>
+          </>
+        );
+      })()}
+
+      {/* ── ADD ENTRY ── */}
+      {view === "add" && (
+        <>
+          <button onClick={() => { setView("entries"); setShowDatePicker(false); }} style={{
+            background: "none", border: "none", fontSize: "12px", color: "#888", cursor: "pointer",
+            marginBottom: "12px", padding: 0, ...F,
+          }}>← All entries</button>
+
           {/* Date selector */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
             <div style={{ fontSize: "15px", color: "#111" }}>{formatDate(activeKey)}</div>
@@ -243,7 +338,7 @@ export default function PhotosTab({ clientId }) {
                 }}
               />
               <div style={{ fontSize: "10px", color: "#bbb", marginTop: "5px", lineHeight: "1.5" }}>
-                You can backdate photos if you forgot to log them. They will appear in history on the date you select.
+                You can backdate photos if you forgot to log them. They will appear under the date you select.
               </div>
             </div>
           )}
@@ -280,59 +375,6 @@ export default function PhotosTab({ clientId }) {
           <div style={{ fontSize: "10px", color: "#ccc", textAlign: "center", lineHeight: "1.5" }}>
             Photos are saved to your account and backed up securely.
           </div>
-        </>
-      )}
-
-      {/* ── HISTORY ── */}
-      {view === "history" && (
-        <>
-          {!hasAnyPhotos ? (
-            <div style={{ textAlign: "center", padding: "40px 20px", color: "#bbb" }}>
-              
-              <div style={{ fontSize: "13px", marginBottom: "6px" }}>No photos yet</div>
-              <div style={{ fontSize: "11px" }}>Add your first set from the Add Photos tab.</div>
-            </div>
-          ) : (
-            <>
-              <div style={{ fontSize: "11px", color: "#bbb", marginBottom: "14px" }}>
-                {allEntries.length} {allEntries.length === 1 ? "entry" : "entries"} logged
-              </div>
-              {allEntries.map(([dateKey, entry]) => (
-                <div key={dateKey} style={{ marginBottom: "22px" }}>
-                  <div style={{ fontSize: "12px", fontWeight: "600", color: "#555", marginBottom: "8px", display: "flex", alignItems: "center", gap: "8px" }}>
-                    {formatDate(dateKey)}
-                    <span style={{ fontSize: "10px", color: "#ccc", fontWeight: "normal" }}>
-                      {POSES.filter(p => entry[p.id]).length}/{POSES.length} poses
-                    </span>
-                  </div>
-                  <div style={{ display: "flex", gap: "6px" }}>
-                    {POSES.map(pose => (
-                      <div key={pose.id} style={{ flex: 1, minWidth: 0 }}>
-                        {entry[pose.id] ? (
-                          <>
-                            <img
-                              src={entry[pose.id]}
-                              alt={pose.label}
-                              style={{ width: "100%", aspectRatio: "3/4", objectFit: "cover", borderRadius: "6px", display: "block" }}
-                            />
-                            <div style={{ fontSize: "9px", color: "#bbb", textAlign: "center", marginTop: "3px" }}>{pose.label}</div>
-                          </>
-                        ) : (
-                          <div style={{
-                            width: "100%", aspectRatio: "3/4",
-                            background: "#f7f6f3", borderRadius: "6px",
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                          }}>
-                            <span style={{ fontSize: "9px", color: "#ddd" }}>{pose.label}</span>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </>
-          )}
         </>
       )}
 
