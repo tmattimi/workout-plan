@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { getPrograms, saveProgram, deleteProgram } from "../lib/supabase";
-import { schedule as taraSchedule, IMBALANCE_NOTE as taraNotes } from "../tara-data";
-import { schedule as skylerSchedule } from "../data.js";
+import { getPrograms, saveProgram, deleteProgram, getMyClients, assignProgramToClient } from "../lib/supabase";
+import { schedule as taraSchedule } from "../tara-data";
+import { schedule as skylerSchedule, IMBALANCE_NOTE as taraNotes } from "../data.js";
 
 const F = { fontFamily: "'Georgia','Times New Roman',serif" };
 
@@ -155,8 +155,29 @@ export default function ProgramLibrary({ coachId }) {
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all"); // all | template | client
+  const [goalFilter, setGoalFilter] = useState("all");
+  const [sort, setSort] = useState("newest"); // newest | name | goal
+  const [clients, setClients] = useState([]);
+  const [deployFor, setDeployFor] = useState(null); // program id whose client-picker is open
+  const [deploying, setDeploying] = useState(false);
+  const [deployMsg, setDeployMsg] = useState(null);
+  const [collapsed, setCollapsed] = useState({}); // goal -> bool
 
   useEffect(() => { loadPrograms(); }, [coachId]);
+  useEffect(() => { getMyClients().then(({ data }) => setClients(data || [])); }, []);
+
+  async function handleDeploy(programId, clientId, clientName) {
+    setDeploying(true);
+    const { error } = await assignProgramToClient(programId, clientId);
+    setDeploying(false);
+    if (!error) {
+      setDeployFor(null);
+      setDeployMsg({ id: programId, text: `Deployed to ${clientName}` });
+      setTimeout(() => setDeployMsg(null), 3000);
+    } else {
+      setDeployMsg({ id: programId, text: "Deploy failed — try again" });
+    }
+  }
 
   async function loadPrograms() {
     setLoading(true);
@@ -190,10 +211,45 @@ export default function ProgramLibrary({ coachId }) {
   const hasTaraSaved = programs.some(p => p.name === "Tara — Body Recomposition");
   const hasSkylSaved = programs.some(p => p.name.includes("Skyler"));
 
+  // Known goals + friendly labels. Anything else falls under "Other".
+  const GOAL_LABELS = {
+    body_recomposition: "Recomp",
+    weight_loss: "Weight Loss",
+    fat_loss: "Weight Loss",
+    muscle_gain: "Muscle Gain",
+    hypertrophy: "Muscle Gain",
+    strength: "Strength",
+    general_fitness: "General Fitness",
+    endurance: "Endurance",
+  };
+  const goalLabel = (g) => GOAL_LABELS[g] || (g ? g.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()) : "Other");
+
+  // Goal values actually present in the library, for the chip row.
+  const presentGoals = Array.from(new Set(programs.map(p => p.goal || "other")));
+
   const filtered = programs.filter(p => {
     const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.description?.toLowerCase().includes(search.toLowerCase());
     const matchFilter = filter === "all" || (filter === "template" && p.is_template) || (filter === "client" && !p.is_template);
-    return matchSearch && matchFilter;
+    const matchGoal = goalFilter === "all" || (p.goal || "other") === goalFilter;
+    return matchSearch && matchFilter && matchGoal;
+  });
+
+  const sorted = [...filtered].sort((a, b) => {
+    if (sort === "name") return (a.name || "").localeCompare(b.name || "");
+    if (sort === "goal") return goalLabel(a.goal).localeCompare(goalLabel(b.goal));
+    return new Date(b.created_at) - new Date(a.created_at); // newest
+  });
+
+  // Group the sorted list by goal label, preserving sort order within groups.
+  const grouped = sorted.reduce((acc, p) => {
+    const label = goalLabel(p.goal);
+    (acc[label] = acc[label] || []).push(p);
+    return acc;
+  }, {});
+  const groupOrder = Object.keys(grouped).sort((a, b) => {
+    if (a === "Other") return 1;
+    if (b === "Other") return -1;
+    return a.localeCompare(b);
   });
 
   if (viewing) {
@@ -237,66 +293,147 @@ export default function ProgramLibrary({ coachId }) {
         </div>
       )}
 
-      {/* Search + filter */}
-      <div style={{ display: "flex", gap: "6px", marginBottom: "10px" }}>
+      {/* Search + type filter + sort */}
+      <div style={{ display: "flex", gap: "6px", marginBottom: "8px" }}>
         <input
           value={search} onChange={e => setSearch(e.target.value)}
           placeholder="Search programs..."
           style={{ flex: 1, padding: "8px 11px", borderRadius: "7px", border: "1px solid #e4e0db", fontSize: "12px", color: "#111" }}
         />
+        <select value={sort} onChange={e => setSort(e.target.value)} style={{ padding: "7px 8px", borderRadius: "7px", border: "1px solid #e4e0db", fontSize: "11px", color: "#666", background: "#fff", cursor: "pointer" }}>
+          <option value="newest">Newest</option>
+          <option value="name">Name A–Z</option>
+          <option value="goal">Goal</option>
+        </select>
+      </div>
+
+      {/* Type filter: all / template / client */}
+      <div style={{ display: "flex", gap: "6px", marginBottom: "8px" }}>
         {["all","template","client"].map(f => (
           <button key={f} onClick={() => setFilter(f)} style={{
-            padding: "7px 10px", borderRadius: "7px", fontSize: "10px", cursor: "pointer", textTransform: "capitalize", border: "1px solid",
+            padding: "6px 12px", borderRadius: "7px", fontSize: "10px", cursor: "pointer", textTransform: "capitalize", border: "1px solid",
             background: filter === f ? "#111" : "transparent",
-            color: filter === f ? "#fff" : "#aaa",
+            color: filter === f ? "#fff" : "#999",
             borderColor: filter === f ? "#111" : "#e4e0db",
-          }}>{f}</button>
+          }}>{f === "all" ? "All" : f}</button>
         ))}
       </div>
 
-      {/* Programs list */}
+      {/* Goal chips */}
+      {presentGoals.length > 1 && (
+        <div style={{ display: "flex", gap: "5px", marginBottom: "14px", flexWrap: "wrap" }}>
+          <button onClick={() => setGoalFilter("all")} style={{
+            padding: "5px 12px", borderRadius: "16px", fontSize: "10px", cursor: "pointer", border: "1px solid",
+            background: goalFilter === "all" ? "#5b4636" : "#f3f1ec", color: goalFilter === "all" ? "#f7f6f3" : "#777",
+            borderColor: goalFilter === "all" ? "#5b4636" : "#e0ddd5",
+          }}>All Goals</button>
+          {presentGoals.map(g => (
+            <button key={g} onClick={() => setGoalFilter(g)} style={{
+              padding: "5px 12px", borderRadius: "16px", fontSize: "10px", cursor: "pointer", border: "1px solid",
+              background: goalFilter === g ? "#5b4636" : "#f3f1ec", color: goalFilter === g ? "#f7f6f3" : "#777",
+              borderColor: goalFilter === g ? "#5b4636" : "#e0ddd5",
+            }}>{goalLabel(g)}</button>
+          ))}
+        </div>
+      )}
+
+      {/* Programs — grouped by goal, collapsible */}
       {loading ? (
         <div style={{ textAlign: "center", padding: "30px", color: "#bbb", fontSize: "12px" }}>Loading...</div>
-      ) : filtered.length === 0 ? (
+      ) : sorted.length === 0 ? (
         <div style={{ textAlign: "center", padding: "30px", color: "#bbb", fontSize: "12px", lineHeight: "1.7", ...F }}>
           {programs.length === 0 ? "No programs saved yet. Save Tara and Skyler's programs above to get started." : "No programs match that search."}
         </div>
       ) : (
-        filtered.map(program => (
-          <div key={program.id} style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "9px", padding: "13px 15px", marginBottom: "8px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: "13px", fontWeight: "600", color: "#111", marginBottom: "3px" }}>{program.name}</div>
-                {program.description && <div style={{ fontSize: "11px", color: "#aaa", lineHeight: "1.5", marginBottom: "6px" }}>{program.description}</div>}
-                <div style={{ display: "flex", gap: "5px", flexWrap: "wrap" }}>
-                  {program.goal && <span style={{ fontSize: "9px", background: "#f0f0f0", color: "#666", padding: "2px 7px", borderRadius: "4px" }}>{program.goal.replace(/_/g," ")}</span>}
-                  {program.days_per_week && <span style={{ fontSize: "9px", background: "#f0f0f0", color: "#666", padding: "2px 7px", borderRadius: "4px" }}>{program.days_per_week} days/wk</span>}
-                  {program.is_template && <span style={{ fontSize: "9px", background: "#f0fff0", color: "#2d7a1e", padding: "2px 7px", borderRadius: "4px" }}>Template</span>}
-                  <span style={{ fontSize: "9px", color: "#ccc" }}>Saved {new Date(program.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
-                </div>
-              </div>
-            </div>
-            <div style={{ display: "flex", gap: "6px", marginTop: "10px" }}>
+        groupOrder.map(label => {
+          const list = grouped[label];
+          const isCollapsed = collapsed[label];
+          return (
+            <div key={label} style={{ marginBottom: "16px" }}>
+              {/* Section header */}
               <button
-                onClick={async () => {
-                  // Fetch full program with schedule
-                  const { getProgramById } = await import("../lib/supabase");
-                  const { data } = await getProgramById(program.id);
-                  if (data) setViewing(data);
-                }}
-                style={{ background: "#1a1a1a", color: "#fff", border: "none", borderRadius: "20px", padding: "6px 14px", fontSize: "11px", cursor: "pointer", ...F }}
+                onClick={() => setCollapsed(c => ({ ...c, [label]: !c[label] }))}
+                style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", borderBottom: "1px solid #e8e4dd", padding: "0 2px 7px", cursor: "pointer", marginBottom: "10px" }}
               >
-                View Program
+                <span style={{ fontSize: "11px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#5b4636", fontWeight: "600", ...F }}>
+                  {label} <span style={{ color: "#bbb", fontWeight: "400" }}>· {list.length}</span>
+                </span>
+                <span style={{ fontSize: "11px", color: "#bbb", transform: isCollapsed ? "rotate(-90deg)" : "none", transition: "transform 0.15s" }}>▾</span>
               </button>
-              <button
-                onClick={() => handleDelete(program.id)}
-                style={{ background: "none", border: "1px solid #e4e0db", borderRadius: "20px", padding: "6px 12px", fontSize: "11px", cursor: "pointer", color: "#aaa" }}
-              >
-                Remove
-              </button>
+
+              {!isCollapsed && list.map(program => {
+                const pickerOpen = deployFor === program.id;
+                const msg = deployMsg && deployMsg.id === program.id ? deployMsg.text : null;
+                return (
+                  <div key={program.id} style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "9px", padding: "13px 15px", marginBottom: "8px" }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: "13px", fontWeight: "600", color: "#111", marginBottom: "3px" }}>{program.name}</div>
+                      {program.description && <div style={{ fontSize: "11px", color: "#aaa", lineHeight: "1.5", marginBottom: "6px" }}>{program.description}</div>}
+                      <div style={{ display: "flex", gap: "5px", flexWrap: "wrap" }}>
+                        {program.days_per_week && <span style={{ fontSize: "9px", background: "#f0f0f0", color: "#666", padding: "2px 7px", borderRadius: "4px" }}>{program.days_per_week} days/wk</span>}
+                        {program.is_template
+                          ? <span style={{ fontSize: "9px", background: "#f0fff0", color: "#2d7a1e", padding: "2px 7px", borderRadius: "4px" }}>Template</span>
+                          : <span style={{ fontSize: "9px", background: "#fff5ec", color: "#9a6320", padding: "2px 7px", borderRadius: "4px" }}>Client-specific</span>}
+                        <span style={{ fontSize: "9px", color: "#ccc" }}>Saved {new Date(program.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div style={{ display: "flex", gap: "6px", marginTop: "10px", flexWrap: "wrap" }}>
+                      <button
+                        onClick={() => { setDeployFor(pickerOpen ? null : program.id); setDeployMsg(null); }}
+                        style={{ background: pickerOpen ? "#5b4636" : "#1d6fa8", color: "#fff", border: "none", borderRadius: "20px", padding: "6px 14px", fontSize: "11px", cursor: "pointer", ...F }}
+                      >
+                        {pickerOpen ? "Cancel" : "Deploy"}
+                      </button>
+                      <button
+                        onClick={async () => {
+                          const { getProgramById } = await import("../lib/supabase");
+                          const { data } = await getProgramById(program.id);
+                          if (data) setViewing(data);
+                        }}
+                        style={{ background: "#1a1a1a", color: "#fff", border: "none", borderRadius: "20px", padding: "6px 14px", fontSize: "11px", cursor: "pointer", ...F }}
+                      >
+                        View
+                      </button>
+                      <button
+                        onClick={() => handleDelete(program.id)}
+                        style={{ background: "none", border: "1px solid #e4e0db", borderRadius: "20px", padding: "6px 12px", fontSize: "11px", cursor: "pointer", color: "#bbb" }}
+                      >
+                        Remove
+                      </button>
+                      {msg && <span style={{ fontSize: "11px", color: msg.includes("failed") ? "#b91c1c" : "#2d7a1e", alignSelf: "center", ...F }}>{msg}</span>}
+                    </div>
+
+                    {/* Deploy: client picker */}
+                    {pickerOpen && (
+                      <div style={{ marginTop: "11px", paddingTop: "11px", borderTop: "1px solid #f0ede7" }}>
+                        <div style={{ fontSize: "10px", color: "#999", marginBottom: "7px", letterSpacing: "0.05em", ...F }}>Assign this program to:</div>
+                        {clients.length === 0 ? (
+                          <div style={{ fontSize: "11px", color: "#bbb", ...F }}>No clients yet.</div>
+                        ) : (
+                          <div style={{ display: "flex", flexDirection: "column", gap: "5px", maxHeight: "180px", overflowY: "auto" }}>
+                            {clients.map(c => (
+                              <button
+                                key={c.id}
+                                disabled={deploying}
+                                onClick={() => handleDeploy(program.id, c.id, c.name)}
+                                style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#faf9f6", border: "1px solid #ece8e1", borderRadius: "7px", padding: "8px 11px", cursor: deploying ? "default" : "pointer", textAlign: "left", ...F }}
+                              >
+                                <span style={{ fontSize: "12px", color: "#111" }}>{c.name}</span>
+                                {c.goal && <span style={{ fontSize: "9px", color: "#aaa" }}>{goalLabel(c.goal)}</span>}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
-          </div>
-        ))
+          );
+        })
       )}
     </div>
   );

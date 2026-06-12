@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { authRedirectUrl, publicWebUrl } from './env';
 
 // These come from your Vercel environment variables.
 // In local dev, create a .env file with these values.
@@ -42,7 +43,7 @@ export async function inviteClient(clientId, email, clientName) {
     email: email.trim(),
     password: tempPassword,
     options: {
-      emailRedirectTo: window.location.origin + "/",
+      emailRedirectTo: authRedirectUrl(),
       data: { name: clientName, role: "client", client_id: clientId }
     }
   });
@@ -419,7 +420,7 @@ async function sendMessageEmailNotification(clientId, message, sender) {
       .single();
     if (!client) return;
 
-    const appUrl = window.location.origin;
+    const appUrl = publicWebUrl();
 
     if (sender === 'coach') {
       // Email the client
@@ -808,6 +809,56 @@ export async function getHealthLogs(clientId, daysBack = 14) {
     .eq('client_id', clientId)
     .gte('log_date', since.toISOString().slice(0, 10))
     .order('log_date', { ascending: false });
+  return { data: data || [], error };
+}
+
+// ── JOURNAL ───────────────────────────────────────────────────────────────────
+// Daily journal entries paired with the Daily Scripture reflection. One row per
+// client per day; share_with_coach controls per-entry visibility to the coach.
+export async function upsertJournalEntry(clientId, entryDate, { body, scriptureRef, shareWithCoach }) {
+  if (!supabase || !clientId) return { data: null };
+  const row = { client_id: clientId, entry_date: entryDate, body: body ?? "" };
+  if (scriptureRef !== undefined) row.scripture_ref = scriptureRef;
+  if (shareWithCoach !== undefined) row.share_with_coach = shareWithCoach;
+  const { data, error } = await supabase
+    .from('journal_entries')
+    .upsert(row, { onConflict: 'client_id,entry_date' })
+    .select().single();
+  return { data, error };
+}
+
+export async function getJournalEntry(clientId, entryDate) {
+  if (!supabase || !clientId) return { data: null };
+  const { data, error } = await supabase
+    .from('journal_entries')
+    .select('*')
+    .eq('client_id', clientId)
+    .eq('entry_date', entryDate)
+    .maybeSingle();
+  return { data, error };
+}
+
+export async function getJournalEntries(clientId, limit = 30) {
+  if (!supabase || !clientId) return { data: [] };
+  const { data, error } = await supabase
+    .from('journal_entries')
+    .select('*')
+    .eq('client_id', clientId)
+    .order('entry_date', { ascending: false })
+    .limit(limit);
+  return { data: data || [], error };
+}
+
+// Coach-side: entries a client chose to share.
+export async function getSharedJournalEntries(clientId, limit = 30) {
+  if (!supabase || !clientId) return { data: [] };
+  const { data, error } = await supabase
+    .from('journal_entries')
+    .select('*')
+    .eq('client_id', clientId)
+    .eq('share_with_coach', true)
+    .order('entry_date', { ascending: false })
+    .limit(limit);
   return { data: data || [], error };
 }
 

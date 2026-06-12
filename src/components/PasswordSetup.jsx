@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
+import { openExternalUrl } from "../lib/env";
 
 const F = { fontFamily: "'Georgia','Times New Roman',serif" };
 
@@ -91,7 +92,7 @@ export default function PasswordSetup({ onComplete }) {
             This setup link has expired or already been used. Contact your coach for a new invite.
           </div>
           <button
-            onClick={() => window.location.href = "/"}
+            onClick={() => openExternalUrl("/")}
             style={{ background: "#f7f6f3", color: "#111", border: "none", borderRadius: "7px", padding: "11px 24px", fontSize: "13px", cursor: "pointer", ...F }}
           >
             Go to login

@@ -23,6 +23,7 @@ import MessagesTab from "./components/MessagesTab";
 import ErrorBoundary from "./components/ErrorBoundary";
 import InstallPrompt from "./components/InstallPrompt";
 import PaymentGate from "./components/PaymentGate";
+import { openExternalUrl } from "./lib/env";
 import HealthLogModal from "./components/HealthLogModal";
 import { getRecoveryAssessment } from "./lib/recoveryEngine";
 import { PRCelebration, OverloadSuggestions } from "./components/PRCelebration";
@@ -702,6 +703,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
     return idx >= 0 ? idx : 0;
   });
   const [tab, setTab] = useState("plan");
+  const [refSection, setRefSection] = useState("tools");
   const [expandedEx, setExpandedEx] = useState(null);
   const [swappedExercises, setSwappedExercises] = useState({}); // { originalName: swapObj }
   const [activeSwapModal, setActiveSwapModal] = useState(null); // exercise object
@@ -899,7 +901,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
         }),
       });
       const { url } = await res.json();
-      if (url) window.location.href = url;
+      if (url) openExternalUrl(url);
     } catch (err) {
       console.error('Payment error:', err);
     }
@@ -1064,10 +1066,8 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
   const tabs = [
     ["plan","Plan"],
     ["progress","Progress"],
-    ["body","Body"],
     ["nutrition","Nutrition"],
-    ...(clientData?.sex === "female" ? [["cycle","Cycle"]] : []),
-    ["tools","Tools"],
+    ["reference","Reference"],
     ["messages","Messages"],
   ];
 
@@ -1170,7 +1170,7 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
           })()}
         </div>
         {/* Scripture — inline in header */}
-        <DailyScripture accent="#c47a0a" inHeader />
+        <DailyScripture accent="#c47a0a" inHeader clientId={clientData?.id} />
         <div style={{ display: "flex", gap: "3px", overflowX: "auto", paddingBottom: "1px", msOverflowStyle: "none", scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}>
           {tabs.map(([t, label]) => (
             <button key={t} onClick={() => setTab(t)} style={{
@@ -1962,33 +1962,6 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
 
       {tab === "progress" && <ErrorBoundary tabName="Progress"><NewProgressTab clientId={clientData?.id} bodyweight={clientData?.weight || 170} localLogs={logs} measurements={measurements} />}
       </ErrorBoundary>}
-      {tab === "body" && <ErrorBoundary tabName="Body"><BodyTab clientId={clientData?.id} />}
-      {tab === "health" && (
-        <HealthTab
-          dailyHealth={dailyHealth}
-          todayKey={todayKey}
-          onHealthUpdate={async (updated) => {
-            setDailyHealth(updated);
-            localStorage.setItem("daily_health_v1", JSON.stringify(updated));
-            // Sync to Supabase if logged in
-            if (clientData?.id) {
-              const { upsertHealthLog } = await import("./lib/supabase");
-              const todayData = updated[todayKey] || {};
-              await upsertHealthLog(clientData.id, todayKey, {
-                sleep_hours: todayData.sleep_hours ? parseFloat(todayData.sleep_hours) : null,
-                sleep_quality: todayData.sleep_quality ? parseFloat(todayData.sleep_quality) : null,
-                hrv_ms: todayData.hrv ? parseFloat(todayData.hrv) : null,
-                resting_hr: todayData.resting_hr ? parseFloat(todayData.resting_hr) : null,
-                weight_lbs: todayData.weight_lbs ? parseFloat(todayData.weight_lbs) : null,
-                energy_level: todayData.energy_level ? parseInt(todayData.energy_level) : null,
-                steps: todayData.steps ? parseInt(todayData.steps) : null,
-              });
-            }
-          }}
-          clientId={clientData?.id}
-        />
-      )}
-      </ErrorBoundary>}
       {tab === "nutrition" && <NutritionTab clientId={clientData?.id} />}
       {tab === "messages" && (
         <MessagesTab
@@ -1996,16 +1969,70 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
           onRead={() => setUnreadMessages(0)}
         />
       )}
-      {tab === "cycle" && <CycleTracking clientId={clientData?.id} />}
-      {tab === "tools" && (
-        <ToolsTab
-          principles={principles}
-          clientEquipment={clientEquipment}
-          clientInjuries={clientInjuries}
-          onEquipmentChange={handleEquipmentChange}
-          onInjuryChange={handleInjuryChange}
-          clientId={clientData?.id}
-        />
+      {tab === "reference" && (
+        <div style={{ padding: "16px 16px 60px", background: "#f7f6f3", minHeight: "100vh" }}>
+          {/* Reference sub-nav */}
+          {(() => {
+            const refTabs = [
+              ["tools", "Tools"],
+              ["health", "Health"],
+              ...(clientData?.sex === "female" ? [["cycle", "Cycle"]] : []),
+            ];
+            return (
+              <div style={{ display: "flex", gap: "4px", marginBottom: "18px" }}>
+                {refTabs.map(([id, label]) => (
+                  <button key={id} onClick={() => setRefSection(id)} style={{
+                    flex: 1, padding: "8px 4px", border: "1px solid " + (refSection === id ? "#1a1a1a" : "#e0e0e0"),
+                    borderRadius: "6px", background: refSection === id ? "#1a1a1a" : "#fff",
+                    color: refSection === id ? "#f7f6f3" : "#777", cursor: "pointer", fontSize: "11px",
+                  }}>{label}</button>
+                ))}
+              </div>
+            );
+          })()}
+
+          {refSection === "tools" && (
+            <ErrorBoundary tabName="Tools">
+              <ToolsTab
+                principles={principles}
+                clientEquipment={clientEquipment}
+                clientInjuries={clientInjuries}
+                onEquipmentChange={handleEquipmentChange}
+                onInjuryChange={handleInjuryChange}
+                clientId={clientData?.id}
+              />
+            </ErrorBoundary>
+          )}
+          {refSection === "health" && (
+            <ErrorBoundary tabName="Health">
+              <HealthTab
+                dailyHealth={dailyHealth}
+                todayKey={todayKey}
+                onHealthUpdate={async (updated) => {
+                  setDailyHealth(updated);
+                  localStorage.setItem("daily_health_v1", JSON.stringify(updated));
+                  if (clientData?.id) {
+                    const { upsertHealthLog } = await import("./lib/supabase");
+                    const todayData = updated[todayKey] || {};
+                    await upsertHealthLog(clientData.id, todayKey, {
+                      sleep_hours: todayData.sleep_hours ? parseFloat(todayData.sleep_hours) : null,
+                      sleep_quality: todayData.sleep_quality ? parseFloat(todayData.sleep_quality) : null,
+                      hrv_ms: todayData.hrv ? parseFloat(todayData.hrv) : null,
+                      resting_hr: todayData.resting_hr ? parseFloat(todayData.resting_hr) : null,
+                      weight_lbs: todayData.weight_lbs ? parseFloat(todayData.weight_lbs) : null,
+                      energy_level: todayData.energy_level ? parseInt(todayData.energy_level) : null,
+                      steps: todayData.steps ? parseInt(todayData.steps) : null,
+                    });
+                  }
+                }}
+                clientId={clientData?.id}
+              />
+            </ErrorBoundary>
+          )}
+          {refSection === "cycle" && clientData?.sex === "female" && (
+            <ErrorBoundary tabName="Cycle"><CycleTracking clientId={clientData?.id} /></ErrorBoundary>
+          )}
+        </div>
       )}
 
 

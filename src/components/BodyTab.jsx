@@ -1027,8 +1027,22 @@ function DailyHealthSection({ clientId }) {
 }
 
 // ── Main BodyTab ──────────────────────────────────────────────────────────────
-export default function BodyTab({ clientId }) {
+export default function BodyTab({ clientId, embedded = false }) {
   const [section, setSection] = useState("weight");
+
+  // Embedded in Progress: show measurements, photos, scans as one continuous
+  // scroll. Weight is logged in Progress Overview; Health lives in Reference.
+  if (embedded) {
+    return (
+      <div style={{ padding: "4px 0 20px" }}>
+        <MeasurementsSection clientId={clientId} />
+        <div style={{ height: 28 }} />
+        <PhotosSection />
+        <div style={{ height: 28 }} />
+        <BodyScanSection clientId={clientId} />
+      </div>
+    );
+  }
 
   const SECTIONS = [
     { id: "weight", label: "Weight" },

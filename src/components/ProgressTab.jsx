@@ -3,6 +3,7 @@ import GoalTracker from './GoalTracker';
 import WorkoutHistory from './WorkoutHistory';
 import ProgressDashboard from './ProgressDashboard';
 import ExerciseProgress from './ExerciseProgress';
+import BodyTab from './BodyTab';
 import { supabase } from '../lib/supabase';
 import { EmptyState, InlineEmpty } from './ui';
 import {
@@ -651,11 +652,8 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
 
   const TABS = [
     { id: 'overview', label: 'Overview' },
-    { id: 'dashboard', label: 'Dashboard' },
-    { id: 'history', label: 'History' },
     { id: 'strength', label: 'Strength' },
-    { id: 'goals', label: 'Goals' },
-    { id: 'analytics', label: 'Analytics' },
+    { id: 'body', label: 'Body' },
   ];
 
   return (
@@ -718,27 +716,27 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
         }
 
         return (
-          <div style={{ background: '#111', minHeight: '100%', padding: '22px 18px 80px' }}>
+          <div style={{ background: '#f7f6f3', minHeight: '100%', padding: '22px 18px 40px' }}>
             {!hasData ? (
               <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-                <div style={{ fontSize: 11, letterSpacing: '.2em', textTransform: 'uppercase', color: '#444', marginBottom: 10 }}>No sessions yet</div>
-                <div style={{ fontSize: 13, color: '#555', lineHeight: 1.8, ...F }}>Complete your first session to see your progress here.</div>
+                <div style={{ fontSize: 11, letterSpacing: '.2em', textTransform: 'uppercase', color: '#bbb', marginBottom: 10 }}>No sessions yet</div>
+                <div style={{ fontSize: 13, color: '#999', lineHeight: 1.8, ...F }}>Complete your first session to see your progress here.</div>
               </div>
             ) : (<>
 
               {/* ── STATS ROW — tight, no cards ── */}
-              <div style={{ display: 'flex', marginBottom: 32 }}>
+              <div style={{ display: 'flex', marginBottom: 28 }}>
                 {[
                   { value: streak,               sub: 'day streak' },
                   { value: sessionsThisMonth,     sub: 'this month', note: monthDiff !== 0 ? `${monthDiff > 0 ? '+' : ''}${monthDiff} vs last` : null, up: monthDiff > 0 },
                   { value: Math.round(sessionsPerWeek * 10) / 10, sub: 'per week avg' },
                 ].map(({ value, sub, note, up }, i) => (
-                  <div key={i} style={{ flex: 1, textAlign: 'center', borderRight: i < 2 ? '1px solid #1c1c1e' : 'none' }}>
+                  <div key={i} style={{ flex: 1, textAlign: 'center', borderRight: i < 2 ? '1px solid #e5e3dd' : 'none' }}>
                     <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 3 }}>
-                      <span style={{ fontSize: 30, fontWeight: 700, color: '#f5f5f7', letterSpacing: '-1px', lineHeight: 1 }}>{value}</span>
-                      {note && <span style={{ fontSize: 8, color: up ? '#34c759' : '#ff453a', fontWeight: 600 }}>{note}</span>}
+                      <span style={{ fontSize: 30, fontWeight: 700, color: '#1a1a1a', letterSpacing: '-1px', lineHeight: 1 }}>{value}</span>
+                      {note && <span style={{ fontSize: 8, color: up ? '#16a34a' : '#b91c1c', fontWeight: 600 }}>{note}</span>}
                     </div>
-                    <div style={{ fontSize: 9, color: '#3a3a3c', marginTop: 4, letterSpacing: '.05em' }}>{sub}</div>
+                    <div style={{ fontSize: 9, color: '#999', marginTop: 4, letterSpacing: '.05em' }}>{sub}</div>
                   </div>
                 ))}
               </div>
@@ -748,14 +746,17 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
                 const hasChart = wtPts.length >= 2;
                 const sp = hasChart ? miniLine(wtPts, '#f5f5f7', 44) : null;
                 const diff = hasChart ? (wtPts[wtPts.length-1] - wtPts[0]).toFixed(1) : null;
-                const diffColor = diff === null ? '#555' : parseFloat(diff) < 0 ? '#34c759' : parseFloat(diff) > 0 ? '#ff453a' : '#555';
+                const diffColor = diff === null ? '#999' : parseFloat(diff) < 0 ? '#16a34a' : parseFloat(diff) > 0 ? '#b91c1c' : '#999';
                 return (
-                  <div style={{ marginBottom: 30, borderBottom: '1px solid #1c1c1e', paddingBottom: 26 }}>
+                  <div style={{ marginBottom: 26, borderBottom: '1px solid #e5e3dd', paddingBottom: 24 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: hasChart ? 12 : 6 }}>
-                      <span style={{ fontSize: '8px', letterSpacing: '.2em', textTransform: 'uppercase', color: '#3a3a3c' }}>Body weight</span>
+                      <button onClick={() => setActiveTab('body')} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <span style={{ fontSize: '8px', letterSpacing: '.2em', textTransform: 'uppercase', color: '#aaa' }}>Body weight</span>
+                        <span style={{ fontSize: 9, color: '#1d6fa8' }}>+ log</span>
+                      </button>
                       <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-                        <span style={{ fontSize: 20, fontWeight: 700, color: '#f5f5f7', letterSpacing: '-0.5px' }}>{wtPts[wtPts.length-1]}</span>
-                        <span style={{ fontSize: 10, color: '#555' }}>lbs</span>
+                        <span style={{ fontSize: 20, fontWeight: 700, color: '#1a1a1a', letterSpacing: '-0.5px' }}>{wtPts[wtPts.length-1]}</span>
+                        <span style={{ fontSize: 10, color: '#aaa' }}>lbs</span>
                         {diff !== null && diff !== '0.0' && (
                           <span style={{ fontSize: 10, color: diffColor, fontWeight: 600 }}>{parseFloat(diff)>0?'+':''}{diff}</span>
                         )}
@@ -763,18 +764,18 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
                     </div>
                     {hasChart ? (
                       <svg viewBox={`0 0 ${sp.W} ${sp.h}`} width="100%" height={sp.h} preserveAspectRatio="none" style={{ display: 'block' }}>
-                        <polyline points={sp.points} fill="none" stroke="#2c2c2e" strokeWidth="1" />
-                        <polyline points={sp.points} fill="none" stroke="#f5f5f7" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.55" />
+                        <polyline points={sp.points} fill="none" stroke="#e5e3dd" strokeWidth="1" />
+                        <polyline points={sp.points} fill="none" stroke="#1d6fa8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                         {wtPts.map((v, i) => {
                           const x = (i/(wtPts.length-1))*sp.W;
                           const min = Math.min(...wtPts), max = Math.max(...wtPts), range = max-min||1;
                           const y = sp.h - ((v-min)/range)*(sp.h-6) - 3;
-                          return <circle key={i} cx={x} cy={y} r={i===wtPts.length-1?2.5:1.5} fill={i===wtPts.length-1?'#f5f5f7':'#3a3a3c'} />;
+                          return <circle key={i} cx={x} cy={y} r={i===wtPts.length-1?2.5:1.5} fill={i===wtPts.length-1?'#1d6fa8':'#c5d4dd'} />;
                         })}
                       </svg>
                     ) : (
-                      <div style={{ fontSize: 9, color: '#333', marginTop: 4, lineHeight: 1.6 }}>
-                        Log your weight daily in the Body tab — the chart will appear once you have a few entries.
+                      <div style={{ fontSize: 10, color: '#999', marginTop: 4, lineHeight: 1.6 }}>
+                        Tap “+ log” to record your weight. The chart appears once you have a few entries.
                       </div>
                     )}
                   </div>
@@ -783,31 +784,31 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
 
               {/* ── STRENGTH SPARKLINES ── */}
               {liftSparklines.length > 0 && (
-                <div style={{ marginBottom: 30 }}>
-                  <div style={{ fontSize: '8px', letterSpacing: '.2em', textTransform: 'uppercase', color: '#3a3a3c', marginBottom: 16 }}>Strength</div>
+                <div style={{ marginBottom: 28 }}>
+                  <div style={{ fontSize: '8px', letterSpacing: '.2em', textTransform: 'uppercase', color: '#aaa', marginBottom: 16 }}>Strength</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                     {liftSparklines.map(({ name, pts, latest, change }) => {
-                      const sp = miniLine(pts, '#f5f5f7', 28);
+                      const sp = miniLine(pts, '#1a1a1a', 28);
                       if (!sp) return null;
-                      const changeColor = change > 0 ? '#34c759' : change < 0 ? '#ff453a' : '#555';
+                      const changeColor = change > 0 ? '#16a34a' : change < 0 ? '#b91c1c' : '#999';
                       const min = Math.min(...pts), max = Math.max(...pts), range = max-min||1;
                       return (
                         <div key={name}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
-                            <span style={{ fontSize: 11, color: '#888', ...F }}>{name}</span>
+                            <span style={{ fontSize: 11, color: '#555', ...F }}>{name}</span>
                             <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
-                              <span style={{ fontSize: 15, fontWeight: 700, color: '#f5f5f7' }}>{latest}</span>
-                              <span style={{ fontSize: 9, color: '#555' }}>lbs</span>
+                              <span style={{ fontSize: 15, fontWeight: 700, color: '#1a1a1a' }}>{latest}</span>
+                              <span style={{ fontSize: 9, color: '#aaa' }}>lbs</span>
                               {change !== 0 && <span style={{ fontSize: 9, color: changeColor, fontWeight: 600 }}>{change>0?'+':''}{change}</span>}
                             </div>
                           </div>
                           <svg viewBox={`0 0 ${sp.W} ${sp.h}`} width="100%" height={sp.h} preserveAspectRatio="none" style={{ display: 'block' }}>
-                            <polyline points={sp.points} fill="none" stroke="#2c2c2e" strokeWidth="1" />
-                            <polyline points={sp.points} fill="none" stroke="#f5f5f7" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.4" />
+                            <polyline points={sp.points} fill="none" stroke="#e5e3dd" strokeWidth="1" />
+                            <polyline points={sp.points} fill="none" stroke="#1a1a1a" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.55" />
                             {pts.map((v,i) => {
                               const x = (i/(pts.length-1))*sp.W;
                               const y = sp.h - ((v-min)/range)*(sp.h-6) - 3;
-                              return <circle key={i} cx={x} cy={y} r={i===pts.length-1?2.5:1.5} fill={i===pts.length-1?'#f5f5f7':'#3a3a3c'} />;
+                              return <circle key={i} cx={x} cy={y} r={i===pts.length-1?2.5:1.5} fill={i===pts.length-1?'#1a1a1a':'#cfcdc6'} />;
                             })}
                           </svg>
                         </div>
@@ -820,7 +821,7 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
               {/* ── GOALS — slim bars, no cards ── */}
               {activeGoals.length > 0 && (
                 <div>
-                  <div style={{ fontSize: '8px', letterSpacing: '.2em', textTransform: 'uppercase', color: '#3a3a3c', marginBottom: 14 }}>Goals</div>
+                  <div style={{ fontSize: '8px', letterSpacing: '.2em', textTransform: 'uppercase', color: '#aaa', marginBottom: 14 }}>Goals</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                     {activeGoals.slice(0,4).map((goal, i) => {
                       const currentVal = goal.current_value ?? goal.currentValue ?? 0;
@@ -833,19 +834,19 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
                           ? Math.min(100, Math.max(0, Math.round(((startVal - currentVal) / (startVal - targetVal)) * 100)))
                           : !lowerIsBetter ? Math.min(100, Math.round((currentVal / targetVal) * 100)) : null;
                       }
-                      const barColor = pct >= 100 ? '#34c759' : '#f5f5f7';
+                      const barColor = pct >= 100 ? '#16a34a' : '#1a1a1a';
                       return (
                         <div key={goal.id || i}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
-                            <span style={{ fontSize: 11, color: '#888', ...F }}>{goal.name}</span>
+                            <span style={{ fontSize: 11, color: '#555', ...F }}>{goal.name}</span>
                             <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
                               {pct !== null && <span style={{ fontSize: 12, fontWeight: 700, color: barColor }}>{pct}%</span>}
-                              {targetVal && <span style={{ fontSize: 9, color: '#444' }}>{currentVal} → {targetVal} {goal.unit}</span>}
+                              {targetVal && <span style={{ fontSize: 9, color: '#aaa' }}>{currentVal} → {targetVal} {goal.unit}</span>}
                             </div>
                           </div>
                           {pct !== null && (
-                            <div style={{ height: 2, background: '#1c1c1e', borderRadius: 1, overflow: 'hidden' }}>
-                              <div style={{ height: '100%', width: `${pct}%`, background: barColor, borderRadius: 1, transition: 'width 0.6s ease', opacity: 0.7 }} />
+                            <div style={{ height: 3, background: '#e5e3dd', borderRadius: 2, overflow: 'hidden' }}>
+                              <div style={{ height: '100%', width: `${pct}%`, background: barColor, borderRadius: 2, transition: 'width 0.6s ease' }} />
                             </div>
                           )}
                         </div>
@@ -1033,7 +1034,7 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
       )}
 
       {/* ── ANALYTICS TAB ── */}
-      {activeTab === 'analytics' && (
+      {activeTab === 'strength' && (
         <div style={{ padding: '16px 16px 60px' }}>
 
           {/* ── ACWR Training Load ── */}
@@ -1284,10 +1285,10 @@ export default function ProgressTab({ clientId, bodyweight = 170, localLogs = {}
         </div>
       )}
 
-      {/* ── DASHBOARD TAB ── */}
-      {activeTab === 'dashboard' && (
-        <div style={{ padding: '16px 16px 60px' }}>
-          <ProgressDashboard clientId={clientId} />
+      {/* ── BODY TAB — measurements, photos, scans (single source for body data) ── */}
+      {activeTab === 'body' && (
+        <div style={{ padding: '18px 16px 60px', background: '#f7f6f3', minHeight: '100%' }}>
+          <BodyTab clientId={clientId} embedded />
         </div>
       )}
     </div>

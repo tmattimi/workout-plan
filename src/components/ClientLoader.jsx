@@ -5,14 +5,9 @@ import { adaptPlanToSchedule } from "../lib/planAdapter";
 import ClientAuth from "./ClientAuth";
 import OnboardingQuestionnaire from "./OnboardingQuestionnaire";
 import PasswordSetup from "./PasswordSetup";
+import { hasAuthTokensInUrl, clearUrlHash } from "../lib/env";
 
 const F = { fontFamily: "'Georgia','Times New Roman',serif" };
-
-// Check if the URL has Supabase auth tokens (from invite/reset email click)
-function hasAuthTokensInUrl() {
-  const hash = window.location.hash;
-  return hash.includes("access_token") || hash.includes("type=invite") || hash.includes("type=recovery");
-}
 
 export default function ClientLoader({ children }) {
   const [state, setState] = useState("loading"); // loading | auth | setup | ready | error
@@ -139,7 +134,7 @@ export default function ClientLoader({ children }) {
         setState("loading");
         checkSession();
         // Clean up URL hash
-        window.history.replaceState(null, "", window.location.pathname);
+        clearUrlHash();
       }} />
     );
   }

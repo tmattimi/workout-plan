@@ -14,8 +14,14 @@ import AICoachPanel from "../components/AICoachPanel";
 import AIProgramBuilder from "../components/AIProgramBuilder";
 import ClientAnalytics from "./ClientAnalytics";
 import ClientProgramReview from "./ClientProgramReview";
+import ClientProgramView from "./ClientProgramView";
+import ClientStatusView from "./ClientStatusView";
+import GroupProgramming from "./GroupProgramming";
+import ProgramLibrary from "./ProgramLibrary";
+import VideoLibrary from "./VideoLibrary";
 import ProgressDashboard from "../components/ProgressDashboard";
 import { UI, SectionLabel, EmptyState, Card, InlineEmpty } from "../components/ui";
+import { clientSetupLink, authRedirectUrl } from "../lib/env";
 
 const F = { fontFamily: "'Georgia','Times New Roman',serif" };
 const DAYS = ["MON","TUE","WED","THU","FRI","SAT","SUN"];
@@ -142,7 +148,7 @@ function CreateClientModal({ onSave, onCancel, coachId }) {
   }
 
   if (created) {
-    const clientUrl = `${window.location.origin}?client=${created.access_token}`;
+    const clientUrl = clientSetupLink(created.access_token);
     return (
       <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}>
         <div style={{ background: "#fff", borderRadius: "12px", padding: "24px", maxWidth: "380px", width: "100%" }}>
@@ -704,7 +710,7 @@ function ClientDetail({ client, coachId, plans, onBack, onDelete, onAssignPlan }
           email: client.email,
           clientId: client.id,
           clientName: client.name,
-          redirectTo: window.location.origin + "/",
+          redirectTo: authRedirectUrl(),
         }),
       });
       const result = await res.json();
@@ -776,7 +782,7 @@ function ClientDetail({ client, coachId, plans, onBack, onDelete, onAssignPlan }
     setMessages(data || []);
   }
 
-  const clientUrl = `${window.location.origin}?client=${client.access_token}`;
+  const clientUrl = clientSetupLink(client.access_token);
 
   return (
     <div style={{ padding: "16px 16px 40px" }}>
@@ -815,39 +821,54 @@ function ClientDetail({ client, coachId, plans, onBack, onDelete, onAssignPlan }
         )}
       </div>
 
-      {/* Sub-nav — grouped by purpose with dividers */}
-      <div style={{ display: "flex", gap: "5px", marginBottom: "16px", overflowX: "auto", alignItems: "center" }}>
-        {(() => {
-          const groups = [
-            // Snapshot
-            [["overview","Overview"]],
-            // Progress & Insights
-            [["progress_dashboard","Progress"],["analytics","Analytics"],["ai","AI Analysis"],["program_review","Program Review"],["photos","Photos"]],
-            // Programming
-            [["view_program","View Program"],["program","Build Program"],["assign","Assign Plan"]],
-            // Communication
-            [["messages","Messages"],["notes","Coach Notes"],["workout_notes","Workout Notes"]],
-            // Client Admin
-            [["intake","Intake Form"],["billing","Billing"],["edit","Edit Client"]],
-          ];
-          const els = [];
-          groups.forEach((group, gi) => {
-            group.forEach(([v, label]) => {
-              els.push(
-                <button key={v} onClick={() => setView(v)} style={{ flex: "0 0 auto", background: view === v ? "#111" : "#fff", color: view === v ? "#fff" : "#555", border: "1px solid #e0e0e0", borderRadius: "20px", padding: "6px 14px", fontSize: "11px", cursor: "pointer", ...F, whiteSpace: "nowrap" }}>
-                  {label}{v === "messages" && overview?.unreadFromClient > 0 ? ` (${overview.unreadFromClient})` : ""}
-                </button>
-              );
-            });
-            if (gi < groups.length - 1) {
-              els.push(
-                <div key={`div-${gi}`} style={{ flex: "0 0 auto", width: "1px", alignSelf: "stretch", background: "#ddd", margin: "4px 3px" }} />
-              );
-            }
-          });
-          return els;
-        })()}
-      </div>
+      {/* Two-level nav — 5 primary tabs, each revealing its own sub-options */}
+      {(() => {
+        const NAV = [
+          { id: "overview", label: "Overview", items: [["overview", "Overview"]] },
+          { id: "program",  label: "Program",  items: [["view_program", "View Program"], ["program", "Build"], ["assign", "Assign Plan"], ["program_review", "Program Review"]] },
+          { id: "progress", label: "Progress", items: [["progress_dashboard", "Dashboard"], ["analytics", "Analytics"], ["ai", "AI Analysis"], ["photos", "Photos"], ["workout_notes", "Workout Notes"]] },
+          { id: "messages", label: "Messages", items: [["messages", "Messages"], ["notes", "Coach Notes"]] },
+          { id: "admin",    label: "Admin",    items: [["intake", "Intake Form"], ["billing", "Billing"], ["edit", "Edit Client"]] },
+        ];
+        // Which primary tab owns the current view?
+        const activePrimary = NAV.find(g => g.items.some(([v]) => v === view))?.id || "overview";
+        const activeGroup = NAV.find(g => g.id === activePrimary);
+        const unread = overview?.unreadFromClient > 0 ? overview.unreadFromClient : 0;
+        return (
+          <div style={{ marginBottom: "16px" }}>
+            {/* Primary tabs */}
+            <div style={{ display: "flex", gap: "4px", marginBottom: activeGroup.items.length > 1 ? "10px" : "0" }}>
+              {NAV.map(g => {
+                const isActive = g.id === activePrimary;
+                return (
+                  <button key={g.id} onClick={() => setView(g.items[0][0])} style={{
+                    flex: 1, padding: "9px 4px", border: "1px solid " + (isActive ? "#111" : "#e0e0e0"),
+                    borderRadius: "7px", background: isActive ? "#111" : "#fff",
+                    color: isActive ? "#f7f6f3" : "#777", cursor: "pointer", fontSize: "11px", ...F,
+                    position: "relative", whiteSpace: "nowrap",
+                  }}>
+                    {g.label}{g.id === "messages" && unread ? ` (${unread})` : ""}
+                  </button>
+                );
+              })}
+            </div>
+            {/* Sub-nav for the active primary tab (only when it has more than one item) */}
+            {activeGroup.items.length > 1 && (
+              <div style={{ display: "flex", gap: "5px", overflowX: "auto", alignItems: "center", paddingBottom: "2px" }}>
+                {activeGroup.items.map(([v, label]) => (
+                  <button key={v} onClick={() => setView(v)} style={{
+                    flex: "0 0 auto", background: view === v ? "#5b4636" : "#f3f1ec",
+                    color: view === v ? "#f7f6f3" : "#777", border: "1px solid " + (view === v ? "#5b4636" : "#e0ddd5"),
+                    borderRadius: "16px", padding: "5px 13px", fontSize: "11px", cursor: "pointer", ...F, whiteSpace: "nowrap",
+                  }}>
+                    {label}{v === "messages" && unread ? ` (${unread})` : ""}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Overview */}
       {view === "overview" && overview && (() => {

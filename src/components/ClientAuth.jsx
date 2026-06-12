@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { supabase } from "../lib/supabase";
+import { authRedirectUrl } from "../lib/env";
 
 const F = { fontFamily: "'Georgia','Times New Roman',serif" };
 
@@ -39,7 +40,7 @@ export default function ClientAuth({ onAuthenticated }) {
     setLoading(true);
     setError("");
     const { error: err } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${window.location.origin}/reset-password`,
+      redirectTo: authRedirectUrl("reset-password"),
     });
     setLoading(false);
     if (err) {
