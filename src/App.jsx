@@ -18,13 +18,12 @@ import DayReorderStrip from "./components/DayReorderStrip";
 import RestTimer, { parseRestSeconds } from "./components/RestTimer";
 import SessionSummary from "./components/SessionSummary";
 import RecoveryCard from "./components/RecoveryCard";
-import HealthTab from "./components/HealthTab";
+import HealthLogModal from "./components/HealthLogModal";
 import MessagesTab from "./components/MessagesTab";
 import ErrorBoundary from "./components/ErrorBoundary";
 import InstallPrompt from "./components/InstallPrompt";
 import PaymentGate from "./components/PaymentGate";
 import { openExternalUrl } from "./lib/env";
-import HealthLogModal from "./components/HealthLogModal";
 import { getRecoveryAssessment } from "./lib/recoveryEngine";
 import { PRCelebration, OverloadSuggestions } from "./components/PRCelebration";
 import MonthlyPrompt from "./components/MonthlyPrompt";
@@ -565,6 +564,13 @@ const CARDIO_OPTIONS = [
   },
 ];
 
+// Cardio options offered in the unified "+ Add" search (separate from strength DB).
+const CARDIO_CATALOG = [
+  "Treadmill Walk", "Treadmill Run", "Incline Treadmill", "Outdoor Walk", "Outdoor Run",
+  "Stair Master", "Rowing Machine", "Assault Bike", "Stationary Bike", "Elliptical",
+  "Jump Rope", "Swimming", "Hiking", "Spin Class", "Sled Push", "Battle Ropes",
+];
+
 function CardioSwapCard({ sessionType, cardio, sessionKey, onLog }) {
   const F = { fontFamily: "'Georgia','Times New Roman',serif" };
   const [logged, setLogged] = useState(false);
@@ -625,6 +631,95 @@ function CardioSwapCard({ sessionType, cardio, sessionKey, onLog }) {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Added movement card — type-appropriate logging for user-added items ───────
+// Cardio items get per-type fields (stairmaster: level+time; walk/treadmill:
+// incline+speed+time; rower/bike: time+distance; default: time). Exercise items
+// get the familiar weight/reps sets. Multiple entries can be logged per item.
+const CARDIO_FIELD_SCHEMAS = {
+  "stair master":   [{ k: "level", label: "Level" }, { k: "time", label: "Time (min)" }],
+  "incline treadmill": [{ k: "incline", label: "Incline %" }, { k: "speed", label: "Speed (mph)" }, { k: "time", label: "Time (min)" }],
+  "treadmill walk": [{ k: "incline", label: "Incline %" }, { k: "speed", label: "Speed (mph)" }, { k: "time", label: "Time (min)" }],
+  "treadmill run":  [{ k: "incline", label: "Incline %" }, { k: "speed", label: "Speed (mph)" }, { k: "time", label: "Time (min)" }],
+  "outdoor walk":   [{ k: "distance", label: "Distance (mi)" }, { k: "time", label: "Time (min)" }],
+  "outdoor run":    [{ k: "distance", label: "Distance (mi)" }, { k: "time", label: "Time (min)" }],
+  "rowing machine": [{ k: "distance", label: "Distance (m)" }, { k: "time", label: "Time (min)" }],
+  "assault bike":   [{ k: "distance", label: "Distance (mi)" }, { k: "time", label: "Time (min)" }],
+  "stationary bike":[{ k: "distance", label: "Distance (mi)" }, { k: "time", label: "Time (min)" }],
+  "elliptical":     [{ k: "distance", label: "Distance (mi)" }, { k: "time", label: "Time (min)" }],
+};
+function cardioSchemaFor(name) {
+  return CARDIO_FIELD_SCHEMAS[name.trim().toLowerCase()] || [{ k: "time", label: "Time (min)" }, { k: "distance", label: "Distance" }];
+}
+
+function AddedMovementCard({ movement, logKey, logs, onLogsChange, onRemove }) {
+  const F = { fontFamily: "'Georgia','Times New Roman',serif" };
+  const isCardio = movement.kind === "cardio";
+  const log = logs[logKey] || { sets: [] };
+  const entries = log.sets || [];
+  const schema = isCardio ? cardioSchemaFor(movement.name) : null;
+
+  function addEntry() {
+    const blank = isCardio
+      ? { done: true, cardio: true, ...Object.fromEntries(schema.map(f => [f.k, ""])) }
+      : { weight: "", reps: "", done: false };
+    onLogsChange({ ...logs, [logKey]: { ...log, sets: [...entries, blank] } });
+  }
+  function updateEntry(i, field, val) {
+    onLogsChange({ ...logs, [logKey]: { ...log, sets: entries.map((s, idx) => idx === i ? { ...s, [field]: val } : s) } });
+  }
+  function removeEntry(i) {
+    onLogsChange({ ...logs, [logKey]: { ...log, sets: entries.filter((_, idx) => idx !== i) } });
+  }
+
+  return (
+    <div style={{ marginBottom: "6px", background: "#fff", border: "1px solid #e8e8e8", borderRadius: "8px", padding: "11px 12px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: entries.length ? "9px" : "0" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <span style={{ fontSize: "13px", fontWeight: "600" }}>{movement.name}</span>
+          <span style={{ fontSize: "8px", letterSpacing: "0.1em", textTransform: "uppercase", color: isCardio ? "#1d6fa8" : "#bbb" }}>{isCardio ? "Cardio" : "Exercise"}</span>
+        </div>
+        <button onClick={onRemove} style={{ background: "none", border: "none", color: "#ddd", cursor: "pointer", fontSize: "18px", lineHeight: 1 }}>×</button>
+      </div>
+
+      {/* Entries */}
+      {entries.map((entry, i) => (
+        <div key={i} style={{ display: "flex", gap: "6px", alignItems: "center", marginBottom: "6px" }}>
+          {isCardio ? (
+            schema.map(f => (
+              <div key={f.k} style={{ flex: 1 }}>
+                <div style={{ fontSize: "8px", color: "#aaa", marginBottom: "2px", letterSpacing: "0.04em" }}>{f.label}</div>
+                <input
+                  type="number" inputMode="decimal" value={entry[f.k] ?? ""}
+                  onChange={e => updateEntry(i, f.k, e.target.value)}
+                  style={{ width: "100%", padding: "7px 8px", border: "1px solid #e0e0e0", borderRadius: "5px", fontSize: "13px", boxSizing: "border-box" }}
+                />
+              </div>
+            ))
+          ) : (
+            <>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: "8px", color: "#aaa", marginBottom: "2px" }}>Weight</div>
+                <input type="number" inputMode="decimal" value={entry.weight ?? ""} onChange={e => updateEntry(i, "weight", e.target.value)}
+                  style={{ width: "100%", padding: "7px 8px", border: "1px solid #e0e0e0", borderRadius: "5px", fontSize: "13px", boxSizing: "border-box" }} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: "8px", color: "#aaa", marginBottom: "2px" }}>Reps</div>
+                <input type="number" inputMode="numeric" value={entry.reps ?? ""} onChange={e => updateEntry(i, "reps", e.target.value)}
+                  style={{ width: "100%", padding: "7px 8px", border: "1px solid #e0e0e0", borderRadius: "5px", fontSize: "13px", boxSizing: "border-box" }} />
+              </div>
+            </>
+          )}
+          <button onClick={() => removeEntry(i)} style={{ background: "none", border: "none", color: "#ddd", cursor: "pointer", fontSize: "16px", alignSelf: "flex-end", paddingBottom: "5px" }}>×</button>
+        </div>
+      ))}
+
+      <button onClick={addEntry} style={{ marginTop: entries.length ? "2px" : "9px", background: "#f3f3f1", border: "1px solid #e4e4e0", borderRadius: "6px", padding: "7px 12px", fontSize: "11px", color: "#666", cursor: "pointer", ...F }}>
+        + {isCardio ? "Log a round" : "Add set"}
+      </button>
     </div>
   );
 }
@@ -714,16 +809,12 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
   const [customMovements, setCustomMovements] = useState(() => { try { return JSON.parse(localStorage.getItem("custom_movements_v1") || "{}"); } catch { return {}; } });
   const [showAddMovement, setShowAddMovement] = useState(false);
   const [newMovement, setNewMovement] = useState({ name: "", sets: "", reps: "", notes: "" });
-  const [dailyHealth, setDailyHealth] = useState(() => { try { return JSON.parse(localStorage.getItem("daily_health_v1") || "{}"); } catch { return {}; } });
-  const [showHealthLog, setShowHealthLog] = useState(false);
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [exerciseVideos, setExerciseVideos] = useState({}); // { exerciseName: videoUrl }
   const [showStretches, setShowStretches] = useState(false);
   const [sessionSkipped, setSessionSkipped] = useState({});  // { [sessionDate]: { reason, skipped } }
   const [syncStatus, setSyncStatus] = useState("idle"); // idle | syncing | synced | failed
   const [syncFailedSets, setSyncFailedSets] = useState([]); // sets that failed to save
-  const [showActivityLog, setShowActivityLog] = useState(false);
-  const [activityForm, setActivityForm] = useState({ type: 'class', description: '', duration: '' });
 
   // State from storage
   const [logs, setLogs] = useState(loadWorkoutLogs);
@@ -768,7 +859,6 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
 
   const current = activeSchedule ? activeSchedule[activeDay] : null;
   const sessionKey = current ? makeSessionKey(current.day, sessionDate) : "";
-  const todayKey = new Date().toISOString().slice(0, 10);
   const warmup = current ? getWarmupForDay(current.type) : [];
 
   const handleLogsChange = useCallback((newLogs) => {
@@ -1529,11 +1619,11 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
                 </div>
                 <div style={{ borderBottom: "1px solid #ebebeb", background: "#fff" }}>
                   <div style={{ padding: "11px 16px", display: "flex", gap: "11px", alignItems: "flex-start" }}>
-                    <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#4a8fff", flexShrink: 0, marginTop: "9px" }} />
+                    <div style={{ width: "24px", height: "24px", borderRadius: "50%", background: "#e8e8e8", color: "#999", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px", fontWeight: "800", flexShrink: 0, marginTop: "1px" }}>C</div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: "13px", fontWeight: "600", marginBottom: "4px" }}>{cardio.name}</div>
                       <div style={{ display: "flex", gap: "5px", flexWrap: "wrap" }}>
-                        <span style={{ fontSize: "10px", background: "#eff6ff", color: "#2563a8", padding: "2px 8px", borderRadius: "20px", fontWeight: "600" }}>{cardio.protocol}</span>
+                        <span style={{ fontSize: "10px", background: "#f0f0f0", color: "#666", padding: "2px 8px", borderRadius: "20px", fontWeight: "600" }}>{cardio.protocol}</span>
                         {cardio.zone && <span style={{ fontSize: "9px", color: "#999", padding: "2px 7px", background: "#f0f0f0", borderRadius: "20px" }}>{cardio.zone}</span>}
                       </div>
                       {cardio.feel && <div style={{ fontSize: "11px", color: "#777", marginTop: "5px", lineHeight: "1.5", ...F }}>{cardio.feel}</div>}
@@ -1608,286 +1698,27 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
             </button>
           )}
 
-          {/* Daily check-in — single button, opens bottom sheet */}
-          {(() => {
-            const todayKey = sessionDate;
-            const logged = dailyHealth[todayKey]?.logged;
-            return (
-              <div style={{ margin: "8px 16px 4px" }}>
-                {logged ? (
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: "#f5f5f3", borderRadius: "7px" }}>
-                    <span style={{ fontSize: "11px", color: "#888" }}>
-                      {dailyHealth[todayKey]?.sleep_hours ? `${dailyHealth[todayKey].sleep_hours}h sleep` : ""}
-                      {dailyHealth[todayKey]?.sleep_hours && dailyHealth[todayKey]?.steps ? "  ·  " : ""}
-                      {dailyHealth[todayKey]?.steps ? `${parseInt(dailyHealth[todayKey].steps).toLocaleString()} steps` : ""}
-                      {!dailyHealth[todayKey]?.sleep_hours && !dailyHealth[todayKey]?.steps ? "Day logged" : ""}
-                    </span>
-                    <button onClick={() => setShowHealthLog(true)} style={{ fontSize: "10px", color: "#aaa", background: "none", border: "none", cursor: "pointer", padding: 0 }}>Edit</button>
-                  </div>
-                ) : (
-                  <button onClick={() => setShowHealthLog(true)} style={{ width: "100%", background: "none", border: "1px dashed #ddd", borderRadius: "7px", padding: "9px 14px", cursor: "pointer", color: "#bbb", fontSize: "11px", textAlign: "left", ...F }}>
-                    + Log your day
-                  </button>
-                )}
-              </div>
-            );
-          })()}
+          {/* Cool-down link handled above. Daily check-in removed from Plan. */}
 
           {/* Daily check-in bottom sheet */}
-          {showHealthLog && (() => {
-            const todayKey = sessionDate;
-            const existing = dailyHealth[todayKey] || {};
-            return (
-              <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "flex-end" }}
-                onClick={e => e.target === e.currentTarget && setShowHealthLog(false)}>
-                <div style={{ background: "#fff", borderRadius: "16px 16px 0 0", padding: "20px 16px 40px", width: "100%", maxWidth: 640, margin: "0 auto", boxSizing: "border-box" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-                    <div style={{ fontSize: "14px", fontWeight: "600", ...F }}>How was your day?</div>
-                    <button onClick={() => setShowHealthLog(false)} style={{ background: "none", border: "none", fontSize: "22px", cursor: "pointer", color: "#bbb" }}>×</button>
-                  </div>
-
-                  {/* Quick-tap energy */}
-                  <div style={{ marginBottom: "14px" }}>
-                    <div style={{ fontSize: "10px", color: "#999", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.1em" }}>Energy level</div>
-                    <div style={{ display: "flex", gap: "5px" }}>
-                      {["Low", "Okay", "Good", "Great"].map((label, i) => {
-                        const val = [3, 5, 7, 9][i];
-                        const sel = existing.energy_level === val;
-                        return (
-                          <button key={label} onClick={() => {
-                            const updated = { ...dailyHealth, [todayKey]: { ...(dailyHealth[todayKey] || {}), energy_level: val } };
-                            setDailyHealth(updated);
-                            try { localStorage.setItem("daily_health_v1", JSON.stringify(updated)); } catch {}
-                          }} style={{ flex: 1, padding: "8px 4px", borderRadius: "6px", border: "1px solid " + (sel ? "#1a1a1a" : "#e0e0e0"), background: sel ? "#1a1a1a" : "#fff", color: sel ? "#fff" : "#555", fontSize: "11px", cursor: "pointer", ...F }}>
-                            {label}
-                {t === "messages" && unreadMessages > 0 && (
-                  <span style={{ display: "inline-block", width: "6px", height: "6px", borderRadius: "50%", background: "#ff3b30", marginLeft: "4px", verticalAlign: "middle", flexShrink: 0 }} />
-                )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Number fields */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "12px" }}>
-                    {[
-                      { key: "sleep_hours", label: "Sleep (hours)", placeholder: "e.g. 7.5", step: "0.5", hint: "goal: 8 hrs" },
-                      { key: "steps", label: "Steps", placeholder: "e.g. 8500", step: "100", hint: "goal: 10,000" },
-                      { key: "weight_lbs", label: "Weight (lbs)", placeholder: "e.g. 148.5", step: "0.1", hint: "" },
-                      { key: "soreness_level", label: "Soreness (1–10)", placeholder: "e.g. 4", step: "1", hint: "1 = none" },
-                    ].map(({ key, label, placeholder, step, hint }) => (
-                      <div key={key}>
-                        <div style={{ fontSize: "10px", color: "#888", marginBottom: "3px" }}>{label}</div>
-                        <input
-                          type="number"
-                          step={step}
-                          defaultValue={existing[key] || ""}
-                          placeholder={placeholder}
-                          id={`health_${key}`}
-                          style={{ width: "100%", padding: "8px 10px", border: "1px solid #e0e0e0", borderRadius: "6px", fontSize: "13px", boxSizing: "border-box" }}
-                        />
-                        {hint && <div style={{ fontSize: "9px", color: "#ccc", marginTop: "2px" }}>{hint}</div>}
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Notes */}
-                  <input
-                    type="text"
-                    id="health_notes"
-                    defaultValue={existing.notes || ""}
-                    placeholder="Anything else? (injury, stress, nutrition...)"
-                    style={{ width: "100%", padding: "8px 10px", border: "1px solid #e0e0e0", borderRadius: "6px", fontSize: "12px", boxSizing: "border-box", marginBottom: "14px", ...F }}
-                  />
-
-                  <button onClick={async () => {
-                    const get = id => document.getElementById(id)?.value;
-                    const updated = {
-                      ...dailyHealth,
-                      [todayKey]: {
-                        ...(dailyHealth[todayKey] || {}),
-                        sleep_hours: get("health_sleep_hours") ? parseFloat(get("health_sleep_hours")) : (existing.sleep_hours || null),
-                        steps: get("health_steps") ? parseInt(get("health_steps")) : (existing.steps || null),
-                        weight_lbs: get("health_weight_lbs") ? parseFloat(get("health_weight_lbs")) : (existing.weight_lbs || null),
-                        soreness_level: get("health_soreness_level") ? parseInt(get("health_soreness_level")) : (existing.soreness_level || null),
-                        notes: get("health_notes") || (existing.notes || null),
-                        logged: true,
-                        logged_at: new Date().toISOString(),
-                      }
-                    };
-                    setDailyHealth(updated);
-                    try { localStorage.setItem("daily_health_v1", JSON.stringify(updated)); } catch {}
-
-                    // Sync to Supabase
-                    if (clientData?.id) {
-                      try {
-                        const { upsertHealthLog } = await import("./lib/supabase");
-                        const entry = updated[todayKey];
-                        await upsertHealthLog(clientData.id, todayKey, {
-                          sleep_hours: entry.sleep_hours,
-                          steps: entry.steps,
-                          weight_lbs: entry.weight_lbs,
-                          soreness_level: entry.soreness_level,
-                          notes: entry.notes,
-                          energy_level: entry.energy_level,
-                        });
-                      } catch(e) { console.warn("Health log save failed:", e); }
-                    }
-
-                    setShowHealthLog(false);
-                  }} style={{ width: "100%", background: "#1a1a1a", color: "#f7f6f3", border: "none", borderRadius: "8px", padding: "13px", fontSize: "13px", cursor: "pointer", ...F }}>
-                    Save
-                  </button>
-                </div>
-              </div>
-            );
-          })()}
-
-          {/* Skip session / Log activity — inline, no modal needed */}
+          {/* ── Unified "+ Add" — search exercises & cardio, or create your own ── */}
           {current.type !== "rest" && (() => {
-            const skipped = sessionSkipped[sessionDate];
-            const ACTIVITY_TYPES = [
-              { id: 'class', label: 'Class' },
-              { id: 'run', label: 'Run' },
-              { id: 'walk', label: 'Walk' },
-              { id: 'bike', label: 'Cycling' },
-              { id: 'swim', label: 'Swim' },
-              { id: 'rowing', label: 'Rowing' },
-              { id: 'sport', label: 'Sport' },
-              { id: 'other', label: 'Other' },
-            ];
-
-            async function logActivity() {
-              const entry = {
-                activity_date: sessionDate,
-                activity_type: activityForm.type,
-                description: activityForm.description || ACTIVITY_TYPES.find(a => a.id === activityForm.type)?.label,
-                duration_minutes: activityForm.duration ? parseInt(activityForm.duration) : null,
-                notes: `Logged instead of: ${current?.focus}`,
-              };
-              try {
-                const existing = JSON.parse(localStorage.getItem("activity_log_v1") || "[]");
-                localStorage.setItem("activity_log_v1", JSON.stringify([{ id: Date.now(), ...entry }, ...existing]));
-                if (clientData?.id) {
-                  const { logActivity: logAct } = await import("./lib/supabase");
-                  await logAct(clientData.id, entry);
-                }
-              } catch(e) {}
-              setShowActivityLog(false);
-              setActivityForm({ type: 'class', description: '', duration: '' });
-            }
-
-            return (
-              <div style={{ margin: "8px 16px 0" }}>
-                {/* Skip toggle */}
-                {!skipped && (
-                  <button
-                    onClick={() => setSessionSkipped(prev => ({ ...prev, [sessionDate]: { skipped: true } }))}
-                    style={{ background: "none", border: "1px dashed #ddd", borderRadius: "7px", padding: "7px 14px", cursor: "pointer", color: "#bbb", fontSize: "11px", ...F, width: "100%", textAlign: "left" }}>
-                    Mark session as skipped
-                  </button>
-                )}
-                {skipped && (
-                  <div style={{ background: "#f5f5f3", borderRadius: "8px", padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontSize: "12px", color: "#999", ...F }}>Session marked as skipped</span>
-                    <button onClick={() => setSessionSkipped(prev => { const n = {...prev}; delete n[sessionDate]; return n; })}
-                      style={{ background: "none", border: "none", color: "#bbb", fontSize: "11px", cursor: "pointer" }}>Undo</button>
-                  </div>
-                )}
-              </div>
-            );
-          })()}
-
-          {/* Log a different activity instead */}
-          {current.type !== "rest" && (() => {
-            const ACTIVITY_TYPES = [
-              { id: 'class', label: 'Class', placeholder: 'Spin, HIIT, Pilates...' },
-              { id: 'run', label: 'Run', placeholder: 'Outdoor, treadmill...' },
-              { id: 'walk', label: 'Walk', placeholder: 'Outdoor, incline...' },
-              { id: 'bike', label: 'Cycling', placeholder: 'Stationary, outdoor...' },
-              { id: 'swim', label: 'Swim', placeholder: 'Laps, water aerobics...' },
-              { id: 'rowing', label: 'Rowing', placeholder: 'Erg, on-water...' },
-              { id: 'sport', label: 'Sport', placeholder: 'Tennis, hiking...' },
-              { id: 'other', label: 'Other', placeholder: 'Elliptical, stairmaster...' },
-            ];
-
-            async function handleLogActivity() {
-              const entry = {
-                activity_date: sessionDate,
-                activity_type: activityForm.type,
-                description: activityForm.description || ACTIVITY_TYPES.find(a => a.id === activityForm.type)?.label,
-                duration_minutes: activityForm.duration ? parseInt(activityForm.duration) : null,
-              };
-              try {
-                const existing = JSON.parse(localStorage.getItem("activity_log_v1") || "[]");
-                localStorage.setItem("activity_log_v1", JSON.stringify([{ id: Date.now(), ...entry }, ...existing]));
-                if (clientData?.id) {
-                  const { logActivity } = await import("./lib/supabase");
-                  await logActivity(clientData.id, entry);
-                }
-              } catch(e) {}
-              setShowActivityLog(false);
-              setActivityForm({ type: 'class', description: '', duration: '' });
-            }
-
-            return (
-              <div style={{ margin: "6px 16px 4px" }}>
-                {!showActivityLog ? (
-                  <button onClick={() => setShowActivityLog(true)}
-                    style={{ background: "none", border: "1px dashed #ddd", borderRadius: "7px", padding: "7px 14px", cursor: "pointer", color: "#bbb", fontSize: "11px", ...F, width: "100%", textAlign: "left" }}>
-                    + Log a class or cardio instead
-                  </button>
-                ) : (
-                  <div style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "8px", padding: "12px" }}>
-                    <div style={{ fontSize: "9px", letterSpacing: "0.15em", textTransform: "uppercase", color: "#999", marginBottom: "10px" }}>Log Activity</div>
-                    {/* Type chips */}
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: "5px", marginBottom: "10px" }}>
-                      {ACTIVITY_TYPES.map(a => (
-                        <button key={a.id} onClick={() => setActivityForm(p => ({ ...p, type: a.id }))}
-                          style={{ padding: "4px 10px", borderRadius: "20px", border: `1px solid ${activityForm.type === a.id ? "#111" : "#e0e0e0"}`, background: activityForm.type === a.id ? "#111" : "#fff", color: activityForm.type === a.id ? "#fff" : "#555", fontSize: "11px", cursor: "pointer", ...F }}>
-                          {a.label}
-                        </button>
-                      ))}
-                    </div>
-                    <div style={{ display: "flex", gap: "8px", marginBottom: "10px" }}>
-                      <input
-                        value={activityForm.description}
-                        onChange={e => setActivityForm(p => ({ ...p, description: e.target.value }))}
-                        placeholder={ACTIVITY_TYPES.find(a => a.id === activityForm.type)?.placeholder || "Description"}
-                        style={{ flex: 2, padding: "7px 10px", borderRadius: "6px", border: "1px solid #e0e0e0", fontSize: "12px", ...F }}
-                      />
-                      <input
-                        type="number"
-                        value={activityForm.duration}
-                        onChange={e => setActivityForm(p => ({ ...p, duration: e.target.value }))}
-                        placeholder="min"
-                        style={{ flex: 1, padding: "7px 10px", borderRadius: "6px", border: "1px solid #e0e0e0", fontSize: "12px", ...F }}
-                      />
-                    </div>
-                    <div style={{ display: "flex", gap: "6px" }}>
-                      <button onClick={handleLogActivity} style={{ background: "#111", color: "#fff", border: "none", borderRadius: "6px", padding: "8px 14px", fontSize: "12px", cursor: "pointer", ...F }}>Save</button>
-                      <button onClick={() => { setShowActivityLog(false); setActivityForm({ type: 'class', description: '', duration: '' }); }}
-                        style={{ background: "none", border: "1px solid #ddd", borderRadius: "6px", padding: "8px 12px", fontSize: "12px", cursor: "pointer", color: "#999" }}>Cancel</button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })()}
-
-          {/* Add exercise */}
-          {current.type !== "rest" && (() => {
-            const EXERCISE_CATALOG = getAllNames() || ["Ab Wheel Rollout", "Alternating Dumbbell Curl", "Arnold Press", "Bulgarian Split Squat (Dumbbell)", "Cable Crunch", "Cable Curl (Low Pulley)", "Cable Fly (Low-to-High)", "Cable Lateral Raise (Single-Arm)", "Cat-Cow", "Chest and Shoulder Doorway Stretch", "Chest-Supported DB Row", "Dead Bug", "Dumbbell Bench Press", "Face Pull (Rope Attachment)", "Foam Roll", "Goblet Squat", "Hammer Curl", "Hanging Knee Raise", "Hip Flexor Stretch", "Hip Thrust (Barbell or Machine)", "Incline Dumbbell Curl", "Incline Dumbbell Press", "Incline Treadmill", "Lat Pulldown (Wide Overhand)", "Lateral Raise", "Leg Extension", "Leg Press", "Light Walk", "Overhead Tricep Extension", "Pallof Press (Cable)", "Plank", "Pull-Up (or Assisted Pull-Up)", "Rear Delt Fly (Bent-Over)", "Romanian Deadlift (Dumbbell)", "Rowing Machine", "Rowing Machine or Incline Treadmill", "Seated Cable Row (Neutral Grip)", "Seated Calf Raise", "Seated Dumbbell Overhead Press", "Side Plank", "Single-Arm Dumbbell Row", "Single-Arm Overhead DB Press", "Single-Leg Hamstring Curl", "Standing Calf Raise", "Stationary Bike", "Stationary Bike or Brisk Walk", "Straight-Arm Cable Pulldown", "Tricep Rope Pushdown"];
+            const EXERCISE_CATALOG = getAllNames() || [];
             const cmKey = `${current?.day}_${sessionDate}`;
             const dayMovements = customMovements[cmKey] || [];
-            const searchTerm = newMovement.name.toLowerCase();
-            const matches = searchTerm.length > 1
-              ? EXERCISE_CATALOG.filter(n => n.toLowerCase().includes(searchTerm)).slice(0, 6)
-              : [];
+            const term = newMovement.name.trim().toLowerCase();
 
-            function addMovement(name) {
-              const updated = { ...customMovements, [cmKey]: [...dayMovements, { id: Date.now(), name }] };
+            // Search both catalogs, tag each match with its kind.
+            const exMatches = term.length > 0
+              ? EXERCISE_CATALOG.filter(n => n.toLowerCase().includes(term)).slice(0, 6).map(n => ({ name: n, kind: "exercise" }))
+              : [];
+            const cardioMatches = term.length > 0
+              ? CARDIO_CATALOG.filter(n => n.toLowerCase().includes(term)).slice(0, 4).map(n => ({ name: n, kind: "cardio" }))
+              : [];
+            const matches = [...exMatches, ...cardioMatches];
+
+            function addMovement(name, kind) {
+              const updated = { ...customMovements, [cmKey]: [...dayMovements, { id: Date.now(), name, kind: kind || "exercise" }] };
               setCustomMovements(updated);
               try { localStorage.setItem("custom_movements_v1", JSON.stringify(updated)); } catch {}
               setNewMovement({ name: "", sets: "", reps: "", notes: "" });
@@ -1896,20 +1727,25 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
 
             return (
               <div style={{ margin: "8px 16px 4px" }}>
+                {/* Added items render as their own cards with type-appropriate fields */}
                 {dayMovements.map(m => (
-                  <div key={m.id} style={{ marginBottom: "6px", background: "#fff", border: "1px solid #e8e8e8", borderRadius: "7px", padding: "10px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <div style={{ fontSize: "12px", fontWeight: "600" }}>{m.name}</div>
-                    <button onClick={() => {
+                  <AddedMovementCard
+                    key={m.id}
+                    movement={m}
+                    logKey={`custom-${cmKey}-${m.id}`}
+                    logs={logs}
+                    onLogsChange={handleLogsChange}
+                    onRemove={() => {
                       const updated = { ...customMovements, [cmKey]: dayMovements.filter(x => x.id !== m.id) };
                       setCustomMovements(updated);
                       try { localStorage.setItem("custom_movements_v1", JSON.stringify(updated)); } catch {}
-                    }} style={{ background: "none", border: "none", color: "#e0e0e0", cursor: "pointer", fontSize: "18px" }}>×</button>
-                  </div>
+                    }}
+                  />
                 ))}
 
                 {!showAddMovement ? (
-                  <button onClick={() => setShowAddMovement(true)} style={{ width: "100%", background: "none", border: "1px dashed #ddd", borderRadius: "7px", padding: "9px 14px", cursor: "pointer", color: "#bbb", fontSize: "12px", textAlign: "left", ...F }}>
-                    + Add exercise
+                  <button onClick={() => setShowAddMovement(true)} style={{ width: "100%", background: "none", border: "1px dashed #ddd", borderRadius: "7px", padding: "10px 14px", cursor: "pointer", color: "#999", fontSize: "12px", textAlign: "center", ...F }}>
+                    + Add exercise or cardio
                   </button>
                 ) : (
                   <div style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: "8px", padding: "12px" }}>
@@ -1917,33 +1753,64 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
                       autoFocus
                       value={newMovement.name}
                       onChange={e => setNewMovement(p => ({ ...p, name: e.target.value }))}
-                      placeholder="Search exercises"
-                      style={{ width: "100%", padding: "8px 10px", border: "1px solid #e0e0e0", borderRadius: "5px", fontSize: "12px", boxSizing: "border-box", ...F }}
+                      placeholder="Search exercises or cardio..."
+                      style={{ width: "100%", padding: "9px 11px", border: "1px solid #e0e0e0", borderRadius: "6px", fontSize: "13px", boxSizing: "border-box", ...F }}
                     />
                     {matches.length > 0 && (
-                      <div style={{ marginTop: "4px", border: "1px solid #e8e8e8", borderRadius: "5px", overflow: "hidden" }}>
-                        {matches.map(name => (
-                          <button key={name} onClick={() => addMovement(name)} style={{ width: "100%", textAlign: "left", padding: "9px 12px", border: "none", borderBottom: "1px solid #f5f5f5", background: "#fff", fontSize: "12px", cursor: "pointer", ...F }}>
-                            {name}
+                      <div style={{ marginTop: "6px", border: "1px solid #e8e8e8", borderRadius: "6px", overflow: "hidden" }}>
+                        {matches.map(({ name, kind }) => (
+                          <button key={kind + name} onClick={() => addMovement(name, kind)} style={{ width: "100%", textAlign: "left", padding: "10px 12px", border: "none", borderBottom: "1px solid #f5f5f5", background: "#fff", fontSize: "12px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", ...F }}>
+                            <span>{name}</span>
+                            <span style={{ fontSize: "8px", letterSpacing: "0.1em", textTransform: "uppercase", color: kind === "cardio" ? "#1d6fa8" : "#aaa" }}>{kind}</span>
                           </button>
                         ))}
                       </div>
                     )}
-                    {newMovement.name.length > 1 && matches.length === 0 && (
-                      <button onClick={() => addMovement(newMovement.name.trim())} style={{ marginTop: "6px", width: "100%", background: "#1a1a1a", color: "#fff", border: "none", borderRadius: "5px", padding: "8px", fontSize: "12px", cursor: "pointer", ...F }}>
-                        Add "{newMovement.name}"
-                      </button>
+                    {/* Not found → create your own, under Exercise or Cardio */}
+                    {term.length > 1 && matches.length === 0 && (
+                      <div style={{ marginTop: "8px" }}>
+                        <div style={{ fontSize: "10px", color: "#999", marginBottom: "6px", ...F }}>Not in the list — add your own:</div>
+                        <div style={{ display: "flex", gap: "6px" }}>
+                          <button onClick={() => addMovement(newMovement.name.trim(), "exercise")} style={{ flex: 1, background: "#1a1a1a", color: "#fff", border: "none", borderRadius: "6px", padding: "9px", fontSize: "12px", cursor: "pointer", ...F }}>
+                            Add as Exercise
+                          </button>
+                          <button onClick={() => addMovement(newMovement.name.trim(), "cardio")} style={{ flex: 1, background: "#1d6fa8", color: "#fff", border: "none", borderRadius: "6px", padding: "9px", fontSize: "12px", cursor: "pointer", ...F }}>
+                            Add as Cardio
+                          </button>
+                        </div>
+                      </div>
                     )}
-                    <button onClick={() => { setShowAddMovement(false); setNewMovement({ name: "", sets: "", reps: "", notes: "" }); }} style={{ marginTop: "6px", background: "none", border: "none", color: "#bbb", fontSize: "11px", cursor: "pointer" }}>Cancel</button>
+                    <button onClick={() => { setShowAddMovement(false); setNewMovement({ name: "", sets: "", reps: "", notes: "" }); }} style={{ marginTop: "8px", background: "none", border: "none", color: "#bbb", fontSize: "11px", cursor: "pointer" }}>Cancel</button>
                   </div>
                 )}
               </div>
             );
           })()}
 
-          <div style={{ margin: "12px 16px 80px", padding: "10px 12px", background: "#f0f0ee", borderRadius: "7px", color: "#777", fontSize: "11px", lineHeight: "1.55" }}>
-            Tap <strong>Warm-Up</strong> before lifting. Tap <strong>Log</strong> on any exercise to record sets — the rest timer starts automatically. Tap <strong>Stretch</strong> when you're done to cool down. Tap ▼ for form cues.
-          </div>
+          {/* ── Session status — completed / skipped, at the very bottom ── */}
+          {current.type !== "rest" && (() => {
+            const skipped = sessionSkipped[sessionDate]?.skipped;
+            return (
+              <div style={{ margin: "16px 16px 90px", display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
+                {skipped ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <span style={{ fontSize: "12px", color: "#aaa", ...F }}>Session skipped</span>
+                    <button
+                      onClick={() => setSessionSkipped(prev => { const n = { ...prev }; delete n[sessionDate]; return n; })}
+                      style={{ background: "none", border: "none", color: "#1d6fa8", fontSize: "11px", cursor: "pointer", textDecoration: "underline", ...F }}>
+                      undo
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setSessionSkipped(prev => ({ ...prev, [sessionDate]: { skipped: true } }))}
+                    style={{ background: "none", border: "none", color: "#cfcfcf", fontSize: "11px", cursor: "pointer", ...F }}>
+                    skip this session
+                  </button>
+                )}
+              </div>
+            );
+          })()}
           </>
           )}
         </>
@@ -1975,7 +1842,6 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
           {(() => {
             const refTabs = [
               ["tools", "Tools"],
-              ["health", "Health"],
               ...(clientData?.sex === "female" ? [["cycle", "Cycle"]] : []),
             ];
             return (
@@ -2003,32 +1869,6 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
               />
             </ErrorBoundary>
           )}
-          {refSection === "health" && (
-            <ErrorBoundary tabName="Health">
-              <HealthTab
-                dailyHealth={dailyHealth}
-                todayKey={todayKey}
-                onHealthUpdate={async (updated) => {
-                  setDailyHealth(updated);
-                  localStorage.setItem("daily_health_v1", JSON.stringify(updated));
-                  if (clientData?.id) {
-                    const { upsertHealthLog } = await import("./lib/supabase");
-                    const todayData = updated[todayKey] || {};
-                    await upsertHealthLog(clientData.id, todayKey, {
-                      sleep_hours: todayData.sleep_hours ? parseFloat(todayData.sleep_hours) : null,
-                      sleep_quality: todayData.sleep_quality ? parseFloat(todayData.sleep_quality) : null,
-                      hrv_ms: todayData.hrv ? parseFloat(todayData.hrv) : null,
-                      resting_hr: todayData.resting_hr ? parseFloat(todayData.resting_hr) : null,
-                      weight_lbs: todayData.weight_lbs ? parseFloat(todayData.weight_lbs) : null,
-                      energy_level: todayData.energy_level ? parseInt(todayData.energy_level) : null,
-                      steps: todayData.steps ? parseInt(todayData.steps) : null,
-                    });
-                  }
-                }}
-                clientId={clientData?.id}
-              />
-            </ErrorBoundary>
-          )}
           {refSection === "cycle" && clientData?.sex === "female" && (
             <ErrorBoundary tabName="Cycle"><CycleTracking clientId={clientData?.id} /></ErrorBoundary>
           )}
@@ -2049,14 +1889,6 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
 
       <PaymentGate clientData={clientData} onPay={handlePay} />
       <InstallPrompt />
-      {showHealthLog && (
-        <HealthLogModal
-          todayKey={todayKey}
-          dailyHealth={dailyHealth}
-          onSave={(updated) => { setDailyHealth(updated); localStorage.setItem("daily_health_v1", JSON.stringify(updated)); setShowHealthLog(false); }}
-          onDismiss={() => setShowHealthLog(false)}
-        />
-      )}
 
       {restTimer && (
         <RestTimer
