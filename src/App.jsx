@@ -18,7 +18,6 @@ import DayReorderStrip from "./components/DayReorderStrip";
 import RestTimer, { parseRestSeconds } from "./components/RestTimer";
 import SessionSummary from "./components/SessionSummary";
 import RecoveryCard from "./components/RecoveryCard";
-import HealthLogModal from "./components/HealthLogModal";
 import MessagesTab from "./components/MessagesTab";
 import ErrorBoundary from "./components/ErrorBoundary";
 import InstallPrompt from "./components/InstallPrompt";
@@ -1316,12 +1315,50 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
 
           {/* Session header */}
           <div style={{ background: "linear-gradient(135deg, #2c2c2e 0%, #1c1c1e 100%)", borderBottom: "1px solid #3a3a3c", padding: "14px 16px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: "9px", letterSpacing: "0.18em", textTransform: "uppercase", color: "#6e6e73", marginBottom: "3px" }}>
-                  {current.day} · {current.muscles.join(", ") || "Recovery"}
+            {/* Date — top line, with native picker; doubles as the day context */}
+            {(() => {
+              const d = new Date(sessionDate + "T00:00:00");
+              const nice = isNaN(d) ? sessionDate : d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+              return (
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "9px" }}>
+                  <label style={{ position: "relative", cursor: "pointer", display: "inline-flex", alignItems: "center" }}>
+                    <span style={{ fontSize: "10px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#7a7a7e", ...F }}>{nice}</span>
+                    <input type="date" value={sessionDate} onChange={e => setSessionDate(e.target.value)}
+                      style={{ position: "absolute", inset: 0, opacity: 0, width: "100%", height: "100%", cursor: "pointer" }} />
+                  </label>
+                  {clientData?.id && syncStatus === "syncing" && <span style={{ fontSize: "9px", color: "#6e6e73" }}>Saving…</span>}
+                  {syncStatus === "failed" && (
+                    <button onClick={retrySyncFailed} style={{ fontSize: "9px", padding: "3px 8px", borderRadius: "5px", background: "rgba(255,59,48,0.12)", color: "#ff3b30", border: "1px solid rgba(255,59,48,0.25)", cursor: "pointer" }}>
+                      Retry save
+                    </button>
+                  )}
                 </div>
-                <div style={{ fontSize: "17px", color: "#f5f5f7", fontWeight: "normal" }}>{current.focus}</div>
+              );
+            })()}
+
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                {(() => {
+                  // Split "Region — Specifics" into a tag + title. No dash → whole
+                  // thing is the title with no tag. Strip the filler word "Definition".
+                  const raw = current.focus || "";
+                  const parts = raw.split(/\s*—\s*/);
+                  const hasTag = parts.length > 1;
+                  const tag = hasTag ? parts[0].trim() : null;
+                  const title = (hasTag ? parts.slice(1).join(" — ") : raw)
+                    .replace(/\bDefinition\s+/g, "")
+                    .trim();
+                  return (
+                    <>
+                      {tag && (
+                        <span style={{ display: "inline-block", fontSize: "9px", letterSpacing: "0.14em", textTransform: "uppercase", color: "#c89a5a", background: "rgba(196,122,10,0.13)", padding: "2px 8px", borderRadius: "4px", marginBottom: "7px" }}>
+                          {tag}
+                        </span>
+                      )}
+                      <div style={{ fontSize: "18px", color: "#f5f5f7", fontWeight: "normal", lineHeight: 1.25 }}>{title}</div>
+                    </>
+                  );
+                })()}
               </div>
               {trackableCount > 0 && (
                 <div style={{ flexShrink: 0, marginLeft: "12px", textAlign: "right" }}>
@@ -1346,16 +1383,6 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
                     </div>
                   )}
                 </div>
-              )}
-            </div>
-            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-              <input type="date" value={sessionDate} onChange={e => setSessionDate(e.target.value)}
-                style={{ padding: "4px 8px", borderRadius: "5px", border: "1px solid #3a3a3c", fontSize: "10px", background: "rgba(255,255,255,0.04)", color: "#6e6e73", ...F }} />
-              {clientData?.id && syncStatus === "syncing" && <span style={{ fontSize: "9px", color: "#6e6e73" }}>Saving...</span>}
-              {syncStatus === "failed" && (
-                <button onClick={retrySyncFailed} style={{ fontSize: "9px", padding: "3px 8px", borderRadius: "5px", background: "rgba(255,59,48,0.12)", color: "#ff3b30", border: "1px solid rgba(255,59,48,0.25)", cursor: "pointer" }}>
-                  Retry save
-                </button>
               )}
             </div>
           </div>

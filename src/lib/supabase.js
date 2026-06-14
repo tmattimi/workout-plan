@@ -196,6 +196,16 @@ export async function removePlanExercise(planExerciseId) {
   return { error };
 }
 
+export async function updatePlanExercise(planExerciseId, updates) {
+  const { data, error } = await supabase
+    .from('plan_exercises')
+    .update(updates)
+    .eq('id', planExerciseId)
+    .select()
+    .single();
+  return { data, error };
+}
+
 export async function reorderPlanExercises(updates) {
   // updates: [{ id, sort_order }]
   const promises = updates.map(u =>

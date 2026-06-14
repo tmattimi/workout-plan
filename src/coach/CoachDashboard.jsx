@@ -15,6 +15,7 @@ import AIProgramBuilder from "../components/AIProgramBuilder";
 import ClientAnalytics from "./ClientAnalytics";
 import ClientProgramReview from "./ClientProgramReview";
 import ClientProgramView from "./ClientProgramView";
+import ClientPlanEditor from "./ClientPlanEditor";
 import ClientStatusView from "./ClientStatusView";
 import GroupProgramming from "./GroupProgramming";
 import ProgramLibrary from "./ProgramLibrary";
@@ -825,7 +826,7 @@ function ClientDetail({ client, coachId, plans, onBack, onDelete, onAssignPlan }
       {(() => {
         const NAV = [
           { id: "overview", label: "Overview", items: [["overview", "Overview"]] },
-          { id: "program",  label: "Program",  items: [["view_program", "View Program"], ["program", "Build"], ["assign", "Assign Plan"], ["program_review", "Program Review"]] },
+          { id: "program",  label: "Program",  items: [["view_program", "View Program"], ["edit_plan", "Edit Plan"], ["program", "Build"], ["assign", "Assign Plan"], ["program_review", "Program Review"]] },
           { id: "progress", label: "Progress", items: [["progress_dashboard", "Dashboard"], ["analytics", "Analytics"], ["ai", "AI Analysis"], ["photos", "Photos"], ["workout_notes", "Workout Notes"]] },
           { id: "messages", label: "Messages", items: [["messages", "Messages"], ["notes", "Coach Notes"]] },
           { id: "admin",    label: "Admin",    items: [["intake", "Intake Form"], ["billing", "Billing"], ["edit", "Edit Client"]] },
@@ -1184,6 +1185,10 @@ function ClientDetail({ client, coachId, plans, onBack, onDelete, onAssignPlan }
       {/* AI Program Builder */}
       {view === "view_program" && (
         <ClientProgramView client={client} />
+      )}
+
+      {view === "edit_plan" && (
+        <ClientPlanEditor client={client} />
       )}
 
       {view === "program" && (
