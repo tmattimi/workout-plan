@@ -1339,15 +1339,25 @@ export default function App({ clientData, adaptedSchedule, onSignOut }) {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 {(() => {
-                  // Split "Region — Specifics" into a tag + title. No dash → whole
-                  // thing is the title with no tag. Strip the filler word "Definition".
+                  // Region tag comes from the structured session type — consistent
+                  // for every client (Tara's hardcoded data and database plans both
+                  // expose current.type via the plan adapter), present and future.
+                  // The focus text is used only as the descriptive title; any
+                  // hand-typed "Region — " prefix is stripped so it isn't doubled.
+                  const TYPE_TAG = {
+                    push: "Upper Body", pull: "Upper Body", upper: "Upper Body",
+                    legs: "Lower Body", lower: "Lower Body", posterior: "Lower Body",
+                    full: "Full Body", cardio: "Cardio", rest: null,
+                  };
+                  const tag = TYPE_TAG[current.type] !== undefined
+                    ? TYPE_TAG[current.type]
+                    : null;
+                  // Title = focus minus any leading "Anything — " prefix, minus filler.
                   const raw = current.focus || "";
-                  const parts = raw.split(/\s*—\s*/);
-                  const hasTag = parts.length > 1;
-                  const tag = hasTag ? parts[0].trim() : null;
-                  const title = (hasTag ? parts.slice(1).join(" — ") : raw)
+                  const title = raw
+                    .replace(/^[^—]*—\s*/, "")   // drop a leading "Region — "
                     .replace(/\bDefinition\s+/g, "")
-                    .trim();
+                    .trim() || raw.trim();
                   return (
                     <>
                       {tag && (
